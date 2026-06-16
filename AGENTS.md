@@ -62,9 +62,15 @@ opencode-sdd/
 │   ├── agents/                   # Agent definitions registered with opencode
 │   │   ├── index.ts              # Barrel exports (public API)
 │   │   └── sdd-orchestrator.ts   # sdd-orchestrator agent definition
-│   └── commands/                 # Command definitions registered with opencode
+│   ├── commands/                 # Command definitions registered with opencode
+│   │   ├── index.ts              # Barrel exports (public API)
+│   │   └── sdd-prd-write.ts      # sdd-prd-write command definition
+│   └── utils/                    # Shared internal utilities
 │       ├── index.ts              # Barrel exports (public API)
-│       └── sdd-prd-write.ts      # sdd-prd-write command definition
+│       ├── logger.ts             # Plugin logger (opencode client.app.log)
+│       └── logger.test.ts        # Unit tests for the logger
+├── test/                         # Shared test support code (not test cases)
+│   └── stub-client.ts            # Stub opencode SDK client for tests
 ├── .husky/
 │   └── pre-commit                # Runs pnpm check before every commit
 ├── eslint.config.mjs             # ESLint flat config
