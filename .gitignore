@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+
+# Local environment (secrets)
+.env
+
+# Editor config
+.vscode
+
+# Incremental SDD artifacts (generated in user projects)
+.sdd/

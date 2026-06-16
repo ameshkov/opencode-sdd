@@ -1,0 +1,53 @@
+{
+  "name": "opencode-sdd",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "build/index.js",
+  "exports": {
+    ".": {
+      "import": "./build/index.js"
+    }
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc && tsc --project tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf node_modules build",
+    "format:check": "prettier --check --no-error-on-unmatched-pattern --cache . && markdownlint-cli2 .",
+    "format:fix": "prettier --write --no-error-on-unmatched-pattern --cache . && markdownlint-cli2 --fix .",
+    "lint": "eslint src && pnpm knip",
+    "lint:fix": "eslint src --fix",
+    "knip": "knip --production",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
+    "prepare": "husky || true"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "spec-driven",
+    "sdd",
+    "prd",
+    "orchestrator"
+  ],
+  "author": "",
+  "license": "MIT",
+  "description": "Specification-Driven Development plugin for OpenCode.",
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@opencode-ai/plugin": "1.17.7",
+    "@opencode-ai/sdk": "1.17.7",
+    "@types/node": "25.9.3",
+    "eslint": "10.5.0",
+    "husky": "9.1.7",
+    "knip": "6.17.1",
+    "markdownlint-cli2": "0.22.1",
+    "prettier": "3.8.4",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.61.1",
+    "vitest": "4.1.9"
+  }
+}
