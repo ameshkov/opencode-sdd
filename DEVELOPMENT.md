@@ -88,29 +88,51 @@ Two facts shape every debugging workflow:
 
 Keep this repo as the source of truth and load it into a *separate*
 scratch project so you never pollute the plugin's working tree with
-session artifacts. Create a throwaway directory:
+session artifacts. Create the throwaway directory anywhere you like;
+the examples below use a sibling of this repo:
 
 ```sh
-mkdir -p /tmp/sdd-debug && cd /tmp/sdd-debug
+mkdir -p ../opencode-plugin-tester && cd ../opencode-plugin-tester
 ```
+
+> [!TIP]
+> Open both `opencode-sdd` and `opencode-plugin-tester` in the same
+> editor as a **multi-root workspace** (VS Code: *Add Folder to
+> Workspace...*). You can then edit the plugin and its test project side
+> by side, and a single `pnpm build` watcher in the plugin root is
+> visible from the same window.
 
 Pick one of the two methods below.
 
 **Method 1 — reference the local package (recommended).** This respects
 the `exports`/`main` field in `package.json`, so opencode resolves
-`build/index.js` automatically. Create `opencode.json`:
+`build/index.js` automatically. The snippet below writes the project
+`opencode.json` at the scratch project root with the `file:///` plugin
+entry pointing at this repo — copy and paste it as is, the shell
+resolves the absolute path:
 
-```json
+```sh
+cat > opencode.json <<EOF
 {
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["file:///absolute/path/to/opencode-sdd"]
+  "\$schema": "https://opencode.ai/config.json",
+  "plugin": ["file://$(cd ../opencode-sdd && pwd)"]
 }
+EOF
 ```
+
+> [!NOTE]
+> `opencode.json` is the project config and lives at the **project
+> root**, not under `.opencode/`. The `.opencode/` directory is only
+> used by Method 2 below for local plugin files. The unquoted heredoc
+> (`<<EOF`) lets `$(cd ...)` expand to the absolute repo path, while
+> the `\$schema` escape keeps the JSON key literal. The resulting
+> `opencode.json` contains a literal `$schema` key and a fully
+> resolved `plugin` path.
 
 opencode installs plugins listed in the `plugin` array at startup and
 caches them under its cache directory (`~/.cache/opencode/` on macOS/
 Linux). Use the `file:///` form (three slashes): empty host followed by
-the absolute path. Replace the path with the absolute path to this repo.
+the absolute path.
 
 > **Note:** the `file:` specifier is not documented in opencode's
 > official config schema, which only shows npm package names. It has
@@ -151,17 +173,30 @@ pnpm build      # in the opencode-sdd repo
    pnpm exec tsc --watch
    ```
 
-2. In another terminal, start opencode inside the scratch project with
-   verbose, terminal-streamed logging:
+2. In another terminal inside the scratch project, choose how you want
+   to observe logs. `--log-level DEBUG` enables the plugin's
+   `logger.debug(...)` calls in `src/utils/logger.ts`.
 
-   ```sh
-   opencode --log-level DEBUG --print-logs
-   ```
+   - **Captured to a file** (recommended for plugin debugging). Run
+     opencode non-interactively and redirect the log stream into the
+     scratch project. `--print-logs` writes to **stderr**, so `2>`
+     captures the full stream — including the plugin's DEBUG lines — to
+     a file you can grep and scroll:
 
-   - `--log-level DEBUG` enables the plugin's `logger.debug(...)`
-     calls in `src/utils/logger.ts`.
-   - `--print-logs` mirrors the server log stream to your terminal so
-     you see plugin output as it happens.
+     ```sh
+     opencode run --log-level DEBUG --print-logs \
+       "/sdd-prd-write <a short idea>" 2>./opencode.log
+     ```
+
+   - **Interactive TUI**. Start opencode normally, then tail the
+     on-disk log in a third terminal. `--print-logs` does **not** work
+     here: the TUI owns the terminal and swallows stderr, so logs only
+     land on disk (see [Reading plugin logs](#reading-plugin-logs)):
+
+     ```sh
+     opencode --log-level DEBUG
+     tail -F ~/.local/share/opencode/log/opencode.log
+     ```
 
 3. Exercise the registered surface to confirm it loaded:
 
@@ -182,10 +217,20 @@ All plugin output is written through opencode's SDK via
 - **On disk** (macOS/Linux): `~/.local/share/opencode/log/`, in
   timestamped files such as `2026-06-08T163939.log` (plus an
   `opencode.log` rollfile). A small number of recent files are kept.
-- **Filter for this plugin**: search the log file (or the
-  `--print-logs` stream) for the `opencode-sdd` service tag. Every
-  entry this plugin emits is written through `client.app.log(...)`
-  with that tag (see `src/utils/logger.ts`).
+- **Where the stream shows up** depends on the opencode mode:
+    - `opencode run --print-logs 2>./opencode.log` — the full log
+      stream is written to your redirected file. This is the
+      recommended way to inspect plugin output.
+    - `opencode` (the TUI) — `--print-logs` is swallowed by the TUI and
+      never reaches your terminal; logs are only written to the on-disk
+      directory above. Tail that file from a separate terminal.
+- **Filter for this plugin**: opencode's log formatter does **not**
+  print the `service` field, so grep for the plugin's distinctive
+  messages instead — every line this plugin emits is one of these:
+
+  ```sh
+  grep -E "plugin loading|registering SDD surface|SDD surface registered|registered agent|registered command|failed to register" ./opencode.log
+  ```
 
 Do **not** use `console.log` for diagnostics: it is not captured by
 opencode's log pipeline and will not appear in the log files. Add

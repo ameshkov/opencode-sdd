@@ -15,6 +15,7 @@ build/
 
 # Editor config
 .vscode
+*.code-workspace
 
 # Incremental SDD artifacts (generated in user projects)
 .sdd/
