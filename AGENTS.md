@@ -56,6 +56,8 @@ commands.
 
 ```text
 opencode-sdd/
+├── README.md                     # User-facing project pitch
+├── DEVELOPMENT.md                # Build and debug guide for the plugin
 ├── src/                          # Plugin source code
 │   ├── index.ts                  # Plugin entry point; returns Hooks
 │   ├── index.test.ts             # Unit tests for the plugin entry point
