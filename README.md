@@ -26,3 +26,54 @@ something gets lost.
 
 **opencode-sdd** inverts the workflow: *plan everything before you build
 anything.*
+
+## The SDD Short Flow
+
+For a small change you can analyze, implement, and verify in three commands.
+Each command runs with your current agent — no dedicated orchestrator is
+required.
+
+1. Describe the change and produce a lightweight plan.
+2. Implement the plan's tasks following the TDD flow.
+3. Validate the result and write a report.
+
+- `/sdd-quickspec` — analyze a problem and write `SPECS_DIR/quick.md`
+  (problem analysis, affected files, proposed solution, and tasks).
+- `/sdd-implement` — run the tasks defined in `quick.md` using the TDD flow
+  (write failing test → verify failure → implement → verify pass).
+- `/sdd-validate` — validate the implementation and write
+  `SPECS_DIR/validation.md`.
+
+`SPECS_DIR` defaults to `.sdd/.current/`.
+
+## The PRD Long Flow
+
+For a larger feature, drive requirements through validated implementation in
+six steps. Each step runs in a clean session and produces the next artifact.
+
+1. Write a product spec from a feature description.
+2. Break the spec into independent vertical-slice issues.
+3. Plan a single issue.
+4. Implement that issue's plan.
+5. Validate that issue against its plan.
+6. Cross-validate every implemented issue.
+
+- `/prd-write` — produce `SPECS_DIR/prd.md` from a feature description.
+- `/prd-to-issues` — write vertical-slice issues under `SPECS_DIR/issues/`.
+- `/prd-issue-to-plan` — write a plan for one issue.
+- `/prd-implement-issue` — run one issue's plan.
+- `/prd-validate-issue` — validate one issue against its plan.
+- `/prd-validate` — cross-validate all implemented issues and write
+  `SPECS_DIR/validation.md`.
+
+## Keeping Documentation Current
+
+The `doc-*` commands update the project's standard documentation files to
+match the codebase. Run them after a change that affects the corresponding
+file.
+
+- `/doc-readme` — update `README.md` to stay a user manual.
+- `/doc-development` — update `DEVELOPMENT.md` (build and debug guide).
+- `/doc-deployment` — update `DEPLOYMENT.md`.
+- `/doc-agents` — update `AGENTS.md` (guidelines and project structure).
+- `/doc-changelog` — add the Unreleased entry to `CHANGELOG.md`.

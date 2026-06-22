@@ -12,13 +12,13 @@
     "build"
   ],
   "scripts": {
-    "build": "tsc",
-    "typecheck": "tsc && tsc --project tsconfig.test.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-commands.mjs",
+    "typecheck": "tsc -p tsconfig.build.json && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "rm -rf node_modules build",
-    "format:check": "prettier --check --no-error-on-unmatched-pattern --cache . && markdownlint-cli2 .",
-    "format:fix": "prettier --write --no-error-on-unmatched-pattern --cache . && markdownlint-cli2 --fix .",
+    "format:check": "prettier --check --no-error-on-unmatched-pattern --cache . && markdownlint-cli2 '**/*.md'",
+    "format:fix": "prettier --write --no-error-on-unmatched-pattern --cache . && markdownlint-cli2 --fix '**/*.md'",
     "lint": "eslint src && pnpm knip",
     "lint:fix": "eslint src --fix",
     "knip": "knip --production",

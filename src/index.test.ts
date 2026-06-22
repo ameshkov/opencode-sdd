@@ -1,11 +1,75 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { Config, PluginInput } from '@opencode-ai/plugin';
 import sddPlugin from './index.js';
 import { stubClient } from '../test/stub-client.js';
 
+/**
+ * Widened Config type that also accepts `references`, which opencode runtime
+ * supports even when the SDK type declarations don't yet include it.
+ */
+interface ConfigWithReferences extends Config {
+  references?: Record<string, unknown>;
+}
+
 /** Builds a {@link PluginInput} with a stubbed SDK client for logging. */
 function pluginInput(): PluginInput {
   return { client: stubClient() } as unknown as PluginInput;
+}
+
+async function withCommandsDir(fn: (dir: string) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), 'entry-'));
+  const writeCmd = (name: string, description: string) =>
+    writeFile(
+      join(dir, `${name}.md`),
+      [
+        '---',
+        `description: ${description}`,
+        '---',
+        '',
+        `Command ${name}. Input: $ARGUMENTS`,
+        `@opencode-sdd-templates/${name}/template.md`,
+        '',
+      ].join('\n'),
+    );
+  await Promise.all([
+    writeCmd('prd-write', 'Write a PRD'),
+    writeCmd('prd-to-issues', 'Break a PRD into issues'),
+    writeCmd('prd-issue-to-plan', 'Plan a PRD issue'),
+    writeCmd('prd-implement-issue', 'Implement a PRD issue'),
+    writeCmd('prd-validate-issue', 'Validate a PRD issue'),
+    writeCmd('prd-validate', 'Validate the full PRD'),
+    writeCmd('sdd-quickspec', 'Produce a quick spec'),
+    writeCmd('sdd-implement', 'Implement a quick spec'),
+    writeCmd('sdd-validate', 'Validate a quick spec'),
+    writeCmd('doc-agents', 'Actualize AGENTS.md'),
+    writeCmd('doc-changelog', 'Update CHANGELOG.md'),
+    writeCmd('doc-deployment', 'Actualize DEPLOYMENT.md'),
+    writeCmd('doc-development', 'Actualize DEVELOPMENT.md'),
+    writeCmd('doc-readme', 'Actualize README.md'),
+  ]);
+  process.env['SDD_COMMANDS_DIR'] = dir;
+  try {
+    await fn(dir);
+  } finally {
+    delete process.env['SDD_COMMANDS_DIR'];
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function withAssetsDir(fn: (dir: string) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), 'assets-'));
+  await mkdir(join(dir, 'prd-write'), { recursive: true });
+  await writeFile(join(dir, 'prd-write', 'prd-template.md'), 'placeholder\n');
+  process.env['SDD_ASSETS_DIR'] = dir;
+  try {
+    await fn(dir);
+  } finally {
+    delete process.env['SDD_ASSETS_DIR'];
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 describe('sdd plugin', () => {
@@ -28,59 +92,204 @@ describe('sdd plugin', () => {
     });
   });
 
-  it('registers the sdd-orchestrator agent as a subagent', async () => {
-    const hooks = await sddPlugin(pluginInput());
-    const config: Config = {};
+  it('registers prd-write from Markdown and no agent', async () => {
+    await withCommandsDir(async () => {
+      const hooks = await sddPlugin(pluginInput());
+      const config: Config = {};
+      await hooks.config?.(config);
 
-    await hooks.config?.(config);
-
-    const agent = config.agent?.['sdd-orchestrator'];
-    expect(agent).toBeDefined();
-    expect(agent?.mode).toBe('subagent');
-    expect(typeof agent?.prompt).toBe('string');
-    expect(agent?.prompt?.length).toBeGreaterThan(0);
+      const command = config.command?.['prd-write'];
+      expect(command).toBeDefined();
+      expect(command?.template).toContain('$ARGUMENTS');
+      expect(config.agent?.['sdd-orchestrator']).toBeUndefined();
+    });
   });
 
-  it('registers the sdd-prd-write command with a template', async () => {
-    const hooks = await sddPlugin(pluginInput());
-    const config: Config = {};
+  it('registers the sdd short-flow commands from Markdown', async () => {
+    await withCommandsDir(async () => {
+      const hooks = await sddPlugin(pluginInput());
+      const config: Config = {};
+      await hooks.config?.(config);
 
-    await hooks.config?.(config);
-
-    const command = config.command?.['sdd-prd-write'];
-    expect(command).toBeDefined();
-    expect(typeof command?.template).toBe('string');
-    expect(command?.template.length).toBeGreaterThan(0);
+      for (const name of ['sdd-quickspec', 'sdd-implement', 'sdd-validate']) {
+        expect(config.command?.[name]).toBeDefined();
+        expect(config.command?.[name]?.template).toContain('$ARGUMENTS');
+      }
+      expect(config.agent?.['sdd-orchestrator']).toBeUndefined();
+    });
   });
 
-  it('preserves existing agents and commands', async () => {
-    const hooks = await sddPlugin(pluginInput());
-    const config: Config = {
-      agent: { build: { description: 'existing build agent' } },
-      command: { deploy: { template: 'existing deploy template' } },
-    };
+  it('registers all six PRD long-flow commands from Markdown', async () => {
+    await withCommandsDir(async () => {
+      const hooks = await sddPlugin(pluginInput());
+      const config: Config = {};
+      await hooks.config?.(config);
 
-    await hooks.config?.(config);
-
-    expect(config.agent?.['build']).toBeDefined();
-    expect(config.agent?.['sdd-orchestrator']).toBeDefined();
-    expect(config.command?.['deploy']).toBeDefined();
-    expect(config.command?.['sdd-prd-write']).toBeDefined();
+      const prdCommands = [
+        'prd-write',
+        'prd-to-issues',
+        'prd-issue-to-plan',
+        'prd-implement-issue',
+        'prd-validate-issue',
+        'prd-validate',
+      ];
+      for (const name of prdCommands) {
+        expect(config.command?.[name]).toBeDefined();
+        expect(config.command?.[name]?.template).toContain('$ARGUMENTS');
+      }
+    });
   });
 
-  it('logs the registered surface when the config hook runs', async () => {
-    const input = pluginInput();
-    const hooks = await sddPlugin(input);
-    const config: Config = {};
+  it('registers all five documentation-maintenance commands from Markdown', async () => {
+    await withCommandsDir(async () => {
+      const hooks = await sddPlugin(pluginInput());
+      const config: Config = {};
+      await hooks.config?.(config);
 
-    await hooks.config?.(config);
+      const docCommands = [
+        'doc-agents',
+        'doc-changelog',
+        'doc-deployment',
+        'doc-development',
+        'doc-readme',
+      ];
+      for (const name of docCommands) {
+        expect(config.command?.[name]).toBeDefined();
+        expect(config.command?.[name]?.template).toContain('$ARGUMENTS');
+      }
+    });
+  });
 
-    const messages = vi
-      .mocked(input.client.app.log)
-      .mock.calls.map((call) => call[0]?.body?.message);
-    expect(messages).toContain('registering SDD surface');
-    expect(messages).toContain('SDD surface registered');
-    expect(messages).toContain('registered agent "sdd-orchestrator"');
+  it('preserves existing user commands and agents', async () => {
+    await withCommandsDir(async () => {
+      const hooks = await sddPlugin(pluginInput());
+      const config: Config = {
+        agent: { 'user-agent': { description: 'existing' } },
+        command: { 'user-cmd': { template: 'existing template' } },
+      };
+      await hooks.config?.(config);
+
+      expect(config.agent?.['user-agent']).toBeDefined();
+      expect(config.command?.['user-cmd']).toBeDefined();
+      expect(config.command?.['prd-write']).toBeDefined();
+    });
+  });
+
+  it('logs a collision and still registers the command', async () => {
+    await withCommandsDir(async () => {
+      const input = pluginInput();
+      const hooks = await sddPlugin(input);
+      const config: Config = {
+        command: { 'prd-write': { template: 'user owned' } },
+      };
+      await hooks.config?.(config);
+
+      expect(
+        vi.mocked(input.client.app.log).mock.calls.some((call) => {
+          const body = (call[0] as { body?: { message?: string } }).body;
+          return body?.message === 'command name collision, overwriting';
+        }),
+      ).toBe(true);
+      expect(config.command?.['prd-write']?.template).toContain('$ARGUMENTS');
+    });
+  });
+
+  it('does not throw when the commands directory is missing', async () => {
+    process.env['SDD_COMMANDS_DIR'] = join(tmpdir(), 'definitely-missing');
+    try {
+      const hooks = await sddPlugin(pluginInput());
+      const config: Config = {
+        command: { 'user-cmd': { template: 'keep me' } },
+      };
+      await expect(hooks.config?.(config)).resolves.toBeUndefined();
+      expect(config.command?.['user-cmd']).toBeDefined();
+      expect(config.command?.['prd-write']).toBeUndefined();
+    } finally {
+      delete process.env['SDD_COMMANDS_DIR'];
+    }
+  });
+
+  it('reads SDD_COMMANDS_DIR on each invocation of the hook', async () => {
+    const dirA = await mkdtemp(join(tmpdir(), 'entry-a-'));
+    const dirB = await mkdtemp(join(tmpdir(), 'entry-b-'));
+    try {
+      await writeFile(
+        join(dirA, 'prd-write.md'),
+        ['---', 'description: a', '---', '', 'Body A $ARGUMENTS', ''].join('\n'),
+      );
+      await writeFile(
+        join(dirB, 'doc-gen.md'),
+        ['---', 'description: b', '---', '', 'Body B $ARGUMENTS', ''].join('\n'),
+      );
+
+      const hooks = await sddPlugin(pluginInput());
+
+      // First invocation loads dirA.
+      process.env['SDD_COMMANDS_DIR'] = dirA;
+      const configA: Config = {};
+      await hooks.config?.(configA);
+      expect(configA.command?.['prd-write']?.template).toContain('Body A');
+      expect(configA.command?.['doc-gen']).toBeUndefined();
+
+      // Second invocation loads dirB — proving the env var is read per call.
+      process.env['SDD_COMMANDS_DIR'] = dirB;
+      const configB: Config = {};
+      await hooks.config?.(configB);
+      expect(configB.command?.['doc-gen']?.template).toContain('Body B');
+      expect(configB.command?.['prd-write']).toBeUndefined();
+    } finally {
+      delete process.env['SDD_COMMANDS_DIR'];
+      await rm(dirA, { recursive: true, force: true });
+      await rm(dirB, { recursive: true, force: true });
+    }
+  });
+
+  it('registers the opencode-sdd-templates reference pointing at the assets dir', async () => {
+    await withAssetsDir(async (assetsDir) => {
+      await withCommandsDir(async () => {
+        const hooks = await sddPlugin(pluginInput());
+        const config: ConfigWithReferences = {};
+        await hooks.config?.(config);
+
+        expect(config.references?.['opencode-sdd-templates']).toEqual({
+          path: assetsDir,
+          description: 'opencode-sdd bundled prompt template assets',
+          hidden: true,
+        });
+      });
+    });
+  });
+
+  it('preserves existing user references and adds the templates alias', async () => {
+    await withAssetsDir(async () => {
+      await withCommandsDir(async () => {
+        const hooks = await sddPlugin(pluginInput());
+        const config: ConfigWithReferences = {
+          references: { 'user-ref': { path: '/user/path' } },
+        };
+        await hooks.config?.(config);
+
+        expect(config.references?.['user-ref']).toEqual({ path: '/user/path' });
+        expect(config.references?.['opencode-sdd-templates']).toBeDefined();
+      });
+    });
+  });
+
+  it('does not throw and warns when the assets directory is missing', async () => {
+    await withCommandsDir(async () => {
+      const input = pluginInput();
+      const hooks = await sddPlugin(input);
+      process.env['SDD_ASSETS_DIR'] = join(tmpdir(), 'definitely-missing-assets');
+      const config: ConfigWithReferences = {};
+
+      await expect(hooks.config?.(config)).resolves.toBeUndefined();
+
+      expect(config.references?.['opencode-sdd-templates']).toBeUndefined();
+      const warned = vi
+        .mocked(input.client.app.log)
+        .mock.calls.some((call) => call[0]?.body?.level === 'warn');
+      expect(warned).toBe(true);
+    });
   });
 
   it('logs an error instead of throwing when registration fails', async () => {
@@ -93,6 +302,6 @@ describe('sdd plugin', () => {
       .mocked(input.client.app.log)
       .mock.calls.filter((call) => call[0]?.body?.level === 'error');
     expect(errorCalls).toHaveLength(1);
-    expect(errorCalls[0]?.[0]?.body?.message).toBe('failed to register SDD surface');
+    expect(errorCalls[0]?.[0]?.body?.message).toBe('failed to register SDD commands');
   });
 });

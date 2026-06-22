@@ -1,1 +1,1 @@
-export { sddPrdWriteCommand } from './sdd-prd-write.js';
+export { loadCommands } from './loader.js';

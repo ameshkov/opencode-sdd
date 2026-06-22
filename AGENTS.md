@@ -61,24 +61,70 @@ opencode-sdd/
 ├── src/                          # Plugin source code
 │   ├── index.ts                  # Plugin entry point; returns Hooks
 │   ├── index.test.ts             # Unit tests for the plugin entry point
-│   ├── agents/                   # Agent definitions registered with opencode
-│   │   ├── index.ts              # Barrel exports (public API)
-│   │   └── sdd-orchestrator.ts   # sdd-orchestrator agent definition
 │   ├── commands/                 # Command definitions registered with opencode
 │   │   ├── index.ts              # Barrel exports (public API)
-│   │   └── sdd-prd-write.ts      # sdd-prd-write command definition
+│   │   ├── frontmatter-parser.ts # Markdown frontmatter parser for command files
+│   │   ├── frontmatter-parser.test.ts  # Unit tests for the frontmatter parser
+│   │   ├── loader.ts             # Scans directory for *.md, parses, returns map
+│   │   ├── loader.test.ts        # Unit tests for the command loader
+│   │   ├── markdown.test.ts      # Wiring regression test for shipped commands
+│   │   └── markdown/             # Authored Markdown command files
+│   │       ├── prd-write.md      # prd-write command (PRD writer)
+│   │       ├── prd-to-issues.md  # prd-to-issues command (PRD -> issues)
+│   │       ├── prd-issue-to-plan.md   # prd-issue-to-plan command (issue -> plan)
+│   │       ├── prd-implement-issue.md # prd-implement-issue command (run a plan)
+│   │       ├── prd-validate-issue.md  # prd-validate-issue command (per-issue validation)
+│   │       ├── prd-validate.md   # prd-validate command (cross-cutting validation)
+│   │       ├── sdd-implement.md  # sdd-implement command (spec + plan runner)
+│   │       ├── sdd-quickspec.md  # sdd-quickspec command (quick spec writer)
+│   │       ├── sdd-validate.md   # sdd-validate command (quick validation)
+│   │       ├── doc-agents.md        # doc-agents command (AGENTS.md actualizer)
+│   │       ├── doc-changelog.md     # doc-changelog command (CHANGELOG.md maintainer)
+│   │       ├── doc-deployment.md    # doc-deployment command (DEPLOYMENT.md actualizer)
+│   │       ├── doc-development.md   # doc-development command (DEVELOPMENT.md actualizer)
+│   │       └── doc-readme.md        # doc-readme command (README.md actualizer)
+│   ├── references/               # Template-assets reference resolver
+│   │   ├── index.ts              # Barrel exports (public API)
+│   │   ├── resolver.ts           # Computes the opencode-sdd-templates reference
+│   │   └── resolver.test.ts      # Unit tests for the reference resolver
+│   ├── assets/                   # Bundled prompt template assets (data)
+│   │   ├── doc-agents/           # AGENTS.md templates embedded by doc-agents
+│   │   │   ├── contribution-instructions-example.md
+│   │   │   ├── architecture-example.md
+│   │   │   ├── markdown-formatting-rules.md
+│   │   │   └── system-design-*.md # One per project type (web, mobile, ...)
+│   │   ├── doc-readme/           # README templates embedded by doc-readme
+│   │   │   └── readme-*.md       # One per product type (library, cli, ...)
+│   │   ├── prd-issue-to-plan/    # Plan template embedded by prd-issue-to-plan
+│   │   │   └── plan-template.md          # plan.md structure
+│   │   ├── prd-validate-issue/   # Template embedded by prd-validate-issue
+│   │   │   └── validation-report-template.md # per-issue validation.md
+│   │   ├── prd-validate/
+│   │   │   └── validation-report-template.md # Cross-cutting validation.md
+│   │   ├── prd-write/
+│   │   │   └── prd-template.md   # PRD template embedded by prd-write
+│   │   ├── sdd-quickspec/        # Templates embedded by sdd-quickspec
+│   │   │   ├── plan-template.md          # quick.md full document structure
+│   │   │   └── task-structure-template.md # per-task structure
+│   │   └── sdd-validate/         # Templates embedded by sdd-validate
+│   │       ├── quick-validation-report-template.md # quick validation.md
+│   │       └── validation-report-template.md       # full validation.md
 │   └── utils/                    # Shared internal utilities
-│       ├── index.ts              # Barrel exports (public API)
+│       ├── index.ts              # Barrel exports (public API): Logger, createLogger
 │       ├── logger.ts             # Plugin logger (opencode client.app.log)
 │       └── logger.test.ts        # Unit tests for the logger
+├── scripts/                      # Build-time helper scripts
+│   └── copy-commands.mjs         # Copies Markdown commands and assets into build output
 ├── test/                         # Shared test support code (not test cases)
+│   ├── __fixtures__/             # Loader test fixtures (ignored by markdownlint)
 │   └── stub-client.ts            # Stub opencode SDK client for tests
 ├── .husky/
 │   └── pre-commit                # Runs pnpm check before every commit
 ├── eslint.config.mjs             # ESLint flat config
 ├── knip.config.ts                # Knip unused-export analysis config
-├── tsconfig.json                 # TypeScript configuration (production)
-├── tsconfig.test.json            # TypeScript configuration (tests, noEmit)
+├── tsconfig.json                 # Shared TypeScript config (base; editor)
+├── tsconfig.build.json           # Production build config (excludes tests)
+├── tsconfig.test.json            # Test typecheck config (noEmit)
 ├── vitest.config.ts              # Vitest configuration
 └── package.json                  # Project dependencies and scripts
 ```
@@ -135,8 +181,7 @@ You MUST follow the following rules for EVERY task that you perform:
 Universal design principles this codebase follows:
 
 - **Separation of Concerns** — each module handles one aspect of the
-  system (e.g., `agents/` for agent definitions, `commands/` for command
-  definitions).
+  system (e.g., `commands/` for command definitions).
 - **Single Responsibility Principle** — every file, class, or function has
   one reason to change.
 - **Dependency Direction** — dependencies point downward; never from lower
@@ -156,13 +201,19 @@ The project's layers, from top to bottom:
 
 - **Entry point** (`src/index.ts`) — exports the `Plugin` function,
   returns the `Hooks` object, and wires together the registered surface.
-- **Definitions** (`src/agents/`, `src/commands/`) — pure data: agent
-  configs and command templates. No side effects, no business logic.
+- **Definitions** (`src/commands/`, `src/references/`) — Markdown command
+  files loaded at startup via the loader, plus the frontmatter parser;
+  the reference resolver computes the `opencode-sdd-templates` reference
+  entry at load time. No side effects beyond logging.
+- **Data** (`src/assets/`) — Bundled prompt template assets consumed by
+  the resolver (resolved at runtime) and embedded by command prompts.
 
 ```text
 Entry point (index.ts)
       ↓
-Definitions (agents/, commands/)
+Definitions (commands/, references/)
+      ↓
+Data (commands/markdown/, assets/)
 ```
 
 Definitions MUST NOT import from the entry point. New layers (e.g.,
@@ -180,6 +231,12 @@ This plugin talks to opencode exclusively through the `config` hook:
 - **Never overwrite existing user configuration.** Always spread-merge so
   the plugin adds its entries without clobbering keys the user already
   defined: `config.agent = { ...config.agent, <key>: <value> }`.
+- **Registering references is a config-hook concern.** The reference
+  entry is spread-merged onto `config.references`
+  (`config.references = { ...config.references, [alias]: entry }`) so
+  user references are preserved. The alias is `opencode-sdd-templates`
+  (no `/`, whitespace, backticks, or commas), the path is absolute and
+  resolved from the plugin's own location, and `hidden: true`.
 - **Command shape:** `{ template: string, description?: string, agent?:
   string, model?: string, subtask?: boolean }`. `template` is required and
   is the prompt body; `$ARGUMENTS` is interpolated with the user's input.
@@ -208,9 +265,11 @@ All code MUST meet documentation and style requirements before merge:
 - **Do not modify linter or formatter configurations**: Never change
   ESLint, Prettier, Markdownlint, or TypeScript configuration files
   (`eslint.config.mjs`, `.prettierrc`, `.prettierignore`,
-  `.markdownlint-cli2.yaml`, `tsconfig.json`) to work around lint or
-  formatting errors. Fix the source code instead. If the issue cannot be
-  resolved after a few attempts, ask the human for help.
+  `.markdownlint-cli2.yaml`, `tsconfig.json`, `tsconfig.build.json`)
+  to work around lint or formatting errors. Fix the source code instead.
+  If the issue cannot be resolved after a few attempts, ask the human for
+  help. Legitimate structural edits to these files (for example, the
+  base/build/test tsconfig split) are not "workarounds" and are allowed.
 - **Error handling strategy**: Prefer throwing errors over returning error
   values. Handle errors at top-level entry points where they can be logged.
 - **File naming**: Use kebab-case for all file names. TypeScript source
@@ -321,6 +380,17 @@ Configuration and documentation MUST stay synchronized with code:
   surface, or configuration MUST update relevant documentation.
 - **Structure tracking**: Changes to project structure MUST update the
   Project Structure section in `AGENTS.md`.
+- **TypeScript project structure**: The project uses a base/build/test
+  tsconfig split. `tsconfig.json` is the shared base and the config the
+  editor keys off; it includes production source and tests and sets
+  `types: ["node"]`, so every file (including `*.test.ts`) resolves Node
+  built-ins like `node:url` in the editor. `tsconfig.build.json` extends
+  the base, adds `outDir`/`rootDir`, and excludes tests for the compiled
+  `build/` output. `tsconfig.test.json` extends the base with `noEmit`
+  for the typecheck gate. Do NOT exclude `*.test.ts` from `tsconfig.json`:
+  doing so makes the editor treat test files as orphans and report false
+  `Cannot find name 'node:*'` errors that `pnpm typecheck` does not
+  reproduce.
 
 **Rationale**: Stale documentation causes onboarding friction and
 operational incidents.

@@ -185,7 +185,7 @@ pnpm build      # in the opencode-sdd repo
 
      ```sh
      opencode run --log-level DEBUG --print-logs \
-       "/sdd-prd-write <a short idea>" 2>./opencode.log
+       "/prd-write <a short idea>" 2>./opencode.log
      ```
 
    - **Interactive TUI**. Start opencode normally, then tail the
@@ -200,10 +200,8 @@ pnpm build      # in the opencode-sdd repo
 
 3. Exercise the registered surface to confirm it loaded:
 
-   - Run the slash command `/sdd-prd-write <a short idea>` — the
-     template lives in `src/commands/sdd-prd-write.ts`.
-   - Or invoke the `sdd-orchestrator` subagent, defined in
-     `src/agents/sdd-orchestrator.ts`.
+   - Run the slash command `/prd-write <a short idea>` — the
+     template lives in `src/commands/markdown/prd-write.md`.
 
 4. **Restart opencode** to reload the plugin after each rebuild.
    Plugins are only read at startup; there is no hot reload.
@@ -229,7 +227,7 @@ All plugin output is written through opencode's SDK via
   messages instead — every line this plugin emits is one of these:
 
   ```sh
-  grep -E "plugin loading|registering SDD surface|SDD surface registered|registered agent|registered command|failed to register" ./opencode.log
+  grep -E "plugin loading|loading SDD commands|SDD commands registered|registered command|failed to register SDD commands" ./opencode.log
   ```
 
 Do **not** use `console.log` for diagnostics: it is not captured by
