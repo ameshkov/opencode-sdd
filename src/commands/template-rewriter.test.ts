@@ -12,19 +12,19 @@ describe('ASSET_REFERENCE_TOKEN', () => {
 describe('rewriteAssetReferences', () => {
   it('replaces the token prefix with the absolute assets dir', () => {
     const template = `Body text.
-@opencode-sdd-templates/sdd-quickspec/plan-template.md
+@opencode-sdd-templates/sdd-spec/plan-template.md
 More text.`;
 
     const result = rewriteAssetReferences(template, ASSETS_DIR);
 
     expect(result).toBe(`Body text.
-@${ASSETS_DIR}/sdd-quickspec/plan-template.md
+@${ASSETS_DIR}/sdd-spec/plan-template.md
 More text.`);
   });
 
   it('replaces every occurrence when the token appears multiple times', () => {
     const template = [
-      '@opencode-sdd-templates/sdd-quickspec/plan-template.md',
+      '@opencode-sdd-templates/sdd-spec/plan-template.md',
       'between',
       '@opencode-sdd-templates/sdd-validate/validation-report-template.md',
     ].join('\n');
@@ -33,7 +33,7 @@ More text.`);
 
     expect(result).toBe(
       [
-        `@${ASSETS_DIR}/sdd-quickspec/plan-template.md`,
+        `@${ASSETS_DIR}/sdd-spec/plan-template.md`,
         'between',
         `@${ASSETS_DIR}/sdd-validate/validation-report-template.md`,
       ].join('\n'),

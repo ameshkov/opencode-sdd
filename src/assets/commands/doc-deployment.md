@@ -1,7 +1,8 @@
 ---
-title: doc-deployment
 description: Create or update DEPLOYMENT.md for production deployment configuration
 ---
+
+# Create or update DEPLOYMENT.md
 
 Create or update `DEPLOYMENT.md` to document the production deployment
 configuration for a deployable application. Cover environment variables,

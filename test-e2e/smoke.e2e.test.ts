@@ -21,11 +21,11 @@ import {
 
 /**
  * The exact set of commands shipped in the build. Derived from the built
- * `commands/markdown` directory so the test stays in sync with whatever is
+ * `assets/commands` directory so the test stays in sync with whatever is
  * compiled — adding a command automatically covers it here.
  */
 function shippedCommandNames(): string[] {
-  const dir = join(REPO_ROOT, 'build', 'commands', 'markdown');
+  const dir = join(REPO_ROOT, 'build', 'assets', 'commands');
   return readdirSync(dir)
     .filter((file) => file.endsWith('.md'))
     .map((file) => file.slice(0, -'.md'.length))

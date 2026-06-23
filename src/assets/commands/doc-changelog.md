@@ -1,7 +1,8 @@
 ---
-title: doc-changelog
 description: Maintain CHANGELOG.md from uncommitted changes and compress the Unreleased section
 ---
+
+# Maintain CHANGELOG.md
 
 Maintain `CHANGELOG.md` by initializing it when missing, adding entries for
 uncommitted changes, and compressing the Unreleased section.

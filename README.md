@@ -37,9 +37,9 @@ required.
 2. Implement the plan's tasks following the TDD flow.
 3. Validate the result and write a report.
 
-- `/sdd-quickspec` — analyze a problem and write `SPECS_DIR/quick.md`
+- `/sdd-spec` — analyze a problem and write `SPECS_DIR/spec.md`
   (problem analysis, affected files, proposed solution, and tasks).
-- `/sdd-implement` — run the tasks defined in `quick.md` using the TDD flow
+- `/sdd-implement` — run the tasks defined in `spec.md` using the TDD flow
   (write failing test → verify failure → implement → verify pass).
 - `/sdd-validate` — validate the implementation and write
   `SPECS_DIR/validation.md`.

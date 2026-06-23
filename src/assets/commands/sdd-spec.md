@@ -1,11 +1,12 @@
 ---
-title: sdd-quickspec
-description: Produce a lightweight quick spec from a problem description
+description: Produce a spec from a problem description
 ---
 
-Produce a lightweight analysis document for bug fixes and small tasks that
-don't require full feature specifications. Combine problem analysis,
-codebase research, and solution design into a single output file.
+# Produce a spec
+
+Produce an analysis document for bug fixes and small tasks that don't
+require full feature specifications. Combine problem analysis, codebase
+research, and solution design into a single output file.
 
 Brief description of the bug or small change: $ARGUMENTS
 
@@ -153,14 +154,14 @@ Brief description of the bug or small change: $ARGUMENTS
      - Cross-cutting concerns (auth, logging, etc.)
 
 2. **Recommend workflow**
-   - If complexity indicators found: recommend full SDD flow with
-     `sdd-quickspec` → issue planning → implementation instead
-   - If task is straightforward: proceed with quick spec
+   - If complexity indicators found: recommend the PRD flow with
+     `/prd-write` → issue planning → implementation instead
+   - If task is straightforward: proceed with spec
 
 ### Phase 6: Write Implementation Plan
 
 1. **Create the implementation plan file**
-   - Write to `SPECS_DIR/quick.md`
+   - Write to `SPECS_DIR/spec.md`
    - Create the `SPECS_DIR/` directory if it doesn't exist
    - Follow the Implementation Plan Guidelines below to write a
      comprehensive implementation plan.
@@ -230,7 +231,7 @@ Each step is one action (2–5 minutes):
 Use the following structure for each task in the plan. Read and follow the
 task structure template:
 
-@opencode-sdd-templates/sdd-quickspec/task-structure-template.md
+@opencode-sdd-templates/sdd-spec/task-structure-template.md
 
 #### No Placeholders
 
@@ -257,4 +258,4 @@ plan failures — never write them:
 
 Read and follow the full document template:
 
-@opencode-sdd-templates/sdd-quickspec/plan-template.md
+@opencode-sdd-templates/sdd-spec/plan-template.md

@@ -1,7 +1,8 @@
 ---
-title: prd-validate
 description: Validate the full PRD implementation across all issues
 ---
+
+# Validate the entire PRD implementation
 
 Verify that the entire PRD has been fully implemented by checking that all
 issues are done and running a cross-cutting audit across the full feature.

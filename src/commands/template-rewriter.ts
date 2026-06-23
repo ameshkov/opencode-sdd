@@ -1,21 +1,21 @@
 /**
  * Runtime rewriting of the portable `@opencode-sdd-templates/` token into
- * absolute-path `@<assetsDir>/` mentions that opencode natively inlines.
+ * absolute-path `@<templatesDir>/` mentions that opencode natively inlines.
  *
  * Command Markdown source files embed bundled template assets using the
  * portable token `@opencode-sdd-templates/<subdir>/<file>.md`. The token is
  * environment-independent (no absolute path baked in), so the same source
- * ships in every build. The absolute assets directory is only known at
- * runtime — it is computed by `resolveAssetsDir()` in the plugin entry — so
+ * ships in every build. The absolute templates directory is only known at
+ * runtime — it is computed by `resolveTemplatesDir()` in the plugin entry — so
  * the `config` hook rewrites each loaded command template at registration
- * time, replacing the token with the resolved absolute assets directory.
+ * time, replacing the token with the resolved absolute templates directory.
  *
  * opencode's `resolvePromptParts` (`packages/opencode/src/session/prompt.ts`)
  * resolves `@<absolute-path>` mentions by passing the path through
  * `path.resolve(ctx.worktree, name)` unchanged (an absolute path wins), then
  * inlines the file content via the `read` tool with `bypassCwdCheck: true`.
  * That makes absolute-path mentions the correct, working mechanism for
- * embedding bundled assets — no reference registration required.
+ * embedding bundled templates — no reference registration required.
  */
 
 /**
@@ -42,8 +42,8 @@ export const ASSET_REFERENCE_TOKEN = 'opencode-sdd-templates';
  *
  * @param template - The loaded command template string (with `$ARGUMENTS`
  *   and `@opencode-sdd-templates/...` mentions still in portable form).
- * @param assetsDir - Absolute path to the bundled assets directory, as
- *   computed by `resolveAssetsDir()` in the plugin entry. The caller
+ * @param assetsDir - Absolute path to the bundled templates directory, as
+ *   computed by `resolveTemplatesDir()` in the plugin entry. The caller
  *   guarantees this is absolute; `path.resolve` in opencode's
  *   `resolvePromptParts` treats it as a passthrough, so the resulting
  *   `@<assetsDir>/...` mention resolves to the real file.

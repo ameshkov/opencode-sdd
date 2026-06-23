@@ -6,11 +6,11 @@
  * idle), and asserts on the files written to disk and the tool parts recorded
  * in the session.
  *
- * The mock ignores the prompt, so the command choice (`sdd-quickspec`) only
+ * The mock ignores the prompt, so the command choice (`sdd-spec`) only
  * exercises the plumbing — command dispatch -> model -> tool execution — plus
  * the template-asset inlining path (see the "absolute-path mentions" test).
  * To add a case: build a scenario in `scenarios.ts`, drive it with
- * `tempMockLlm` + `runQuickspec`, and assert via `sessionParts` /
+ * `tempMockLlm` + `runSpec`, and assert via `sessionParts` /
  * `completedWriteTools`; keep scenarios fully scripted so runs stay
  * deterministic.
  */
@@ -61,20 +61,20 @@ async function tempMockLlm(scenario: Parameters<typeof createMockLlm>[0]): Promi
 }
 
 /**
- * Invoke the `sdd-quickspec` command in `directory`. The scripted mock ignores
+ * Invoke the `sdd-spec` command in `directory`. The scripted mock ignores
  * the prompt and replays its scenario, so the command choice only exercises the
  * plumbing (command dispatch -> model -> write tool). `session.command` blocks
  * until the agent loop reaches idle, so the scripted files are on disk by the
  * time it resolves.
  */
-async function runQuickspec(
+async function runSpec(
   client: OpencodeClient,
   sessionId: string,
   directory: string,
 ): Promise<void> {
   await client.session.command({
     path: { id: sessionId },
-    body: { command: 'sdd-quickspec', arguments: 'fix the login 500 error' },
+    body: { command: 'sdd-spec', arguments: 'fix the login 500 error' },
     query: { directory },
   });
 }
@@ -139,7 +139,7 @@ describe('command e2e: mock-LLM-driven file writes', () => {
 
     await withOpencodeServer(pluginConfig(mockProviderConfig(`${mock.url}/v1`)), async (client) => {
       const session = await createSession(client, directory);
-      await runQuickspec(client, session.id, directory);
+      await runSpec(client, session.id, directory);
 
       expect(existsSync(outFile), 'output file was not written').toBe(true);
       expect(readFileSync(outFile, 'utf8')).toBe('# Test');
@@ -163,7 +163,7 @@ describe('command e2e: mock-LLM-driven file writes', () => {
 
     await withOpencodeServer(pluginConfig(mockProviderConfig(`${mock.url}/v1`)), async (client) => {
       const session = await createSession(client, directory);
-      await runQuickspec(client, session.id, directory);
+      await runSpec(client, session.id, directory);
 
       expect(existsSync(fileA), 'file A was not written').toBe(true);
       expect(readFileSync(fileA, 'utf8')).toBe('A');
@@ -176,9 +176,17 @@ describe('command e2e: mock-LLM-driven file writes', () => {
   }, 90_000);
 
   it('inlines template asset files into the prompt via absolute-path mentions', async () => {
-    // A distinctive heading from the bundled sdd-quickspec plan template —
+    // A distinctive heading from the bundled sdd-spec plan template —
     // if the asset is inlined into the prompt, this text reaches the model.
-    const templatePath = join(REPO_ROOT, 'build', 'assets', 'sdd-quickspec', 'plan-template.md');
+    const templatePath = join(
+      REPO_ROOT,
+      'build',
+      'assets',
+      'commands',
+      'templates',
+      'sdd-spec',
+      'plan-template.md',
+    );
     const snippet = '### Patterns to Follow';
     expect(
       readFileSync(templatePath, 'utf8'),
@@ -190,7 +198,7 @@ describe('command e2e: mock-LLM-driven file writes', () => {
 
     await withOpencodeServer(pluginConfig(mockProviderConfig(`${mock.url}/v1`)), async (client) => {
       const session = await createSession(client, directory);
-      await runQuickspec(client, session.id, directory);
+      await runSpec(client, session.id, directory);
 
       const promptText = capturedPromptText(mock);
       expect(promptText, 'template asset was not inlined into the prompt').toContain(snippet);

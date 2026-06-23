@@ -1,7 +1,8 @@
 ---
-title: doc-development
 description: Create or update DEVELOPMENT.md for the development guide
 ---
+
+# Create or update DEVELOPMENT.md
 
 Create or update `DEVELOPMENT.md` to comply with the development guide
 requirements: a comprehensive guide for developers that explains how to set up

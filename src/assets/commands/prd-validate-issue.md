@@ -1,7 +1,8 @@
 ---
-title: prd-validate-issue
 description: Validate a single PRD issue's implementation against its plan
 ---
+
+# Validate a single PRD issue implementation
 
 Verify that a single PRD issue has been fully implemented according to its
 plan and acceptance criteria. Produces a validation report for the issue.

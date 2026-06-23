@@ -1,7 +1,8 @@
 ---
-title: prd-issue-to-plan
 description: Generate a structured implementation plan for a single PRD issue
 ---
+
+# Generate implementation plan
 
 Generate a structured implementation plan for a single PRD issue. The plan
 includes technical context, research findings, entity definitions, API

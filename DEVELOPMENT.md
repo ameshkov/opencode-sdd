@@ -277,7 +277,7 @@ pnpm build      # in the opencode-sdd repo
 3. Exercise the registered surface to confirm it loaded:
 
    - Run the slash command `/prd-write <a short idea>` — the
-     template lives in `src/commands/markdown/prd-write.md`.
+     template lives in `src/assets/commands/prd-write.md`.
 
 4. **Restart opencode** to reload the plugin after each rebuild.
    Plugins are only read at startup; there is no hot reload.

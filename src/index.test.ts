@@ -33,9 +33,9 @@ async function withCommandsDir(fn: (dir: string) => Promise<void>): Promise<void
     writeCmd('prd-implement-issue', 'Implement a PRD issue'),
     writeCmd('prd-validate-issue', 'Validate a PRD issue'),
     writeCmd('prd-validate', 'Validate the full PRD'),
-    writeCmd('sdd-quickspec', 'Produce a quick spec'),
-    writeCmd('sdd-implement', 'Implement a quick spec'),
-    writeCmd('sdd-validate', 'Validate a quick spec'),
+    writeCmd('sdd-spec', 'Produce a spec'),
+    writeCmd('sdd-implement', 'Implement a spec'),
+    writeCmd('sdd-validate', 'Validate a spec'),
     writeCmd('doc-agents', 'Actualize AGENTS.md'),
     writeCmd('doc-changelog', 'Update CHANGELOG.md'),
     writeCmd('doc-deployment', 'Actualize DEPLOYMENT.md'),
@@ -51,15 +51,15 @@ async function withCommandsDir(fn: (dir: string) => Promise<void>): Promise<void
   }
 }
 
-async function withAssetsDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'assets-'));
+async function withTemplatesDir(fn: (dir: string) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), 'templates-'));
   await mkdir(join(dir, 'prd-write'), { recursive: true });
   await writeFile(join(dir, 'prd-write', 'prd-template.md'), 'placeholder\n');
-  process.env['SDD_ASSETS_DIR'] = dir;
+  process.env['SDD_TEMPLATES_DIR'] = dir;
   try {
     await fn(dir);
   } finally {
-    delete process.env['SDD_ASSETS_DIR'];
+    delete process.env['SDD_TEMPLATES_DIR'];
     await rm(dir, { recursive: true, force: true });
   }
 }
@@ -103,7 +103,7 @@ describe('sdd plugin', () => {
       const config: Config = {};
       await hooks.config?.(config);
 
-      for (const name of ['sdd-quickspec', 'sdd-implement', 'sdd-validate']) {
+      for (const name of ['sdd-spec', 'sdd-implement', 'sdd-validate']) {
         expect(config.command?.[name]).toBeDefined();
         expect(config.command?.[name]?.template).toContain('$ARGUMENTS');
       }
@@ -236,11 +236,11 @@ describe('sdd plugin', () => {
     }
   });
 
-  it('does not throw when the assets directory is missing', async () => {
+  it('does not throw when the templates directory is missing', async () => {
     await withCommandsDir(async () => {
       const input = pluginInput();
       const hooks = await sddPlugin(input);
-      process.env['SDD_ASSETS_DIR'] = join(tmpdir(), 'definitely-missing-assets');
+      process.env['SDD_TEMPLATES_DIR'] = join(tmpdir(), 'definitely-missing-assets');
       const config: Config = {};
 
       await expect(hooks.config?.(config)).resolves.toBeUndefined();
@@ -253,15 +253,15 @@ describe('sdd plugin', () => {
     });
   });
 
-  it('rewrites the @opencode-sdd-templates token to the absolute assets dir', async () => {
-    await withAssetsDir(async (assetsDir) => {
+  it('rewrites the @opencode-sdd-templates token to the absolute templates dir', async () => {
+    await withTemplatesDir(async (templatesDir) => {
       await withCommandsDir(async () => {
         const hooks = await sddPlugin(pluginInput());
         const config: Config = {};
         await hooks.config?.(config);
 
         const template = config.command?.['prd-write']?.template;
-        expect(template).toContain(`@${assetsDir}/prd-write/template.md`);
+        expect(template).toContain(`@${templatesDir}/prd-write/template.md`);
         expect(template).not.toContain('@opencode-sdd-templates/');
       });
     });
@@ -275,7 +275,7 @@ describe('sdd plugin', () => {
         ['---', 'description: plain', '---', '', 'No token here $ARGUMENTS', ''].join('\n'),
       );
       process.env['SDD_COMMANDS_DIR'] = dir;
-      await withAssetsDir(async () => {
+      await withTemplatesDir(async () => {
         const hooks = await sddPlugin(pluginInput());
         const config: Config = {};
         await hooks.config?.(config);

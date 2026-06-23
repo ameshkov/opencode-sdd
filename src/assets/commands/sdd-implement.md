@@ -1,10 +1,11 @@
 ---
-title: sdd-implement
-description: Execute the tasks in an existing quick spec following TDD
+description: Execute the tasks in an existing spec following TDD
 ---
 
-Implement a feature by executing the tasks defined in the implementation
-plan `plan.md` according to the feature specification `spec.md`.
+# Implement from a spec
+
+Implement a change by executing the tasks defined in the specification
+`spec.md` following the TDD flow.
 
 Task scope or empty to implement all tasks: $ARGUMENTS
 
@@ -21,41 +22,35 @@ Task scope or empty to implement all tasks: $ARGUMENTS
 
 ## Prerequisites
 
-Check for the existence of both required files:
+Check for the existence of the required file:
 
-1. `SPECS_DIR/spec.md` - The feature specification
-2. `SPECS_DIR/plan.md` - The implementation plan
+1. `SPECS_DIR/spec.md` - The specification with implementation tasks
 
-If either file is missing:
+If the file is missing:
 
-**ERROR: Required files not found. Ensure both `SPECS_DIR/spec.md` and
-`SPECS_DIR/plan.md` exist. Run `sdd-spec` and `sdd-plan` first.**
+**ERROR: Required file not found. Ensure `SPECS_DIR/spec.md` exists.
+Run `sdd-spec` first.**
 
 ## Steps
 
 ### Phase 1: Load Context
 
-1. **Read the implementation plan**
-   - Read `SPECS_DIR/plan.md`
+1. **Read the specification**
+   - Read `SPECS_DIR/spec.md`
    - Extract all tasks with their:
      - Description and files (create, modify, test)
      - Steps with exact code and commands
      - Prerequisites
      - Verification criteria
    - Note the task execution order
+   - Extract acceptance scenarios for verification
 
-2. **Read the feature specification**
-   - Read `SPECS_DIR/spec.md`
-   - Extract functional requirements for reference
-   - Note acceptance scenarios for verification
-   - Cross-reference with plan tasks to understand coverage
-
-3. **Read project guidelines**
+2. **Read project guidelines**
    - Read `AGENTS.md` if it exists (coding standards and patterns)
    - Read `DEVELOPMENT.md` if it exists (development setup)
    - These inform implementation style and conventions
 
-4. **Load contracts** (if applicable)
+3. **Load contracts** (if applicable)
    - Check `SPECS_DIR/contracts/` directory
    - Load API schemas to guide implementation
 
@@ -64,8 +59,8 @@ If either file is missing:
 1. **Parse TASK_SCOPE**
    - Match TASK_SCOPE against supported patterns (see Input section)
    - Identify selected tasks, skipped tasks, and starting point
-   - For resume requests, check plan.md for `[x]` markers to find the last
-     completed task and begin from the next one
+   - For resume requests, check `spec.md` for `[x]` markers to find the
+     last completed task and begin from the next one
 
 2. **Build task queue**
    - If TASK_SCOPE is empty: queue all tasks in plan order
@@ -116,8 +111,8 @@ For each task in the queue:
    - **BLOCKED**: Cannot proceed (explain why)
    - **NEEDS INPUT**: Requires user decision
 
-5. **Update plan progress**
-   - Mark completed tasks in the `plan.md` file with `[x]`
+5. **Update spec progress**
+   - Mark completed tasks in the `spec.md` file with `[x]`
    - Mark completed steps within each task with `[x]`
    - Add implementation notes if helpful
 
@@ -142,10 +137,9 @@ After completing all queued tasks:
    - If TASK_SCOPE was a partial selection, suggest the next TASK_SCOPE
      value to continue (e.g., "Continue from Task 2.1")
 
-4. **Update spec and plan status**
+4. **Update spec status**
    - If all tasks completed successfully:
      - Change status from "Draft" to "Implemented" in `SPECS_DIR/spec.md`
-     - Change status from "Draft" to "Implemented" in `SPECS_DIR/plan.md`
      - Add `**Implemented by**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]`
        to the spec header metadata
      - Add implementation notes if helpful
@@ -179,7 +173,7 @@ After completing all queued tasks:
 ### Progress Tracking
 
 - **One task at a time**: Complete and verify before moving on
-- **Update plan file**: Mark tasks and steps as complete with `[x]`
+- **Update spec file**: Mark tasks and steps as complete with `[x]`
 - **Note deviations**: Document any changes from the plan
 
 ## Output

@@ -11,15 +11,20 @@ import { createLogger } from './utils/index.js';
  * changes), so it is safe to compute once at module load. It is the fallback
  * used when {@link resolveCommandsDir} finds no `SDD_COMMANDS_DIR` override.
  */
-const BUNDLED_COMMANDS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'commands', 'markdown');
+const BUNDLED_COMMANDS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'assets', 'commands');
 
 /**
  * Bundled template assets directory, resolved relative to this module.
  *
- * Fallback used when {@link resolveAssetsDir} finds no `SDD_ASSETS_DIR`
+ * Fallback used when {@link resolveTemplatesDir} finds no `SDD_TEMPLATES_DIR`
  * override.
  */
-const BUNDLED_ASSETS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'assets');
+const BUNDLED_TEMPLATES_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  'assets',
+  'commands',
+  'templates',
+);
 
 /**
  * Resolve the commands directory to load from for the current invocation.
@@ -40,14 +45,14 @@ function resolveCommandsDir(): string {
 /**
  * Resolve the template assets directory for the current invocation.
  *
- * Reads `SDD_ASSETS_DIR` **on every call** — invoked from inside the
+ * Reads `SDD_TEMPLATES_DIR` **on every call** — invoked from inside the
  * `config` hook, never captured at import time — so per-test env-var
  * overrides take effect.
  *
  * @returns Absolute path to the template assets directory.
  */
-function resolveAssetsDir(): string {
-  return process.env['SDD_ASSETS_DIR'] ?? BUNDLED_ASSETS_DIR;
+function resolveTemplatesDir(): string {
+  return process.env['SDD_TEMPLATES_DIR'] ?? BUNDLED_TEMPLATES_DIR;
 }
 
 /**
@@ -55,7 +60,7 @@ function resolveAssetsDir(): string {
  *
  * Loads Markdown command files from the bundled commands directory at load
  * time, rewrites the portable `@opencode-sdd-templates/` token in each
- * template to the resolved absolute assets directory (so opencode natively
+ * template to the resolved absolute templates directory (so opencode natively
  * inlines the bundled asset files via `@<abs-path>` mention resolution), and
  * spread-merges them onto `config.command`, preserving all existing user
  * commands. No agent is registered, so commands run with the user's current
@@ -75,8 +80,8 @@ const sddPlugin: Plugin = async (input) => {
         // Resolve per invocation so SDD_COMMANDS_DIR overrides are honored.
         const commands = await loadCommands(resolveCommandsDir(), logger);
 
-        // Resolve per invocation so SDD_ASSETS_DIR overrides are honored.
-        const assetsDir = resolveAssetsDir();
+        // Resolve per invocation so SDD_TEMPLATES_DIR overrides are honored.
+        const templatesDir = resolveTemplatesDir();
 
         for (const [name, commandConfig] of commands) {
           if (config.command?.[name] !== undefined) {
@@ -87,7 +92,7 @@ const sddPlugin: Plugin = async (input) => {
           // `CommandConfig.template` is `readonly`; build a new object with
           // the rewritten template so opencode inlines bundled assets via
           // native `@<abs-path>` mention resolution.
-          const rewritten = rewriteAssetReferences(commandConfig.template, assetsDir);
+          const rewritten = rewriteAssetReferences(commandConfig.template, templatesDir);
           config.command = {
             ...config.command,
             [name]: { ...commandConfig, template: rewritten },

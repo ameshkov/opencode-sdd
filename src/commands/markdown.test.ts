@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCommandFile } from './frontmatter-parser.js';
 
-const markdownDir = join(dirname(fileURLToPath(import.meta.url)), 'markdown');
+const markdownDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'commands');
 
 describe('prd-write command file', () => {
   it('embeds the templates reference for its PRD template', async () => {
@@ -20,22 +20,20 @@ describe('prd-write command file', () => {
   });
 });
 
-describe('sdd-quickspec command file', () => {
+describe('sdd-spec command file', () => {
   it('parses with a description, $ARGUMENTS, and the plan/task template references', async () => {
-    const raw = await readFile(join(markdownDir, 'sdd-quickspec.md'), 'utf8');
-    const result = parseCommandFile('sdd-quickspec', raw);
+    const raw = await readFile(join(markdownDir, 'sdd-spec.md'), 'utf8');
+    const result = parseCommandFile('sdd-spec', raw);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       const template = result.command.config.template;
       expect(result.command.config.description).toBeTruthy();
       expect(template).toContain('$ARGUMENTS');
-      expect(template).toContain('@opencode-sdd-templates/sdd-quickspec/plan-template.md');
-      expect(template).toContain(
-        '@opencode-sdd-templates/sdd-quickspec/task-structure-template.md',
-      );
+      expect(template).toContain('@opencode-sdd-templates/sdd-spec/plan-template.md');
+      expect(template).toContain('@opencode-sdd-templates/sdd-spec/task-structure-template.md');
       const asset = await readFile(
-        join(markdownDir, '..', '..', 'assets', 'sdd-quickspec', 'plan-template.md'),
+        join(markdownDir, 'templates', 'sdd-spec', 'plan-template.md'),
         'utf8',
       );
       expect(asset.trim()).not.toBe('');
@@ -44,7 +42,7 @@ describe('sdd-quickspec command file', () => {
 });
 
 describe('sdd-implement command file', () => {
-  it('parses with a description, $ARGUMENTS, and references spec and plan files', async () => {
+  it('parses with a description, $ARGUMENTS, and references the spec file', async () => {
     const raw = await readFile(join(markdownDir, 'sdd-implement.md'), 'utf8');
     const result = parseCommandFile('sdd-implement', raw);
 
@@ -54,7 +52,6 @@ describe('sdd-implement command file', () => {
       expect(result.command.config.description).toBeTruthy();
       expect(template).toContain('$ARGUMENTS');
       expect(template).toContain('spec.md');
-      expect(template).toContain('plan.md');
     }
   });
 });
@@ -71,9 +68,6 @@ describe('sdd-validate command file', () => {
       expect(template).toContain('$ARGUMENTS');
       expect(template).toContain(
         '@opencode-sdd-templates/sdd-validate/validation-report-template.md',
-      );
-      expect(template).toContain(
-        '@opencode-sdd-templates/sdd-validate/quick-validation-report-template.md',
       );
       expect(template).toContain('validation.md');
     }
@@ -110,7 +104,7 @@ describe('prd-issue-to-plan command file', () => {
       );
       expect(result.command.config.template).toContain('plan.md');
       const asset = await readFile(
-        join(markdownDir, '..', '..', 'assets', 'prd-issue-to-plan', 'plan-template.md'),
+        join(markdownDir, 'templates', 'prd-issue-to-plan', 'plan-template.md'),
         'utf8',
       );
       expect(asset.trim()).not.toBe('');
@@ -147,14 +141,7 @@ describe('prd-validate-issue command file', () => {
       );
       expect(result.command.config.template).toContain('validation.md');
       const asset = await readFile(
-        join(
-          markdownDir,
-          '..',
-          '..',
-          'assets',
-          'prd-validate-issue',
-          'validation-report-template.md',
-        ),
+        join(markdownDir, 'templates', 'prd-validate-issue', 'validation-report-template.md'),
         'utf8',
       );
       expect(asset.trim()).not.toBe('');
@@ -176,7 +163,7 @@ describe('prd-validate command file', () => {
       );
       expect(result.command.config.template).toContain('validation.md');
       const asset = await readFile(
-        join(markdownDir, '..', '..', 'assets', 'prd-validate', 'validation-report-template.md'),
+        join(markdownDir, 'templates', 'prd-validate', 'validation-report-template.md'),
         'utf8',
       );
       expect(asset.trim()).not.toBe('');
@@ -198,7 +185,7 @@ describe('doc-readme command file', () => {
       expect(template).toContain('@opencode-sdd-templates/doc-readme/readme-library.md');
       expect(template).toContain('@opencode-sdd-templates/doc-readme/readme-generic.md');
       const asset = await readFile(
-        join(markdownDir, '..', '..', 'assets', 'doc-readme', 'readme-library.md'),
+        join(markdownDir, 'templates', 'doc-readme', 'readme-library.md'),
         'utf8',
       );
       expect(asset.trim()).not.toBe('');
@@ -266,7 +253,7 @@ describe('doc-agents command file', () => {
       expect(template).toContain(
         '@opencode-sdd-templates/doc-agents/contribution-instructions-example.md',
       );
-      const assetsDir = join(markdownDir, '..', '..', 'assets', 'doc-agents');
+      const assetsDir = join(markdownDir, 'templates', 'doc-agents');
       const exampleAsset = await readFile(
         join(assetsDir, 'contribution-instructions-example.md'),
         'utf8',

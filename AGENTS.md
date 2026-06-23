@@ -65,7 +65,7 @@ opencode-sdd/
 ├── src/                          # Plugin source code
 │   ├── index.ts                  # Plugin entry point; returns Hooks
 │   ├── index.test.ts             # Unit tests for the plugin entry point
-│   ├── commands/                 # Command definitions registered with opencode
+│   ├── commands/                 # Command definitions CODE (loader, parser, rewriter)
 │   │   ├── index.ts              # Barrel exports (public API)
 │   │   ├── frontmatter-parser.ts # Markdown frontmatter parser for command files
 │   │   ├── frontmatter-parser.test.ts  # Unit tests for the frontmatter parser
@@ -73,8 +73,9 @@ opencode-sdd/
 │   │   ├── loader.test.ts        # Unit tests for the command loader
 │   │   ├── markdown.test.ts      # Wiring regression test for shipped commands
 │   │   ├── template-rewriter.ts  # Rewrites @opencode-sdd-templates/ to abs path
-│   │   ├── template-rewriter.test.ts # Unit tests for the template rewriter
-│   │   └── markdown/             # Authored Markdown command files
+│   │   └── template-rewriter.test.ts # Unit tests for the template rewriter
+│   ├── assets/                   # Bundled command and template data
+│   │   └── commands/             # Command Markdown files + referenced templates
 │   │       ├── prd-write.md      # prd-write command (PRD writer)
 │   │       ├── prd-to-issues.md  # prd-to-issues command (PRD -> issues)
 │   │       ├── prd-issue-to-plan.md   # prd-issue-to-plan command (issue -> plan)
@@ -82,41 +83,40 @@ opencode-sdd/
 │   │       ├── prd-validate-issue.md  # prd-validate-issue command (per-issue validation)
 │   │       ├── prd-validate.md   # prd-validate command (cross-cutting validation)
 │   │       ├── sdd-implement.md  # sdd-implement command (spec + plan runner)
-│   │       ├── sdd-quickspec.md  # sdd-quickspec command (quick spec writer)
+│   │       ├── sdd-spec.md  # sdd-spec command (spec writer)
 │   │       ├── sdd-validate.md   # sdd-validate command (quick validation)
 │   │       ├── doc-agents.md        # doc-agents command (AGENTS.md actualizer)
 │   │       ├── doc-changelog.md     # doc-changelog command (CHANGELOG.md maintainer)
 │   │       ├── doc-deployment.md    # doc-deployment command (DEPLOYMENT.md actualizer)
 │   │       ├── doc-development.md   # doc-development command (DEVELOPMENT.md actualizer)
-│   │       └── doc-readme.md        # doc-readme command (README.md actualizer)
-│   ├── assets/                   # Bundled prompt template assets (data)
-│   │   ├── doc-agents/           # AGENTS.md templates embedded by doc-agents
-│   │   │   ├── contribution-instructions-example.md
-│   │   │   ├── architecture-example.md
-│   │   │   ├── markdown-formatting-rules.md
-│   │   │   └── system-design-*.md # One per project type (web, mobile, ...)
-│   │   ├── doc-readme/           # README templates embedded by doc-readme
-│   │   │   └── readme-*.md       # One per product type (library, cli, ...)
-│   │   ├── prd-issue-to-plan/    # Plan template embedded by prd-issue-to-plan
-│   │   │   └── plan-template.md          # plan.md structure
-│   │   ├── prd-validate-issue/   # Template embedded by prd-validate-issue
-│   │   │   └── validation-report-template.md # per-issue validation.md
-│   │   ├── prd-validate/
-│   │   │   └── validation-report-template.md # Cross-cutting validation.md
-│   │   ├── prd-write/
-│   │   │   └── prd-template.md   # PRD template embedded by prd-write
-│   │   ├── sdd-quickspec/        # Templates embedded by sdd-quickspec
-│   │   │   ├── plan-template.md          # quick.md full document structure
-│   │   │   └── task-structure-template.md # per-task structure
-│   │   └── sdd-validate/         # Templates embedded by sdd-validate
-│   │       ├── quick-validation-report-template.md # quick validation.md
-│   │       └── validation-report-template.md       # full validation.md
+│   │       ├── doc-readme.md        # doc-readme command (README.md actualizer)
+│   │       └── templates/           # Template assets referenced by commands
+│   │           ├── doc-agents/           # AGENTS.md templates
+│   │           │   ├── contribution-instructions-example.md
+│   │           │   ├── architecture-example.md
+│   │           │   ├── markdown-formatting-rules.md
+│   │           │   └── system-design-*.md
+│   │           ├── doc-readme/           # README templates
+│   │           │   └── readme-*.md
+│   │           ├── prd-issue-to-plan/    # Plan template
+│   │           │   └── plan-template.md
+│   │           ├── prd-validate/         # Cross-cutting validation template
+│   │           │   └── validation-report-template.md
+│   │           ├── prd-validate-issue/   # Per-issue validation template
+│   │           │   └── validation-report-template.md
+│   │           ├── prd-write/            # PRD template
+│   │           │   └── prd-template.md
+│   │           ├── sdd-spec/        # Spec templates
+│   │           │   ├── plan-template.md
+│   │           │   └── task-structure-template.md
+│   │           └── sdd-validate/         # Validation template
+│   │               └── validation-report-template.md
 │   └── utils/                    # Shared internal utilities
 │       ├── index.ts              # Barrel exports (public API): Logger, createLogger
 │       ├── logger.ts             # Plugin logger (opencode client.app.log)
 │       └── logger.test.ts        # Unit tests for the logger
 ├── scripts/                      # Build-time helper scripts
-│   └── copy-commands.mjs         # Copies Markdown commands and assets into build output
+│   └── copy-assets.mjs           # Copies src/assets/ into build/assets/
 ├── test/                         # Shared test support code (not test cases)
 │   ├── __fixtures__/             # Loader test fixtures (ignored by markdownlint)
 │   └── stub-client.ts            # Stub opencode SDK client for tests
@@ -222,9 +222,10 @@ The project's layers, from top to bottom:
 - **Definitions** (`src/commands/`) — Markdown command files loaded at
   startup via the loader, plus the frontmatter parser and the template
   rewriter that rewrites the portable `@opencode-sdd-templates/` token to
-  the resolved absolute assets directory at registration time. No side
+  the resolved absolute templates directory at registration time. No side
   effects beyond logging.
-- **Data** (`src/assets/`) — Bundled prompt template assets embedded by
+- **Data** (`src/assets/commands/` + `src/assets/commands/templates/`) —
+  Bundled command Markdown files and prompt template assets embedded by
   command prompts via native `@<abs-path>` mention resolution.
 
 ```text
@@ -232,7 +233,7 @@ Entry point (index.ts)
       ↓
 Definitions (commands/)
       ↓
-Data (commands/markdown/, assets/)
+Data (assets/commands/, assets/commands/templates/)
 ```
 
 Definitions MUST NOT import from the entry point. New layers (e.g.,
@@ -254,9 +255,9 @@ This plugin talks to opencode exclusively through the `config` hook:
   Command Markdown files embed bundled template assets using the portable
   token `@opencode-sdd-templates/<subdir>/<file>.md` (environment-
   independent, baked into source). The absolute assets directory is only
-  known at runtime (`resolveAssetsDir()` in `src/index.ts`), so the
+  known at runtime (`resolveTemplatesDir()` in `src/index.ts`), so the
   `config` hook rewrites each loaded command template at registration
-  time, replacing `@opencode-sdd-templates/` with `@<abs-assets-dir>/`
+  time, replacing `@opencode-sdd-templates/` with `@<abs-templates-dir>/`
   via `rewriteAssetReferences`. opencode's `resolvePromptParts` then
   inlines the file via the `read` tool with `bypassCwdCheck: true`, so
   bundled assets outside the worktree need no `external_directory`

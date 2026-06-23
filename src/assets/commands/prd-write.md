@@ -1,12 +1,13 @@
 ---
-title: prd-write
 description: Write a Product Requirements Document (PRD) from a feature idea
 ---
+
+# Write a PRD from a feature idea
 
 Turn a free-form feature description into a structured Product Requirements
 Document through codebase exploration and relentless user interview.
 
-Use this command instead of `sdd-quickspec` when the feature is large or
+Use this command instead of `sdd-spec` when the feature is large or
 complex enough to require issue-level breakdown and phased implementation.
 
 Feature description: $ARGUMENTS

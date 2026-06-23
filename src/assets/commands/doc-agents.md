@@ -1,7 +1,8 @@
 ---
-title: doc-agents
 description: Update or create AGENTS.md for LLM agent guidance
 ---
+
+# Update or create AGENTS.md
 
 Update or create `AGENTS.md` — a document that provides LLM agents (and human
 contributors) with project context, structure, build commands, contribution

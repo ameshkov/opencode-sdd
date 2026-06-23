@@ -1,7 +1,8 @@
 ---
-title: doc-readme
 description: Actualize README.md to serve as a user manual for the product
 ---
+
+# Create or update README.md
 
 Update `README.md` to serve as a user manual — documentation that explains what
 the product does and how to use it. Adapt the README structure to the product

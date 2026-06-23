@@ -1,7 +1,8 @@
 ---
-title: prd-implement-issue
 description: Implement a single PRD issue by executing its plan
 ---
+
+# Implement a single PRD issue
 
 Implement a single PRD issue by executing the tasks defined in its
 implementation plan. Checks that all blocking issues are implemented before

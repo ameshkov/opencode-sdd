@@ -23,7 +23,8 @@ config:
 ignores:
   - node_modules/**
   - build/**
+  - .sdd/**
   - test/__fixtures__/**
-  - src/assets/doc-agents/**
-  - src/assets/doc-readme/**
-  - src/assets/sdd-quickspec/task-structure-template.md
+  - src/assets/commands/templates/doc-agents/**
+  - src/assets/commands/templates/doc-readme/**
+  - src/assets/commands/templates/sdd-spec/task-structure-template.md

@@ -1,7 +1,8 @@
 ---
-title: prd-to-issues
 description: Break a PRD into independently-grabbable vertical-slice issues
 ---
+
+# Break PRD into issues
 
 Break a Product Requirements Document into independently-grabbable issues
 using vertical slices (tracer bullets). Each issue is a thin slice that cuts
