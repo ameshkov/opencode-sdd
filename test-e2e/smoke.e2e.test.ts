@@ -11,8 +11,13 @@
  */
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, pluginConfig, withOpencodeServer } from './harness.js';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  REPO_ROOT,
+  pluginConfig,
+  startOpencodeServer,
+  type OpencodeServerHandle,
+} from './harness.js';
 
 /**
  * The exact set of commands shipped in the build. Derived from the built
@@ -28,25 +33,35 @@ function shippedCommandNames(): string[] {
 }
 
 describe('smoke: plugin loads in a live opencode server', () => {
-  it('registers every shipped command', async () => {
-    await withOpencodeServer(pluginConfig(), async (client) => {
-      const res = await client.command.list();
-      const names = (res.data ?? []).map((command) => command.name).sort();
+  // Both smoke tests only need a loaded plugin, so they share a single
+  // opencode server across the describe block. This amortizes the slow server
+  // startup (which on a loaded Windows CI runner can approach the per-test
+  // timeout) instead of paying it twice.
+  let server: OpencodeServerHandle;
 
-      for (const expected of shippedCommandNames()) {
-        expect(names, `missing command: ${expected}`).toContain(expected);
-      }
-    });
+  beforeAll(async () => {
+    server = await startOpencodeServer(pluginConfig());
+  });
+
+  afterAll(() => {
+    server?.close();
+  });
+
+  it('registers every shipped command', async () => {
+    const res = await server.client.command.list();
+    const names = (res.data ?? []).map((command) => command.name).sort();
+
+    for (const expected of shippedCommandNames()) {
+      expect(names, `missing command: ${expected}`).toContain(expected);
+    }
   });
 
   it('keeps client.config.get() reachable (no references 400)', async () => {
     // Reference registration (which 400'd config.get()) was removed in favor
     // of runtime absolute-path template rewriting. config.get() must now
     // return 200 with the plugin loaded.
-    await withOpencodeServer(pluginConfig(), async (client) => {
-      const res = await client.config.get();
-      expect(res.error, `config.get() errored: ${JSON.stringify(res.error)}`).toBeUndefined();
-      expect(res.data).toBeDefined();
-    });
+    const res = await server.client.config.get();
+    expect(res.error, `config.get() errored: ${JSON.stringify(res.error)}`).toBeUndefined();
+    expect(res.data).toBeDefined();
   });
 });

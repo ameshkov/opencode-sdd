@@ -158,21 +158,49 @@ export async function withOpencodeServer<T>(
   config: Config,
   fn: (client: OpencodeClient) => Promise<T>,
 ): Promise<T> {
-  const home = isolateHome();
-  let server: Awaited<ReturnType<typeof createOpencodeServer>> | undefined;
+  const handle = await startOpencodeServer(config);
   try {
-    server = await createOpencodeServer({
-      hostname: '127.0.0.1',
-      port: 0,
-      timeout: 30_000,
-      config,
-    });
-    const client = createOpencodeClient({ baseUrl: server.url });
-    return await fn(client);
+    return await fn(handle.client);
   } finally {
-    server?.close();
-    home.restore();
+    handle.close();
   }
+}
+
+/**
+ * A started opencode server with an isolated home, plus the client to talk to
+ * it and a `close` that tears both down. Use {@link startOpencodeServer} when
+ * multiple tests in a file want to share a single server (amortizing the slow
+ * startup, which matters on Windows CI); otherwise prefer
+ * {@link withOpencodeServer} for the automatic cleanup.
+ */
+export interface OpencodeServerHandle {
+  /** Client bound to the running server's base URL. */
+  client: OpencodeClient;
+  /** Close the server and restore the isolated home. Idempotent. */
+  close(): void;
+}
+
+/**
+ * Start an opencode server with `config` and an isolated home, returning a
+ * handle whose `close` tears it down. The caller is responsible for calling
+ * `close` (typically in `afterAll`).
+ */
+export async function startOpencodeServer(config: Config): Promise<OpencodeServerHandle> {
+  const home = isolateHome();
+  const server = await createOpencodeServer({
+    hostname: '127.0.0.1',
+    port: 0,
+    timeout: 30_000,
+    config,
+  });
+  const client = createOpencodeClient({ baseUrl: server.url });
+  return {
+    client,
+    close() {
+      server.close();
+      home.restore();
+    },
+  };
 }
 
 /** Create a session rooted at `directory`, throwing on failure. */
