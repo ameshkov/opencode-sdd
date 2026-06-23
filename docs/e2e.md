@@ -20,11 +20,12 @@ Two things must be present, or the suite fails loudly before any test runs:
 
 1. **The `opencode` binary on `PATH`.** The `globalSetup`
    (`test-e2e/global-setup.ts`) shells out to `opencode --version` and exits
-   non-zero with a clear message if it is missing. The suite is developed
-   and tested against opencode `1.17.8`. On macOS, `brew install opencode`
-   works; on any platform (including Windows) `npm install -g
-   opencode-ai@1.17.8` works too, since the npm package version tracks the
-   binary version.
+   non-zero with a clear message if it is missing. Any version compatible
+   with the pinned `@opencode-ai/sdk` in `package.json` works (the SDK and
+   the binary ship together, so matching the SDK's version is safest). On
+   macOS, `brew install opencode` works; on any platform (including
+   Windows) `npm install -g opencode-ai@<sdk-version>` works too, since
+   the npm package version tracks the binary version.
 2. **A built `build/` directory.** The plugin loads from `build/index.js`
    via a `file://` URL (opencode resolves `package.json#main`), so run
    `pnpm build` first. The same guard checks `build/index.js` exists.
@@ -51,6 +52,11 @@ pnpm test:e2e -- test-e2e/command.e2e.test.ts
 pnpm test:e2e -t "writes a single scripted file"
 ```
 
-The e2e config (`vitest.test-e2e.config.ts`) uses a 60s test timeout and a
-30s hook timeout — each test spawns its own `opencode` server, which takes a
-few seconds to boot.
+The e2e config (`vitest.test-e2e.config.ts`) uses a 120s test timeout and
+a 120s hook timeout. Server startup dominates wall-clock on a loaded
+Windows CI runner (it can exceed 60s for a cold start), so each e2e test
+file shares **one** opencode server across its `describe` block via
+`beforeAll`/`afterAll` (`smoke.e2e.test.ts`, `command.e2e.test.ts`)
+rather than spawning a fresh server per test. The command tests reload
+their per-test scripted scenario into a shared mock LLM via
+`MockLlmState.reset(...)` before driving a fresh session.

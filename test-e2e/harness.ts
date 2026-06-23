@@ -104,6 +104,21 @@ const HOME_ENV_KEYS = ['HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HO
 
 type HomeEnvKey = (typeof HOME_ENV_KEYS)[number];
 
+/**
+ * Environment keys that opencode's server reads to enable HTTP Basic auth.
+ *
+ * When the e2e suite is launched from *inside* an opencode session (e.g. the
+ * developer runs `pnpm test:e2e` via an opencode-powered agent), the parent
+ * opencode process exports `OPENCODE_SERVER_PASSWORD` so its own server is
+ * authenticated. The SDK's `createOpencodeServer` spreads `process.env` into
+ * the spawned child, so the e2e server would inherit that password, enable
+ * Basic auth, and reject every SDK request with `401` — the SDK client does
+ * not send credentials. Stripping these vars from the child's environment
+ * makes the e2e server run auth-free (it only ever binds `127.0.0.1` for the
+ * duration of a test), isolating it from the parent session.
+ */
+const SERVER_AUTH_ENV_KEYS = ['OPENCODE_SERVER_PASSWORD', 'OPENCODE_SERVER_USERNAME'] as const;
+
 /** Object returned by {@link isolateHome} to undo the env rewrite. */
 interface IsolatedHome {
   /** Restore the original env values and remove the temp home dir. */
@@ -151,6 +166,34 @@ function isolateHome(): IsolatedHome {
 }
 
 /**
+ * Strip the inherited opencode server auth env vars from `process.env` so the
+ * e2e server (spawned by the SDK, which spreads `process.env`) does not enable
+ * HTTP Basic auth. Returns a `restore` that puts the original values back.
+ *
+ * Necessary when the suite runs inside a parent opencode session that exports
+ * `OPENCODE_SERVER_PASSWORD`; see {@link SERVER_AUTH_ENV_KEYS}.
+ */
+export function isolateServerAuth(): IsolatedHome {
+  const saved: Partial<Record<(typeof SERVER_AUTH_ENV_KEYS)[number], string | undefined>> = {};
+  for (const key of SERVER_AUTH_ENV_KEYS) {
+    saved[key] = process.env[key];
+    delete process.env[key];
+  }
+  return {
+    restore: () => {
+      for (const key of SERVER_AUTH_ENV_KEYS) {
+        const value = saved[key];
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    },
+  };
+}
+
+/**
  * Start an opencode server with `config`, run `fn` against a client, and close
  * the server (and its isolated home) in `finally`.
  */
@@ -184,9 +227,15 @@ export interface OpencodeServerHandle {
  * Start an opencode server with `config` and an isolated home, returning a
  * handle whose `close` tears it down. The caller is responsible for calling
  * `close` (typically in `afterAll`).
+ *
+ * The server is isolated from the host on two axes: its opencode home (config,
+ * cache, state) is a fresh temp dir, and any inherited `OPENCODE_SERVER_*`
+ * auth env vars are stripped so it serves unauthenticated on `127.0.0.1` (the
+ * SDK client does not send Basic credentials).
  */
 export async function startOpencodeServer(config: Config): Promise<OpencodeServerHandle> {
   const home = isolateHome();
+  const auth = isolateServerAuth();
   const server = await createOpencodeServer({
     hostname: '127.0.0.1',
     port: 0,
@@ -198,6 +247,7 @@ export async function startOpencodeServer(config: Config): Promise<OpencodeServe
     client,
     close() {
       server.close();
+      auth.restore();
       home.restore();
     },
   };

@@ -9,8 +9,8 @@
  * The mock ignores the prompt, so the command choice (`sdd-spec`) only
  * exercises the plumbing — command dispatch -> model -> tool execution — plus
  * the template-asset inlining path (see the "absolute-path mentions" test).
- * To add a case: build a scenario in `scenarios.ts`, drive it with
- * `tempMockLlm` + `runSpec`, and assert via `sessionParts` /
+ * To add a case: build a scenario in `scenarios.ts`, load it into the shared
+ * mock via `mock.reset(...)` + `runSpec`, and assert via `sessionParts` /
  * `completedWriteTools`; keep scenarios fully scripted so runs stay
  * deterministic.
  */
@@ -18,13 +18,14 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { OpencodeClient, Part, ToolPart } from '@opencode-ai/sdk';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   REPO_ROOT,
   createSession,
   mockProviderConfig,
   pluginConfig,
-  withOpencodeServer,
+  startOpencodeServer,
+  type OpencodeServerHandle,
 } from './harness.js';
 import { createMockLlm, type MockLlmState } from './mock-server.js';
 import { writeFileScenario, writeFilesScenario } from './scenarios.js';
@@ -51,13 +52,6 @@ function tempProjectDir(): string {
   const dir = mkdtempSync(join(tmpdir(), 'sdd-e2e-'));
   cleanup.push(() => rmSync(dir, { recursive: true, force: true }));
   return dir;
-}
-
-/** Start a mock LLM, registered for cleanup. */
-async function tempMockLlm(scenario: Parameters<typeof createMockLlm>[0]): Promise<MockLlmState> {
-  const mock = await createMockLlm(scenario);
-  cleanup.push(() => mock.close());
-  return mock;
 }
 
 /**
@@ -132,48 +126,64 @@ function capturedPromptText(mock: MockLlmState): string {
 }
 
 describe('command e2e: mock-LLM-driven file writes', () => {
+  // One opencode server + one mock LLM shared across every test in this
+  // file. Server startup dominates wall-clock on Windows CI (~60-75s per
+  // cold start); paying it once — instead of per test — keeps every test
+  // well under the timeout. Each test reloads its own scenario into the
+  // shared mock via `mock.reset(...)` before driving a fresh session.
+  let server: OpencodeServerHandle;
+  let mock: MockLlmState;
+
+  beforeAll(async () => {
+    mock = await createMockLlm([]);
+    server = await startOpencodeServer(pluginConfig(mockProviderConfig(`${mock.url}/v1`)));
+  });
+
+  afterAll(() => {
+    server?.close();
+    mock?.close();
+  });
+
   it('writes a single scripted file', async () => {
     const directory = tempProjectDir();
     const outFile = join(directory, 'output.md');
-    const mock = await tempMockLlm(writeFileScenario(outFile, '# Test'));
+    mock.reset(writeFileScenario(outFile, '# Test'));
 
-    await withOpencodeServer(pluginConfig(mockProviderConfig(`${mock.url}/v1`)), async (client) => {
-      const session = await createSession(client, directory);
-      await runSpec(client, session.id, directory);
+    const client = server.client;
+    const session = await createSession(client, directory);
+    await runSpec(client, session.id, directory);
 
-      expect(existsSync(outFile), 'output file was not written').toBe(true);
-      expect(readFileSync(outFile, 'utf8')).toBe('# Test');
+    expect(existsSync(outFile), 'output file was not written').toBe(true);
+    expect(readFileSync(outFile, 'utf8')).toBe('# Test');
 
-      const parts = await sessionParts(client, session.id, directory);
-      const writes = completedWriteTools(parts);
-      expect(writes.length, 'expected a completed write tool call').toBeGreaterThanOrEqual(1);
-    });
-  }, 90_000);
+    const parts = await sessionParts(client, session.id, directory);
+    const writes = completedWriteTools(parts);
+    expect(writes.length, 'expected a completed write tool call').toBeGreaterThanOrEqual(1);
+  });
 
   it('writes multiple scripted files across tool-result round-trips', async () => {
     const directory = tempProjectDir();
     const fileA = join(directory, 'a.md');
     const fileB = join(directory, 'b.md');
-    const mock = await tempMockLlm(
+    mock.reset(
       writeFilesScenario([
         { filePath: fileA, content: 'A' },
         { filePath: fileB, content: 'B' },
       ]),
     );
 
-    await withOpencodeServer(pluginConfig(mockProviderConfig(`${mock.url}/v1`)), async (client) => {
-      const session = await createSession(client, directory);
-      await runSpec(client, session.id, directory);
+    const client = server.client;
+    const session = await createSession(client, directory);
+    await runSpec(client, session.id, directory);
 
-      expect(existsSync(fileA), 'file A was not written').toBe(true);
-      expect(readFileSync(fileA, 'utf8')).toBe('A');
-      expect(existsSync(fileB), 'file B was not written').toBe(true);
-      expect(readFileSync(fileB, 'utf8')).toBe('B');
+    expect(existsSync(fileA), 'file A was not written').toBe(true);
+    expect(readFileSync(fileA, 'utf8')).toBe('A');
+    expect(existsSync(fileB), 'file B was not written').toBe(true);
+    expect(readFileSync(fileB, 'utf8')).toBe('B');
 
-      const parts = await sessionParts(client, session.id, directory);
-      expect(completedWriteTools(parts).length).toBeGreaterThanOrEqual(2);
-    });
-  }, 90_000);
+    const parts = await sessionParts(client, session.id, directory);
+    expect(completedWriteTools(parts).length).toBeGreaterThanOrEqual(2);
+  });
 
   it('inlines template asset files into the prompt via absolute-path mentions', async () => {
     // A distinctive heading from the bundled sdd-spec plan template —
@@ -194,17 +204,16 @@ describe('command e2e: mock-LLM-driven file writes', () => {
     ).toContain(snippet);
 
     const directory = tempProjectDir();
-    const mock = await tempMockLlm([{ type: 'text', text: 'Done' }]);
+    mock.reset([{ type: 'text', text: 'Done' }]);
 
-    await withOpencodeServer(pluginConfig(mockProviderConfig(`${mock.url}/v1`)), async (client) => {
-      const session = await createSession(client, directory);
-      await runSpec(client, session.id, directory);
+    const client = server.client;
+    const session = await createSession(client, directory);
+    await runSpec(client, session.id, directory);
 
-      const promptText = capturedPromptText(mock);
-      expect(promptText, 'template asset was not inlined into the prompt').toContain(snippet);
-      expect(promptText, 'portable token was not rewritten to an absolute path').not.toContain(
-        '@opencode-sdd-templates',
-      );
-    });
-  }, 90_000);
+    const promptText = capturedPromptText(mock);
+    expect(promptText, 'template asset was not inlined into the prompt').toContain(snippet);
+    expect(promptText, 'portable token was not rewritten to an absolute path').not.toContain(
+      '@opencode-sdd-templates',
+    );
+  });
 });

@@ -32,6 +32,14 @@ export interface MockLlmState {
   close(): void;
   /** Every incoming POST body, in arrival order. */
   requests: CapturedRequest[];
+  /**
+   * Replace the scenario queue and clear captured requests, so a shared
+   * mock can be reused across independent tests without leaking turns or
+   * request history between them.
+   *
+   * @param scenario - One turn per future `/v1/chat/completions` request.
+   */
+  reset(scenario: Turn[]): void;
 }
 
 interface MockState {
@@ -104,6 +112,13 @@ export function createMockLlm(scenario: Turn[]): Promise<MockLlmState> {
         url: `http://127.0.0.1:${address.port}`,
         close: () => server.close(),
         requests: state.requests,
+        reset: (scenario: Turn[]) => {
+          state.queue = [...scenario];
+          // Clear in place: the handle's `requests` field is a reference to
+          // this same array (captured at resolve time), so reassigning would
+          // leave the handle pointing at the stale buffer.
+          state.requests.length = 0;
+        },
       });
     });
   });

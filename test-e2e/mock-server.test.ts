@@ -185,4 +185,29 @@ describe('mock LLM server', () => {
       mock.close();
     }
   });
+
+  it('reset() replaces the scenario queue and clears captured requests', async () => {
+    const mock = await createMockLlm(writeFileScenario('/tmp/a.md', 'a'));
+
+    try {
+      // Consume both scripted turns (tool call, then text).
+      await completions(mock.url, { messages: [] });
+      await completions(mock.url, { messages: [] });
+      expect(mock.requests).toHaveLength(2);
+
+      // Reload a fresh scenario; captured history is wiped.
+      mock.reset([{ type: 'text', text: 'fresh' }]);
+      expect(mock.requests).toHaveLength(0);
+
+      // The new scenario's first (and only) turn is served next.
+      const raw = await completions(mock.url, { messages: [] });
+      const payloads = parseSse(raw) as Array<{
+        choices: Array<{ delta: { content?: string } }>;
+      }>;
+      expect(payloads.map((p) => p.choices[0].delta.content ?? '').join('')).toBe('fresh');
+      expect(mock.requests).toHaveLength(1);
+    } finally {
+      mock.close();
+    }
+  });
 });

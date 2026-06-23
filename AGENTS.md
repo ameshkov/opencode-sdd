@@ -122,6 +122,7 @@ opencode-sdd/
 │   └── stub-client.ts            # Stub opencode SDK client for tests
 ├── test-e2e/                     # Mock-LLM e2e suite (runs via pnpm test:e2e)
 │   ├── harness.ts                # Binary/build guards, server lifecycle, session helpers
+│   ├── harness.test.ts           # Unit tests for harness env isolation helpers
 │   ├── mock-server.ts            # node:http OpenAI-compatible SSE mock LLM
 │   ├── mock-server-chunks.ts     # SSE chunk builders for the mock
 │   ├── mock-server.test.ts       # Standalone unit test for the mock
