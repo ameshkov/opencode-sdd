@@ -16,7 +16,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Install dependencies
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS deps
+FROM node:24-bookworm-slim AS deps
 
 # Use bash with pipefail for every RUN so a failing command piped into `tee`
 # (used by the lint/test stages to capture results) propagates its non-zero
@@ -68,7 +68,7 @@ RUN pnpm test 2>&1 | tee /tmp/unit-test-results.txt
 # ---------------------------------------------------------------------------
 # Stage 5: Install the opencode binary (needed only for e2e tests)
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS opencode
+FROM node:24-bookworm-slim AS opencode
 
 # Fresh base image: re-declare the pipefail shell so the `curl | bash`
 # download fails the build if the fetch errors out.

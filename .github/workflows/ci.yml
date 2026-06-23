@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: '24'
   PNPM_VERSION: '10.14.0'
   # The opencode-ai npm package is published in lockstep with the binary, so
   # this pins both the binary and the package. Matches the version the e2e

@@ -21,7 +21,7 @@ opencode instance. For architecture and contribution rules, see
 
 ## Prerequisites
 
-- **Node.js 22+** — the plugin targets ES2022 and runs inside the
+- **Node.js 24+** — the plugin targets ES2022 and runs inside the
   opencode host. Verify with `node --version`.
 - **pnpm 10+** — the only supported package manager. Verify with
   `pnpm --version`.

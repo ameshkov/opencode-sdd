@@ -43,7 +43,7 @@ commands.
 | Field | Value |
 | --- | --- |
 | Language | TypeScript 6, ES2022 target, strict mode |
-| Runtime | Node.js 22+ (loaded inside the opencode host) |
+| Runtime | Node.js 24+ (loaded inside the opencode host) |
 | Package Manager | pnpm 10+ |
 | Framework | OpenCode Plugin SDK (`@opencode-ai/plugin`, `@opencode-ai/sdk`) |
 | Linting | ESLint 10.x + typescript-eslint |
