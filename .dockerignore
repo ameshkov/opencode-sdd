@@ -1,0 +1,26 @@
+# Build artifacts (rebuilt inside the image)
+build/
+dist/
+
+# CI / editor / git tooling
+.vscode/
+.husky/
+.github/
+.git/
+
+# Docker files (not needed inside the image)
+Dockerfile
+.dockerignore
+
+# Dependency directories (installed fresh in the image)
+node_modules/
+
+# Local environment & OS files
+.env
+.DS_Store
+
+# Logs
+*.log
+
+# Incremental SDD artifacts (generated in user projects)
+.sdd/

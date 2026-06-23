@@ -6,14 +6,6 @@ import type { Config, PluginInput } from '@opencode-ai/plugin';
 import sddPlugin from './index.js';
 import { stubClient } from '../test/stub-client.js';
 
-/**
- * Widened Config type that also accepts `references`, which opencode runtime
- * supports even when the SDK type declarations don't yet include it.
- */
-interface ConfigWithReferences extends Config {
-  references?: Record<string, unknown>;
-}
-
 /** Builds a {@link PluginInput} with a stubbed SDK client for logging. */
 function pluginInput(): PluginInput {
   return { client: stubClient() } as unknown as PluginInput;
@@ -244,52 +236,57 @@ describe('sdd plugin', () => {
     }
   });
 
-  it('registers the opencode-sdd-templates reference pointing at the assets dir', async () => {
-    await withAssetsDir(async (assetsDir) => {
-      await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
-        const config: ConfigWithReferences = {};
-        await hooks.config?.(config);
-
-        expect(config.references?.['opencode-sdd-templates']).toEqual({
-          path: assetsDir,
-          description: 'opencode-sdd bundled prompt template assets',
-          hidden: true,
-        });
-      });
-    });
-  });
-
-  it('preserves existing user references and adds the templates alias', async () => {
-    await withAssetsDir(async () => {
-      await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
-        const config: ConfigWithReferences = {
-          references: { 'user-ref': { path: '/user/path' } },
-        };
-        await hooks.config?.(config);
-
-        expect(config.references?.['user-ref']).toEqual({ path: '/user/path' });
-        expect(config.references?.['opencode-sdd-templates']).toBeDefined();
-      });
-    });
-  });
-
-  it('does not throw and warns when the assets directory is missing', async () => {
+  it('does not throw when the assets directory is missing', async () => {
     await withCommandsDir(async () => {
       const input = pluginInput();
       const hooks = await sddPlugin(input);
       process.env['SDD_ASSETS_DIR'] = join(tmpdir(), 'definitely-missing-assets');
-      const config: ConfigWithReferences = {};
+      const config: Config = {};
 
       await expect(hooks.config?.(config)).resolves.toBeUndefined();
 
-      expect(config.references?.['opencode-sdd-templates']).toBeUndefined();
-      const warned = vi
-        .mocked(input.client.app.log)
-        .mock.calls.some((call) => call[0]?.body?.level === 'warn');
-      expect(warned).toBe(true);
+      // Commands still register; only the rewrite target is a non-existent
+      // dir (the `@opencode-sdd-templates/` token is rewritten to it, which
+      // opencode would fail to inline at runtime — but registration itself
+      // must not throw).
+      expect(config.command?.['prd-write']).toBeDefined();
     });
+  });
+
+  it('rewrites the @opencode-sdd-templates token to the absolute assets dir', async () => {
+    await withAssetsDir(async (assetsDir) => {
+      await withCommandsDir(async () => {
+        const hooks = await sddPlugin(pluginInput());
+        const config: Config = {};
+        await hooks.config?.(config);
+
+        const template = config.command?.['prd-write']?.template;
+        expect(template).toContain(`@${assetsDir}/prd-write/template.md`);
+        expect(template).not.toContain('@opencode-sdd-templates/');
+      });
+    });
+  });
+
+  it('leaves a command template with no token unchanged', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'entry-notoken-'));
+    try {
+      await writeFile(
+        join(dir, 'plain.md'),
+        ['---', 'description: plain', '---', '', 'No token here $ARGUMENTS', ''].join('\n'),
+      );
+      process.env['SDD_COMMANDS_DIR'] = dir;
+      await withAssetsDir(async () => {
+        const hooks = await sddPlugin(pluginInput());
+        const config: Config = {};
+        await hooks.config?.(config);
+
+        expect(config.command?.['plain']?.template).toContain('No token here $ARGUMENTS');
+        expect(config.command?.['plain']?.template).not.toContain('@opencode-sdd-templates');
+      });
+    } finally {
+      delete process.env['SDD_COMMANDS_DIR'];
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it('logs an error instead of throwing when registration fails', async () => {

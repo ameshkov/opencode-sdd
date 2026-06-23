@@ -1,8 +1,7 @@
 import type { Plugin } from '@opencode-ai/plugin';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { loadCommands } from './commands/index.js';
-import { resolveTemplatesReference, TEMPLATES_REFERENCE_ALIAS } from './references/index.js';
+import { loadCommands, rewriteAssetReferences } from './commands/index.js';
 import { createLogger } from './utils/index.js';
 
 /**
@@ -55,10 +54,13 @@ function resolveAssetsDir(): string {
  * OpenCode SDD plugin entry point.
  *
  * Loads Markdown command files from the bundled commands directory at load
- * time and spread-merges them onto `config.command`, preserving all existing
- * user commands. No agent is registered, so commands run with the user's
- * current agent. Any registration error is logged and swallowed; the plugin
- * never throws during load.
+ * time, rewrites the portable `@opencode-sdd-templates/` token in each
+ * template to the resolved absolute assets directory (so opencode natively
+ * inlines the bundled asset files via `@<abs-path>` mention resolution), and
+ * spread-merges them onto `config.command`, preserving all existing user
+ * commands. No agent is registered, so commands run with the user's current
+ * agent. Any registration error is logged and swallowed; the plugin never
+ * throws during load.
  */
 const sddPlugin: Plugin = async (input) => {
   const logger = createLogger(input.client);
@@ -73,38 +75,29 @@ const sddPlugin: Plugin = async (input) => {
         // Resolve per invocation so SDD_COMMANDS_DIR overrides are honored.
         const commands = await loadCommands(resolveCommandsDir(), logger);
 
+        // Resolve per invocation so SDD_ASSETS_DIR overrides are honored.
+        const assetsDir = resolveAssetsDir();
+
         for (const [name, commandConfig] of commands) {
           if (config.command?.[name] !== undefined) {
             await logger.warn('command name collision, overwriting', {
               command: name,
             });
           }
-          config.command = { ...config.command, [name]: commandConfig };
+          // `CommandConfig.template` is `readonly`; build a new object with
+          // the rewritten template so opencode inlines bundled assets via
+          // native `@<abs-path>` mention resolution.
+          const rewritten = rewriteAssetReferences(commandConfig.template, assetsDir);
+          config.command = {
+            ...config.command,
+            [name]: { ...commandConfig, template: rewritten },
+          };
           await logger.debug('registered command', { command: name });
         }
 
         await logger.info('SDD commands registered', {
           count: commands.size,
         });
-
-        await logger.info('loading SDD templates reference');
-
-        const reference = await resolveTemplatesReference(resolveAssetsDir(), logger);
-        if (reference !== undefined) {
-          // The SDK Config type may not yet declare `references`; opencode
-          // runtime accepts it. Use a local widened type for the assignment.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const cfg = config as any;
-          cfg.references = {
-            ...cfg.references,
-            [TEMPLATES_REFERENCE_ALIAS]: reference,
-          };
-          await logger.debug('registered templates reference', {
-            alias: TEMPLATES_REFERENCE_ALIAS,
-          });
-        }
-        // When reference is undefined, resolveTemplatesReference already
-        // logged a warning; commands remain registered.
       } catch (error) {
         await logger.error('failed to register SDD commands', {
           error: error instanceof Error ? error.message : String(error),

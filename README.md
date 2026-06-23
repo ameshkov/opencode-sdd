@@ -77,3 +77,17 @@ file.
 - `/doc-deployment` — update `DEPLOYMENT.md`.
 - `/doc-agents` — update `AGENTS.md` (guidelines and project structure).
 - `/doc-changelog` — add the Unreleased entry to `CHANGELOG.md`.
+
+## Testing
+
+The plugin has two Vitest suites:
+
+- **Unit tests** (`pnpm test`, part of `pnpm check`) — fast, no external
+  dependencies; assert command loading and reference resolution in memory.
+- **E2E tests** (`pnpm test:e2e`, **not** part of `pnpm check`) — spin up a
+  real `opencode` server with the plugin loaded, route its model at a local
+  mock LLM, run SDD commands, and assert on files written to disk.
+  Deterministic, offline, and free (no API keys). Requires the `opencode`
+  binary on PATH and a built `build/` (`pnpm build`). See
+  [DEVELOPMENT.md](./DEVELOPMENT.md) and
+  [test-e2e/NOTES.md](./test-e2e/NOTES.md) for details.

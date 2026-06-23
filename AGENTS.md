@@ -58,6 +58,8 @@ commands.
 opencode-sdd/
 ├── README.md                     # User-facing project pitch
 ├── DEVELOPMENT.md                # Build and debug guide for the plugin
+├── Dockerfile                    # Multi-stage CI image (lint, test, e2e)
+├── .dockerignore                 # Build-context exclusions for the Dockerfile
 ├── src/                          # Plugin source code
 │   ├── index.ts                  # Plugin entry point; returns Hooks
 │   ├── index.test.ts             # Unit tests for the plugin entry point
@@ -68,6 +70,8 @@ opencode-sdd/
 │   │   ├── loader.ts             # Scans directory for *.md, parses, returns map
 │   │   ├── loader.test.ts        # Unit tests for the command loader
 │   │   ├── markdown.test.ts      # Wiring regression test for shipped commands
+│   │   ├── template-rewriter.ts  # Rewrites @opencode-sdd-templates/ to abs path
+│   │   ├── template-rewriter.test.ts # Unit tests for the template rewriter
 │   │   └── markdown/             # Authored Markdown command files
 │   │       ├── prd-write.md      # prd-write command (PRD writer)
 │   │       ├── prd-to-issues.md  # prd-to-issues command (PRD -> issues)
@@ -83,10 +87,6 @@ opencode-sdd/
 │   │       ├── doc-deployment.md    # doc-deployment command (DEPLOYMENT.md actualizer)
 │   │       ├── doc-development.md   # doc-development command (DEVELOPMENT.md actualizer)
 │   │       └── doc-readme.md        # doc-readme command (README.md actualizer)
-│   ├── references/               # Template-assets reference resolver
-│   │   ├── index.ts              # Barrel exports (public API)
-│   │   ├── resolver.ts           # Computes the opencode-sdd-templates reference
-│   │   └── resolver.test.ts      # Unit tests for the reference resolver
 │   ├── assets/                   # Bundled prompt template assets (data)
 │   │   ├── doc-agents/           # AGENTS.md templates embedded by doc-agents
 │   │   │   ├── contribution-instructions-example.md
@@ -118,6 +118,16 @@ opencode-sdd/
 ├── test/                         # Shared test support code (not test cases)
 │   ├── __fixtures__/             # Loader test fixtures (ignored by markdownlint)
 │   └── stub-client.ts            # Stub opencode SDK client for tests
+├── test-e2e/                     # Mock-LLM e2e suite (runs via pnpm test:e2e)
+│   ├── harness.ts                # Binary/build guards, server lifecycle, session helpers
+│   ├── mock-server.ts            # node:http OpenAI-compatible SSE mock LLM
+│   ├── mock-server-chunks.ts     # SSE chunk builders for the mock
+│   ├── mock-server.test.ts       # Standalone unit test for the mock
+│   ├── scenarios.ts              # writeFileScenario / writeFilesScenario builders
+│   ├── smoke.e2e.test.ts         # Commands register in a live opencode server
+│   ├── command.e2e.test.ts       # Mock-LLM-driven command -> file on disk
+│   ├── global-setup.ts           # Vitest globalSetup: binary + build guards
+│   └── NOTES.md                  # Phase 0 spike findings (command/permission paths)
 ├── .husky/
 │   └── pre-commit                # Runs pnpm check before every commit
 ├── eslint.config.mjs             # ESLint flat config
@@ -125,7 +135,8 @@ opencode-sdd/
 ├── tsconfig.json                 # Shared TypeScript config (base; editor)
 ├── tsconfig.build.json           # Production build config (excludes tests)
 ├── tsconfig.test.json            # Test typecheck config (noEmit)
-├── vitest.config.ts              # Vitest configuration
+├── vitest.config.ts              # Vitest configuration (excludes *.e2e.test.ts)
+├── vitest.test-e2e.config.ts     # Vitest configuration for the e2e suite
 └── package.json                  # Project dependencies and scripts
 ```
 
@@ -142,6 +153,9 @@ opencode-sdd/
 - `pnpm format:fix` — fix formatting issues
 - `pnpm check` — run `format:check`, `lint`, `typecheck`, and `test`
   (full CI gate)
+- `pnpm test:e2e` — run the mock-LLM e2e suite against a real
+  `opencode` server (NOT part of `pnpm check`; needs the `opencode`
+  binary on PATH and a built `build/`)
 - `pnpm clean` — remove `node_modules` and `build/`
 
 ## Contribution Instructions
@@ -201,17 +215,18 @@ The project's layers, from top to bottom:
 
 - **Entry point** (`src/index.ts`) — exports the `Plugin` function,
   returns the `Hooks` object, and wires together the registered surface.
-- **Definitions** (`src/commands/`, `src/references/`) — Markdown command
-  files loaded at startup via the loader, plus the frontmatter parser;
-  the reference resolver computes the `opencode-sdd-templates` reference
-  entry at load time. No side effects beyond logging.
-- **Data** (`src/assets/`) — Bundled prompt template assets consumed by
-  the resolver (resolved at runtime) and embedded by command prompts.
+- **Definitions** (`src/commands/`) — Markdown command files loaded at
+  startup via the loader, plus the frontmatter parser and the template
+  rewriter that rewrites the portable `@opencode-sdd-templates/` token to
+  the resolved absolute assets directory at registration time. No side
+  effects beyond logging.
+- **Data** (`src/assets/`) — Bundled prompt template assets embedded by
+  command prompts via native `@<abs-path>` mention resolution.
 
 ```text
 Entry point (index.ts)
       ↓
-Definitions (commands/, references/)
+Definitions (commands/)
       ↓
 Data (commands/markdown/, assets/)
 ```
@@ -231,12 +246,17 @@ This plugin talks to opencode exclusively through the `config` hook:
 - **Never overwrite existing user configuration.** Always spread-merge so
   the plugin adds its entries without clobbering keys the user already
   defined: `config.agent = { ...config.agent, <key>: <value> }`.
-- **Registering references is a config-hook concern.** The reference
-  entry is spread-merged onto `config.references`
-  (`config.references = { ...config.references, [alias]: entry }`) so
-  user references are preserved. The alias is `opencode-sdd-templates`
-  (no `/`, whitespace, backticks, or commas), the path is absolute and
-  resolved from the plugin's own location, and `hidden: true`.
+- **Rewriting template asset mentions is a config-hook concern.**
+  Command Markdown files embed bundled template assets using the portable
+  token `@opencode-sdd-templates/<subdir>/<file>.md` (environment-
+  independent, baked into source). The absolute assets directory is only
+  known at runtime (`resolveAssetsDir()` in `src/index.ts`), so the
+  `config` hook rewrites each loaded command template at registration
+  time, replacing `@opencode-sdd-templates/` with `@<abs-assets-dir>/`
+  via `rewriteAssetReferences`. opencode's `resolvePromptParts` then
+  inlines the file via the `read` tool with `bypassCwdCheck: true`, so
+  bundled assets outside the worktree need no `external_directory`
+  permission.
 - **Command shape:** `{ template: string, description?: string, agent?:
   string, model?: string, subtask?: boolean }`. `template` is required and
   is the prompt body; `$ARGUMENTS` is interpolated with the user's input.
@@ -339,6 +359,27 @@ Every module MUST have test coverage:
 
 **Rationale**: Co-locating tests with source keeps related files close,
 making it easier to find, update, and maintain tests.
+
+#### E2E Testing
+
+The `test-e2e/` suite exercises the plugin against a real `opencode` server
+(opencode-as-a-library), driven by a local mock OpenAI-compatible LLM
+(`node:http` + SSE). It is deterministic, offline, and needs no API keys:
+
+- **Prerequisites**: the `opencode` binary on PATH **and** a built `build/`
+  (the plugin loads from `build/index.js` via `file://`). The vitest
+  `globalSetup` (`test-e2e/global-setup.ts`) fails loudly with a clear message
+  if either is missing.
+- **Scope**: `pnpm test:e2e` runs the standalone mock unit test plus the
+  binary-dependent `.e2e.test.ts` files. It is intentionally **not** part of
+  `pnpm check`; the main `vitest.config.ts` excludes `*.e2e.test.ts` so the CI
+  gate never requires the binary. The mock unit test
+  (`test-e2e/mock-server.test.ts`) still runs under `pnpm test`.
+- **Type checking**: `test-e2e/**/*` is included in `tsconfig.json`, so
+  `pnpm typecheck` covers it; it is never compiled into `build/`.
+- **Findings**: see `test-e2e/NOTES.md` for the resolved command-invocation
+  and permission paths and the runtime absolute-path template-rewriting
+  mechanism (which replaced the broken reference-registration approach).
 
 ### Dependency Management
 
