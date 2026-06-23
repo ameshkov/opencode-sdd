@@ -32,16 +32,25 @@ export const PLUGIN_FILE_URL = pathToFileURL(REPO_ROOT).href;
  *
  * Exported so the vitest `globalSetup` fails loudly before any test spawns a
  * server, rather than each test failing with an opaque spawn error.
+ *
+ * On Windows the `opencode-ai` npm package exposes `opencode` only as a `.cmd`
+ * shim, which Node cannot spawn directly (it throws `EINVAL` without a shell).
+ * The opencode SDK sidesteps this with `cross-spawn` when it starts the server;
+ * the version probe mirrors that by routing through a shell on Windows. The
+ * argument is a fixed literal, so there is no shell-injection surface.
  */
 export function requireOpencodeBinary(): void {
   try {
     execFileSync('opencode', ['--version'], {
       stdio: ['ignore', 'ignore', 'ignore'],
+      shell: process.platform === 'win32',
     });
-  } catch {
+  } catch (error) {
     throw new Error(
-      'opencode binary not found on PATH. Install it (for example ' +
-        '`brew install opencode`) to run e2e tests.',
+      'opencode binary not found on PATH or failed to run. Install it ' +
+        '(for example `brew install opencode` or `npm install -g opencode-ai`) ' +
+        'to run e2e tests.',
+      { cause: error },
     );
   }
 }

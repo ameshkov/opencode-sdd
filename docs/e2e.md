@@ -21,7 +21,10 @@ Two things must be present, or the suite fails loudly before any test runs:
 1. **The `opencode` binary on `PATH`.** The `globalSetup`
    (`test-e2e/global-setup.ts`) shells out to `opencode --version` and exits
    non-zero with a clear message if it is missing. The suite is developed
-   and tested against opencode `1.17.8`.
+   and tested against opencode `1.17.8`. On macOS, `brew install opencode`
+   works; on any platform (including Windows) `npm install -g
+   opencode-ai@1.17.8` works too, since the npm package version tracks the
+   binary version.
 2. **A built `build/` directory.** The plugin loads from `build/index.js`
    via a `file://` URL (opencode resolves `package.json#main`), so run
    `pnpm build` first. The same guard checks `build/index.js` exists.
