@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.2.0] - 2026-06-23
+
 ### Added
 
 - SDD short flow: `/sdd-spec`, `/sdd-implement`, and `/sdd-validate` commands
@@ -32,4 +34,5 @@ and this project adheres to
   server.
 - Husky pre-commit hook running the full `pnpm check` gate.
 
-[unreleased]: https://github.com/ameshkov/opencode-sdd/commits/master
+[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v0.2.0...HEAD
+[v0.2.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v0.2.0
