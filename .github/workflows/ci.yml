@@ -75,11 +75,36 @@ jobs:
       - run: pnpm build
       - run: pnpm test:e2e
 
+  # A containerized lane that runs the entire quality gate — format, lint,
+  # type-check, unit tests, and the mock-LLM e2e suite — through the repo's
+  # multi-stage Dockerfile (its default `ci-output` collector). Docker can only
+  # build a Linux container, so this complements the native cross-platform
+  # matrix above rather than replacing it: it guards the reproducible,
+  # host-tool-free CI path documented in DEVELOPMENT.md ("Running Checks in
+  # Docker") and exercises every Dockerfile stage end to end.
+  docker:
+    name: CI Gate (Docker)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - name: Build CI gate
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          target: ci-output
+          build-args: OPENCODE_VERSION=${{ env.OPENCODE_VERSION }}
+          outputs: type=local,dest=./ci-output
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   release:
     name: GitHub Release
     needs:
       - ci
       - e2e-tests
+      - docker
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

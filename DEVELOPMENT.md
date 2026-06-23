@@ -118,22 +118,27 @@ Notes:
 ## Continuous Integration
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push
-o `main`/`master` and on pull requests, with three jobs:
+to `main`/`master`, on `v*` tags, and on pull requests, with four jobs:
 
 - **ci** — the full local gate (`pnpm check`: format, lint, typecheck,
   unit tests), on Ubuntu.
 - **e2e-tests** — the mock-LLM e2e suite (`pnpm test:e2e`) on an
-  Ubuntu/macOS/Windows matrix. Unlike the Dockerfile, which can only
-  reproduce Linux, these run natively per OS to verify the plugin and
-  its e2e suite work cross-platform. The `opencode` binary is installed
-  via the `opencode-ai` npm package, pinned to the version in
+  Ubuntu/macOS/Windows matrix. Docker can only reproduce Linux, so these
+  run natively per OS to verify the plugin and its e2e suite work
+  cross-platform. The `opencode` binary is installed via the
+  `opencode-ai` npm package, pinned to the version in
   [docs/e2e.md](./docs/e2e.md).
-- **release** — on `v*` tags, once both jobs pass, builds the plugin,
+- **docker** — the entire quality gate (format, lint, typecheck, unit
+  tests, and the e2e suite) built and run through the
+  [`Dockerfile`](./Dockerfile) `ci-output` collector on Ubuntu. It guards
+  the reproducible, host-tool-free CI path described above ("Running
+  Checks in Docker") alongside the native matrix.
+- **release** — on `v*` tags, once the other jobs pass, builds the plugin,
   packs it, and publishes a GitHub Release with auto-generated notes and
   the resulting `*.tgz`.
 
-The workflow runs natively (Node + pnpm) rather than through the
-Dockerfile so the e2e matrix can cover Windows and macOS too.
+The native matrix (Node + pnpm) covers Windows and macOS; the Docker lane
+reproduces the full containerized Linux gate.
 
 ## Debugging with opencode
 
