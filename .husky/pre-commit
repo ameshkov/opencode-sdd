@@ -15,3 +15,8 @@ fi
 # Run linting first
 echo "Running checks..."
 pnpm run check
+
+# Running e2e tests
+echo "Running e2e tests..."
+pnpm build # e2e tests require the plugin to be built first
+pnpm run test:e2e

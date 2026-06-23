@@ -10,6 +10,7 @@ opencode instance. For architecture and contribution rules, see
 - [Prerequisites](#prerequisites)
 - [Build Commands](#build-commands)
 - [Running Checks in Docker](#running-checks-in-docker)
+- [Continuous Integration](#continuous-integration)
 - [Debugging with opencode](#debugging-with-opencode)
     - [How the plugin loads](#how-the-plugin-loads)
     - [Load the plugin from a scratch project](#load-the-plugin-from-a-scratch-project)
@@ -59,8 +60,7 @@ All commands run through pnpm scripts defined in
 - `pnpm test:e2e` — run the mock-LLM e2e suite against a real `opencode`
   server. **Not** part of `pnpm check`; requires the `opencode` binary on
   PATH and a built `build/` (run `pnpm build` first). Fails loudly if
-  either is missing. See [test-e2e/NOTES.md](./test-e2e/NOTES.md) for
-  details.
+  either is missing. See [docs/e2e.md](./docs/e2e.md) for details.
 - `pnpm clean` — remove `node_modules/` and `build/`.
 
 Day-to-day flow:
@@ -108,11 +108,32 @@ Notes:
 - BuildKit (`# syntax=docker/dockerfile:1`) is required for the pnpm
   cache mounts and for `--output type=local`.
 - The `opencode` binary version is pinned via the `OPENCODE_VERSION`
-  build arg (default `1.17.8`, matching [test-e2e/NOTES.md](./test-e2e/NOTES.md)).
+  build arg (default `1.17.8`, matching the version the e2e suite targets
+  in [docs/e2e.md](./docs/e2e.md)).
   Override with `--build-arg OPENCODE_VERSION=...`.
 - `.dockerignore` excludes `build/`, `node_modules/`, and tooling
   directories so the image always starts from a clean source tree.
 - `ci-output/` is gitignored (see [`.gitignore`](./.gitignore)).
+
+## Continuous Integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push
+o `main`/`master` and on pull requests, with three jobs:
+
+- **ci** — the full local gate (`pnpm check`: format, lint, typecheck,
+  unit tests), on Ubuntu.
+- **e2e-tests** — the mock-LLM e2e suite (`pnpm test:e2e`) on an
+  Ubuntu/macOS/Windows matrix. Unlike the Dockerfile, which can only
+  reproduce Linux, these run natively per OS to verify the plugin and
+  its e2e suite work cross-platform. The `opencode` binary is installed
+  via the `opencode-ai` npm package, pinned to the version in
+  [docs/e2e.md](./docs/e2e.md).
+- **release** — on `v*` tags, once both jobs pass, builds the plugin,
+  packs it, and publishes a GitHub Release with auto-generated notes and
+  the resulting `*.tgz`.
+
+The workflow runs natively (Node + pnpm) rather than through the
+Dockerfile so the e2e matrix can cover Windows and macOS too.
 
 ## Debugging with opencode
 

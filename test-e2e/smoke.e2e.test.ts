@@ -1,3 +1,14 @@
+/**
+ * Smoke tests: the plugin loads cleanly in a live opencode server. Verifies
+ * two load-time invariants unit tests cannot — that every shipped command is
+ * discoverable via `client.command.list()`, and that `client.config.get()`
+ * stays reachable with the plugin loaded. The latter guards the runtime
+ * absolute-path template-rewriting approach, which replaced the
+ * reference-registration code that previously caused a hard HTTP 400 on
+ * `config.get()` (references are a boot-populated state, not fed by the
+ * `config` hook, and the registered object lacked the required `type:
+ * "local"` discriminator).
+ */
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';

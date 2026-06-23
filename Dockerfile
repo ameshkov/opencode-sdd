@@ -74,7 +74,7 @@ FROM node:22-bookworm-slim AS opencode
 # download fails the build if the fetch errors out.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# The version tested locally (see test-e2e/NOTES.md). Override with
+# The version tested locally (see docs/e2e.md). Override with
 # --build-arg OPENCODE_VERSION=... to pin a different release.
 ARG OPENCODE_VERSION=1.17.8
 

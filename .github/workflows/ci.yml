@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+# Cancel superseded runs on PRs (never on tag pushes, which drive releases).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.14.0'
+  # The opencode-ai npm package is published in lockstep with the binary, so
+  # this pins both the binary and the package. Matches the version the e2e
+  # suite targets (see Dockerfile build arg and docs/e2e.md).
+  OPENCODE_VERSION: '1.17.8'
+
+jobs:
+  ci:
+    name: Lint, Type-check and Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The full local gate: format:check, lint, typecheck, and unit tests.
+      - run: pnpm check
+
+  # E2E runs on a Windows/macOS/Linux matrix because the plugin and its e2e
+  # suite must work on every platform opencode supports. Docker (used by the
+  # repo's Dockerfile) can only reproduce Linux, so these run natively per OS.
+  e2e-tests:
+    name: E2E Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install opencode binary
+        run: npm install --global opencode-ai@${{ env.OPENCODE_VERSION }}
+      # The e2e harness loads the plugin from build/index.js via a file URL.
+      - run: pnpm build
+      - run: pnpm test:e2e
+
+  release:
+    name: GitHub Release
+    needs:
+      - ci
+      - e2e-tests
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Package
+        run: pnpm pack
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: opencode-sdd-*.tgz

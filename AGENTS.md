@@ -60,6 +60,8 @@ opencode-sdd/
 ├── DEVELOPMENT.md                # Build and debug guide for the plugin
 ├── Dockerfile                    # Multi-stage CI image (lint, test, e2e)
 ├── .dockerignore                 # Build-context exclusions for the Dockerfile
+├── docs/                         # Long-form developer documentation
+│   └── e2e.md                    # How the E2E test suite works and why
 ├── src/                          # Plugin source code
 │   ├── index.ts                  # Plugin entry point; returns Hooks
 │   ├── index.test.ts             # Unit tests for the plugin entry point
@@ -126,10 +128,12 @@ opencode-sdd/
 │   ├── scenarios.ts              # writeFileScenario / writeFilesScenario builders
 │   ├── smoke.e2e.test.ts         # Commands register in a live opencode server
 │   ├── command.e2e.test.ts       # Mock-LLM-driven command -> file on disk
-│   ├── global-setup.ts           # Vitest globalSetup: binary + build guards
-│   └── NOTES.md                  # Phase 0 spike findings (command/permission paths)
+│   └── global-setup.ts           # Vitest globalSetup: binary + build guards
 ├── .husky/
 │   └── pre-commit                # Runs pnpm check before every commit
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # GitHub Actions: checks, cross-platform e2e, releases
 ├── eslint.config.mjs             # ESLint flat config
 ├── knip.config.ts                # Knip unused-export analysis config
 ├── tsconfig.json                 # Shared TypeScript config (base; editor)
@@ -377,9 +381,10 @@ The `test-e2e/` suite exercises the plugin against a real `opencode` server
   (`test-e2e/mock-server.test.ts`) still runs under `pnpm test`.
 - **Type checking**: `test-e2e/**/*` is included in `tsconfig.json`, so
   `pnpm typecheck` covers it; it is never compiled into `build/`.
-- **Findings**: see `test-e2e/NOTES.md` for the resolved command-invocation
-  and permission paths and the runtime absolute-path template-rewriting
-  mechanism (which replaced the broken reference-registration approach).
+- **How it works**: see [`docs/e2e.md`](docs/e2e.md) for how the suite
+  operates — the mock LLM, server lifecycle, permission auto-approve, and
+  the runtime absolute-path template-rewriting mechanism (which replaced
+  the broken reference-registration approach).
 
 ### Dependency Management
 

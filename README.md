@@ -89,5 +89,5 @@ The plugin has two Vitest suites:
   mock LLM, run SDD commands, and assert on files written to disk.
   Deterministic, offline, and free (no API keys). Requires the `opencode`
   binary on PATH and a built `build/` (`pnpm build`). See
-  [DEVELOPMENT.md](./DEVELOPMENT.md) and
-  [test-e2e/NOTES.md](./test-e2e/NOTES.md) for details.
+  [DEVELOPMENT.md](./DEVELOPMENT.md) and [docs/e2e.md](./docs/e2e.md) for
+  details.

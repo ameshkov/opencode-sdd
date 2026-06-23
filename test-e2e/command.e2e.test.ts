@@ -1,3 +1,19 @@
+/**
+ * E2E: drive SDD commands through a real opencode server against a local mock
+ * LLM. Each test scripts the model's turns (one or more `write` tool-call
+ * turns, then a final text turn that ends the agent loop), invokes a command
+ * via the blocking `session.command` API (it resolves once the loop reaches
+ * idle), and asserts on the files written to disk and the tool parts recorded
+ * in the session.
+ *
+ * The mock ignores the prompt, so the command choice (`sdd-quickspec`) only
+ * exercises the plumbing — command dispatch -> model -> tool execution — plus
+ * the template-asset inlining path (see the "absolute-path mentions" test).
+ * To add a case: build a scenario in `scenarios.ts`, drive it with
+ * `tempMockLlm` + `runQuickspec`, and assert via `sessionParts` /
+ * `completedWriteTools`; keep scenarios fully scripted so runs stay
+ * deterministic.
+ */
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

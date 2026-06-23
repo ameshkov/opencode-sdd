@@ -20,8 +20,8 @@
     "clean": "rm -rf node_modules build",
     "format:check": "prettier --check --no-error-on-unmatched-pattern --cache . && markdownlint-cli2 '**/*.md'",
     "format:fix": "prettier --write --no-error-on-unmatched-pattern --cache . && markdownlint-cli2 --fix '**/*.md'",
-    "lint": "eslint src test-e2e && pnpm knip",
-    "lint:fix": "eslint src test-e2e --fix",
+    "lint": "eslint src test test-e2e && pnpm knip",
+    "lint:fix": "eslint src test test-e2e --fix",
     "knip": "knip --production",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "prepare": "husky || true"
