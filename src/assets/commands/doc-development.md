@@ -1,5 +1,5 @@
 ---
-description: Create or update DEVELOPMENT.md for the development guide
+description: Create or update DEVELOPMENT.md for the development guide (provided by opencode-sdd)
 ---
 
 # Create or update DEVELOPMENT.md

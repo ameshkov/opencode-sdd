@@ -1,5 +1,5 @@
 ---
-description: Implement a single PRD issue by executing its plan
+description: Implement a single PRD issue by executing its plan (provided by opencode-sdd)
 ---
 
 # Implement a single PRD issue

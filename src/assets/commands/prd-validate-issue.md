@@ -1,5 +1,5 @@
 ---
-description: Validate a single PRD issue's implementation against its plan
+description: Validate a single PRD issue's implementation against its plan (provided by opencode-sdd)
 ---
 
 # Validate a single PRD issue implementation

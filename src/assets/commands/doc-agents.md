@@ -1,5 +1,5 @@
 ---
-description: Update or create AGENTS.md for LLM agent guidance
+description: Update or create AGENTS.md for LLM agent guidance (provided by opencode-sdd)
 ---
 
 # Update or create AGENTS.md

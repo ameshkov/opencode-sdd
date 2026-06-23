@@ -1,5 +1,5 @@
 ---
-description: Validate an implemented spec and produce a report
+description: Validate an implemented spec and produce a report (provided by opencode-sdd)
 ---
 
 # Validate a spec implementation

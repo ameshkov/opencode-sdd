@@ -1,5 +1,5 @@
 ---
-description: Create or update DEPLOYMENT.md for production deployment configuration
+description: Create or update DEPLOYMENT.md for production deployment configuration (provided by opencode-sdd)
 ---
 
 # Create or update DEPLOYMENT.md

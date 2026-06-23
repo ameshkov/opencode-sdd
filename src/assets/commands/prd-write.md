@@ -1,5 +1,5 @@
 ---
-description: Write a Product Requirements Document (PRD) from a feature idea
+description: Write a Product Requirements Document (PRD) from a feature idea (provided by opencode-sdd)
 ---
 
 # Write a PRD from a feature idea

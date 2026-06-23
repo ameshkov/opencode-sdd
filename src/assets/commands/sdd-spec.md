@@ -1,5 +1,5 @@
 ---
-description: Produce a spec from a problem description
+description: Produce a spec from a problem description (provided by opencode-sdd)
 ---
 
 # Produce a spec

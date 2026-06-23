@@ -1,5 +1,5 @@
 ---
-description: Generate a structured implementation plan for a single PRD issue
+description: Generate a structured implementation plan for a single PRD issue (provided by opencode-sdd)
 ---
 
 # Generate implementation plan

@@ -1,5 +1,5 @@
 ---
-description: Validate the full PRD implementation across all issues
+description: Validate the full PRD implementation across all issues (provided by opencode-sdd)
 ---
 
 # Validate the entire PRD implementation

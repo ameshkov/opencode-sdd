@@ -1,5 +1,5 @@
 ---
-description: Maintain CHANGELOG.md from uncommitted changes and compress the Unreleased section
+description: Maintain CHANGELOG.md from uncommitted changes and compress the Unreleased section (provided by opencode-sdd)
 ---
 
 # Maintain CHANGELOG.md

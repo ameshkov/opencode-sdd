@@ -1,5 +1,5 @@
 ---
-description: Break a PRD into independently-grabbable vertical-slice issues
+description: Break a PRD into independently-grabbable vertical-slice issues (provided by opencode-sdd)
 ---
 
 # Break PRD into issues

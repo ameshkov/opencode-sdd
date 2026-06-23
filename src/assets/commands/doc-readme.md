@@ -1,5 +1,5 @@
 ---
-description: Actualize README.md to serve as a user manual for the product
+description: Actualize README.md to serve as a user manual for the product (provided by opencode-sdd)
 ---
 
 # Create or update README.md

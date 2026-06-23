@@ -1,5 +1,5 @@
 ---
-description: Execute the tasks in an existing spec following TDD
+description: Execute the tasks in an existing spec following TDD (provided by opencode-sdd)
 ---
 
 # Implement from a spec
