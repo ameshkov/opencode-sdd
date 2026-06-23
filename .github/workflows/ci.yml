@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
@@ -97,18 +99,36 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Publishes to npm (tokenless via OIDC Trusted Publishers) and creates a
+  # GitHub release. Only runs on version tags after all CI gates pass.
+  #
+  # npm Trusted Publisher setup: on npmjs.com, link the package to
+  #   repository = ameshkov/opencode-sdd, workflow filename = ci.yml
   release:
-    name: GitHub Release
+    name: Publish & GitHub Release
     needs:
       - ci
       - e2e-tests
       - docker
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
-      contents: write
+      contents: write # to create the GitHub release
+      id-token: write # to enable npm provenance (OIDC)
     steps:
       - uses: actions/checkout@v6
+      - name: Verify tag matches package version
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Tag version:   $TAG"
+          echo "Package version: $PKG_VERSION"
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $TAG does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
       - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
@@ -116,11 +136,24 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - name: Package
+      # No token needed: npm authenticates via OIDC (Trusted Publishers).
+      # Provenance is generated automatically from the id-token permission.
+      - name: Publish to npm
+        # TODO: Uncomment after making the repo public
+        # run: npm publish --provenance --access public
+        run: npm publish --access public
+      - name: Build npm package tarball
         run: pnpm pack
-      - uses: softprops/action-gh-release@v2
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          name: ${{ github.ref_name }}
+          body: See [CHANGELOG.md](./CHANGELOG.md) for the list of
+            changes.
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
           files: opencode-sdd-*.tgz
