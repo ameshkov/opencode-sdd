@@ -14,6 +14,7 @@ clean, isolated session.
 - [Build and Test Commands](#build-and-test-commands)
 - [Contribution Instructions](#contribution-instructions)
 - [Code Guidelines](#code-guidelines)
+    - [System Design](#system-design)
     - [Architecture](#architecture)
     - [Plugin Surface](#plugin-surface)
     - [Code Quality](#code-quality)
@@ -195,6 +196,38 @@ You MUST follow the following rules for EVERY task that you perform:
 
 ## Code Guidelines
 
+### System Design
+
+Design for a library (an opencode plugin loaded inside the host process):
+
+- The plugin is consumed by the opencode host — it MUST NOT throw during
+  load and MUST NOT mutate global state (environment variables, process
+  listeners, shared singletons) beyond what opencode's hook contract
+  expects. The host may run alongside other plugins in a long-lived
+  process.
+- Export a stable public API: the default `Plugin` function from
+  `@opencode-ai/plugin` returning a `Hooks` object. Internal modules
+  (loaders, parsers, rewriters, utilities) are reached only through
+  barrel `index.ts` files.
+- Keep the dependency footprint minimal — the OpenCode Plugin and SDK
+  packages are type-only (`devDependencies`, erased at compile time), so
+  the compiled `build/` output has zero runtime imports. Verify this
+  after structural changes.
+- Side effects are confined to the `config` hook: it mutates opencode's
+  merged `Config` in place to register agents and commands. The only
+  other side effect is filesystem reads of bundled asset Markdown at
+  registration time, which is part of the plugin contract.
+- Provide complete type definitions so the plugin is usable with static
+  type checking against the SDK (`AgentConfig`, derived command types).
+  opencode hard-fails on invalid config, so the compiler catches shape
+  mistakes early.
+- Handle errors by degrading gracefully inside the `config` hook — if a
+  feature fails to register, log and continue rather than breaking
+  opencode startup. Never let the hook throw.
+- Keep the plugin deterministic: given the same `Config`, registration
+  always produces the same result. No reliance on wall-clock time,
+  network, or random values during load.
+
 ### Architecture
 
 Universal design principles this codebase follows:
@@ -209,10 +242,18 @@ Universal design principles this codebase follows:
   `index.ts` files define public API. External code MUST import from
   barrel files only. Each directory groups related functionality and
   imports only from layers below it.
+- **Data Flow Clarity** — data moves through the plugin in a single,
+  traceable path: bundled Markdown → loader → frontmatter parser →
+  template rewriter → registered `Config` entries. No hidden side
+  channels.
 - **Minimize Coupling, Maximize Cohesion** — modules are self-contained
   and interact through narrow interfaces.
 - **Make Invalid States Impossible** — use TypeScript strict mode and
   validation to prevent illegal combinations at compile time.
+- **Observability Built-in** — the plugin surfaces its behavior through
+  the host's logger (`client.app.log` via `src/utils/logger.ts`); every
+  registration step logs at an appropriate level so failures are
+  diagnosable.
 - **Keep It Boring** — prefer well-understood patterns over clever or
   novel solutions.
 
@@ -452,6 +493,9 @@ All Markdown files MUST follow these formatting rules:
   code blocks are exempt from this limit.
 - **Unordered lists**: Use dashes (`-`) for bullet points. Indent nested
   list items by 4 spaces.
+- **Continuation lines**: When a list item wraps to the next line, align
+  the continuation with the first character of the item text, not the
+  list marker. This applies to all list types (ordered and unordered).
 - **Emphasis**: Use asterisks (`*`) for emphasis (`*italic*`,
   `**bold**`). Do NOT use underscores.
 - **Headings**: Duplicate heading names are allowed only among sibling
