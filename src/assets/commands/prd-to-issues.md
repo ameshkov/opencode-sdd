@@ -8,26 +8,25 @@ Break a Product Requirements Document into independently-grabbable issues
 using vertical slices (tracer bullets). Each issue is a thin slice that cuts
 through all integration layers end-to-end.
 
-Constraints or preferences for the breakdown (may be empty): $ARGUMENTS
-
 ## Input
 
-`$ARGUMENTS` is the input. Extract the following from it:
+User input: $ARGUMENTS
+
+Extract the following from the user input:
 
 - **CONSTRAINTS** (optional, default: `no additional constraints`):
   Constraints or preferences for the breakdown (e.g., "keep it under 10
   issues", "focus on the API first"). Defaults to no additional
   constraints.
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Prerequisites
 
-Check for the existence of `SPECS_DIR/prd.md`. If it does not exist,
+Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
 **STOP immediately** and show this error:
 
-**ERROR: PRD not found at `SPECS_DIR/prd.md`.**
+**ERROR: PRD not found at `{SPECS_DIR}/prd.md`.**
 
 **Run `prd-write [your feature description]` first to create a PRD.**
 
@@ -36,7 +35,7 @@ Check for the existence of `SPECS_DIR/prd.md`. If it does not exist,
 ### Phase 1: Load Context
 
 1. **Read the PRD**
-   - Read `SPECS_DIR/prd.md`
+   - Read `{SPECS_DIR}/prd.md`
    - Extract:
      - Problem statement and solution
      - All user stories with acceptance scenarios
@@ -116,7 +115,7 @@ Check for the existence of `SPECS_DIR/prd.md`. If it does not exist,
 ### Phase 4: Write Issues
 
 1. **Create the issues directory**
-   - Create `SPECS_DIR/issues/` if it doesn't exist
+   - Create `{SPECS_DIR}/issues/` if it doesn't exist
 
 2. **Write each issue to its own directory**
    For each approved issue:
@@ -124,7 +123,7 @@ Check for the existence of `SPECS_DIR/prd.md`. If it does not exist,
    - Derive the ISSUE_ID as `{NUMBER}-{TYPE}` where NUMBER is the
      sequential issue number and TYPE is the slice type (e.g., `1-AFK`,
      `2-HITL`, `3-AFK`)
-   - Create `SPECS_DIR/issues/{ISSUE_ID}/issue.md`
+   - Create `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`
    - Use the issue template below
    - Replace all placeholders with concrete details
    - Cross-reference other issues by their ISSUE_ID in the "Blocked by"
@@ -148,7 +147,7 @@ Check for the existence of `SPECS_DIR/prd.md`. If it does not exist,
 
 ## Parent PRD
 
-`SPECS_DIR/prd.md`
+`{SPECS_DIR}/prd.md`
 
 ## What to Build
 

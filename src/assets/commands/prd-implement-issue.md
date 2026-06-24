@@ -8,48 +8,47 @@ Implement a single PRD issue by executing the tasks defined in its
 implementation plan. Checks that all blocking issues are implemented before
 proceeding.
 
-Issue ID (e.g., 1-AFK): $ARGUMENTS
-
 ## Input
 
-`$ARGUMENTS` is the input. Extract the following from it:
+User input: $ARGUMENTS
+
+Extract the following from the user input:
 
 - **ISSUE_ID** (required): The issue identifier (e.g., `1-AFK`). This
-  corresponds to the directory name under `SPECS_DIR/issues/`.
+  corresponds to the directory name under `{SPECS_DIR}/issues/`.
 
-  > **STOP — required input.** If `$ARGUMENTS` is empty or does not contain
-  > an issue ID, you MUST stop execution immediately and ask the user to
-  > provide one. Do NOT proceed, do NOT guess, do NOT use a placeholder.
-  > Wait for the user's response before continuing.
+  > **STOP — required input.** If the user input is empty or does not
+  > contain an issue ID, you MUST stop execution immediately and ask the
+  > user to provide one. Do NOT proceed, do not guess, do not use a
+  > placeholder. Wait for the user's response before continuing.
 
 - **TASK_SCOPE** (optional, default: `all tasks`): Task selection or scope
   instructions (e.g., "Task 1 only", "Continue from Task 3"). Defaults to
   all tasks in order.
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Prerequisites
 
 Check for the existence of the following files:
 
-1. `SPECS_DIR/prd.md` — the parent PRD
-2. `SPECS_DIR/issues/{ISSUE_ID}/issue.md` — the issue definition
-3. `SPECS_DIR/issues/{ISSUE_ID}/plan.md` — the implementation plan
+1. `{SPECS_DIR}/prd.md` — the parent PRD
+2. `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` — the issue definition
+3. `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` — the implementation plan
 
 If the PRD is missing:
 
-**ERROR: PRD not found at `SPECS_DIR/prd.md`. Run `prd-write` first to
+**ERROR: PRD not found at `{SPECS_DIR}/prd.md`. Run `prd-write` first to
 create a PRD.**
 
 If the issue file is missing:
 
-**ERROR: Issue not found at `SPECS_DIR/issues/{ISSUE_ID}/issue.md`. Run
+**ERROR: Issue not found at `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`. Run
 `prd-to-issues` first, or check the ISSUE_ID.**
 
 If the plan is missing:
 
-**ERROR: Plan not found at `SPECS_DIR/issues/{ISSUE_ID}/plan.md`. Run
+**ERROR: Plan not found at `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md`. Run
 `prd-issue-to-plan {ISSUE_ID}` first to create the plan.**
 
 ## Steps
@@ -57,16 +56,16 @@ If the plan is missing:
 ### Phase 1: Load Context
 
 1. **Read the parent PRD**
-   - Read `SPECS_DIR/prd.md`
+   - Read `{SPECS_DIR}/prd.md`
    - Extract overall feature context for reference
 
 2. **Read the issue**
-   - Read `SPECS_DIR/issues/{ISSUE_ID}/issue.md`
+   - Read `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`
    - Extract acceptance criteria and verification instructions
    - Note the issue's dependencies
 
 3. **Read the implementation plan**
-   - Read `SPECS_DIR/issues/{ISSUE_ID}/plan.md`
+   - Read `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md`
    - Extract all tasks with their:
      - Description and files (create, modify, test)
      - Steps with exact code and commands
@@ -74,12 +73,19 @@ If the plan is missing:
      - Verification criteria
    - Note the task execution order
 
-4. **Read project guidelines**
+4. **Read the existing validation (when revising)**
+   - If `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md` exists and its
+     overall status is not Complete, read it and extract the recorded
+     issues and recommendations. These are the failures the revision must
+     fix — treat them as required work alongside the plan's tasks. If no
+     incomplete validation exists, skip this step.
+
+5. **Read project guidelines**
    - Read `AGENTS.md` if it exists (coding standards and patterns)
    - Read `DEVELOPMENT.md` if it exists (development setup)
 
-5. **Load contracts** (if applicable)
-   - Check `SPECS_DIR/issues/{ISSUE_ID}/contracts/` directory
+6. **Load contracts** (if applicable)
+   - Check `{SPECS_DIR}/issues/{ISSUE_ID}/contracts/` directory
    - Load API schemas to guide implementation
 
 ### Phase 2: Check Dependencies
@@ -87,7 +93,7 @@ If the plan is missing:
 1. **Verify blocking issues are implemented**
    For each issue listed in the "Blocked by" field of the issue:
 
-   - Read `SPECS_DIR/issues/{DEP_ISSUE_ID}/issue.md`
+   - Read `{SPECS_DIR}/issues/{DEP_ISSUE_ID}/issue.md`
    - Check the Status field
 
 2. **Evaluate dependency status**
@@ -102,6 +108,21 @@ If the plan is missing:
    > Implement blocking issues first:
    >
    > 1. Run `prd-implement-issue {DEP_ISSUE_ID}`
+   >
+    > Then retry this command.
+
+3. **Verify the plan is not awaiting revision**
+   - Read the Status field in
+     `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md`
+   - If the Status is "Needs Revision" → **STOP** and show:
+
+   > **ERROR: Cannot implement issue `{ISSUE_ID}` — the plan has Status
+   > "Needs Revision" from a review.**
+   >
+   > Revise the plan first:
+   >
+   > 1. Run `prd-issue-to-plan {ISSUE_ID}` to address the review findings
+   > 1. Optionally re-run `prd-review-plan {ISSUE_ID}` to re-check
    >
    > Then retry this command.
 
@@ -119,8 +140,8 @@ If the plan is missing:
 
 3. **Update issue status**
    - Change the Status field in
-     `SPECS_DIR/issues/{ISSUE_ID}/issue.md` from "Planned" to "In
-     Progress"
+     `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` from "Planned", "Approved",
+     "Implemented", or "Validated" to "In Progress"
 
 ### Phase 4: Execute Tasks
 
@@ -173,15 +194,26 @@ After completing all queued tasks:
 
 3. **Update issue status**
    - If all tasks completed and acceptance criteria met: change Status
-     in `SPECS_DIR/issues/{ISSUE_ID}/issue.md` from "In Progress" to
+     in `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` from "In Progress" to
      "Implemented"
    - If partial: keep "In Progress" and note remaining work
 
 4. **Update plan status**
    - If all tasks completed: change Status in
-     `SPECS_DIR/issues/{ISSUE_ID}/plan.md` from "Draft" to "Implemented"
+     `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` from "Draft", "Approved",
+     "Implemented", or "Validated" to "Implemented"
 
-5. **Report completion status**
+5. **Mark resolved validation issues (when revising)**
+   If this run was a revision after an incomplete validation
+   (`validation.md` existed with an overall status other than Complete):
+   - For every issue recorded under `## Issues Found` in
+     `validation.md`, fill its `Resolved:` line noting how the revised
+     implementation addresses it.
+   - Change the `Overall Status` from "Incomplete" (or "Blocked") to
+     "Revised" to signal the implementation has been revised and is
+     awaiting re-validation.
+
+6. **Report completion status**
    - List completed tasks
    - List remaining tasks (if any)
    - Note issues encountered

@@ -75,29 +75,53 @@ required.
 - `/sdd-validate` — validate the implementation and write
   `SPECS_DIR/validation.md`.
 
+If `/sdd-validate` reports an incomplete implementation, loop:
+`/sdd-implement` → `/sdd-validate` → `/sdd-implement` → `/sdd-validate`.
+Each revision marks the validation's issues as resolved and sets the
+overall status to `Revised`; re-run `/sdd-validate` until the overall
+status is `Complete`.
+
 `SPECS_DIR` defaults to `.sdd/.current/`.
 
 It's up to you whether you want to keep that directory in source control.
 
 ## The PRD Long Flow
 
-For a larger feature, drive requirements through validated implementation in
-six steps. Each step runs in a clean session and produces the next artifact.
+For a larger feature, drive requirements through validated implementation
+in six steps (plus an optional plan review). Each step runs in a clean
+session and produces the next artifact.
 
 1. Write a product spec from a feature description.
 2. Break the spec into independent vertical-slice issues.
 3. Plan a single issue.
-4. Implement that issue's plan.
-5. Validate that issue against its plan.
-6. Cross-validate every implemented issue.
+4. *(Optional)* Review that issue's plan before implementing it.
+5. Implement that issue's plan.
+6. Validate that issue against its plan.
+7. Cross-validate every implemented issue.
 
 - `/prd-write` — produce `SPECS_DIR/prd.md` from a feature description.
 - `/prd-to-issues` — write vertical-slice issues under `SPECS_DIR/issues/`.
 - `/prd-issue-to-plan` — write a plan for one issue.
+- `/prd-review-plan` — *(optional)* review a plan across six dimensions;
+  writes `review.md` and sets the plan's status to Approved or Needs
+  Revision.
 - `/prd-implement-issue` — run one issue's plan.
 - `/prd-validate-issue` — validate one issue against its plan.
 - `/prd-validate` — cross-validate all implemented issues and write
   `SPECS_DIR/validation.md`.
+
+The two quality gates are iterative — you loop on them until the artifact
+passes:
+
+- **Plan review loop** — `/prd-issue-to-plan` → `/prd-review-plan` →
+  `/prd-issue-to-plan` → `/prd-review-plan` … Each revision marks the
+  review's findings as resolved and sets the verdict to `Revised`; re-run
+  `/prd-review-plan` until the verdict is `Approved`.
+- **Implementation validation loop** — `/prd-implement-issue` →
+  `/prd-validate-issue` → `/prd-implement-issue` → `/prd-validate-issue` …
+  Each revision marks the validation's issues as resolved and sets the
+  overall status to `REVISED`; re-run `/prd-validate-issue` until the
+  overall status is `COMPLETE`.
 
 ## Keeping Documentation Current
 

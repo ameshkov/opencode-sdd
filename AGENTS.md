@@ -80,6 +80,7 @@ opencode-sdd/
 │   │       ├── prd-write.md      # prd-write command (PRD writer)
 │   │       ├── prd-to-issues.md  # prd-to-issues command (PRD -> issues)
 │   │       ├── prd-issue-to-plan.md   # prd-issue-to-plan command (issue -> plan)
+│   │       ├── prd-review-plan.md      # prd-review-plan command (plan reviewer)
 │   │       ├── prd-implement-issue.md # prd-implement-issue command (run a plan)
 │   │       ├── prd-validate-issue.md  # prd-validate-issue command (per-issue validation)
 │   │       ├── prd-validate.md   # prd-validate command (cross-cutting validation)
@@ -101,6 +102,8 @@ opencode-sdd/
 │   │           │   └── readme-*.md
 │   │           ├── prd-issue-to-plan/    # Plan template
 │   │           │   └── plan-template.md
+│   │           ├── prd-review-plan/            # Plan review template
+│   │           │   └── review-report-template.md
 │   │           ├── prd-validate/         # Cross-cutting validation template
 │   │           │   └── validation-report-template.md
 │   │           ├── prd-validate-issue/   # Per-issue validation template
@@ -193,6 +196,11 @@ You MUST follow the following rules for EVERY task that you perform:
 
 - After completing the task you MUST verify that the code you've written
   follows the Code Guidelines in this file.
+
+- When the coding task is finished update `CHANGELOG.md` and explain
+  changes in the Unreleased section. Add entries to the appropriate
+  subsection (Added, Changed, or Fixed) if it already exists; do not
+  create duplicate subsections.
 
 ## Code Guidelines
 

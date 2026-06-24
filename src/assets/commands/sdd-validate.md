@@ -14,26 +14,25 @@ Specs directory path or empty for default (`.sdd/.current/`): $ARGUMENTS
 `$ARGUMENTS` is the input. Extract the following from it:
 
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Prerequisites
 
-Check for the specification file in `SPECS_DIR/`:
+Check for the specification file in `{SPECS_DIR}/`:
 
-1. `SPECS_DIR/spec.md` - The specification with implementation tasks
+1. `{SPECS_DIR}/spec.md` - The specification with implementation tasks
 
 If the file is missing:
 
 **ERROR (if no spec found)**: Required file not found. Ensure
-`SPECS_DIR/spec.md` exists. Run `sdd-spec` first.
+`{SPECS_DIR}/spec.md` exists. Run `sdd-spec` first.
 
 ## Steps
 
 ### Phase 1: Load Documentation
 
 1. **Read the specification**
-   - Read `SPECS_DIR/spec.md`
+   - Read `{SPECS_DIR}/spec.md`
    - Extract:
      - Problem statement and root cause analysis
      - Affected files list
@@ -43,13 +42,22 @@ If the file is missing:
      - Acceptance scenarios
 
 2. **Read any contract files**
-   - Check `SPECS_DIR/contracts/` directory
+   - Check `{SPECS_DIR}/contracts/` directory
    - Load OpenAPI or GraphQL schemas if present
 
 3. **Read project guidelines**
    - Read `AGENTS.md` if it exists
    - Extract Code Guidelines and Contribution Instructions
    - These define coding standards the implementation must follow
+
+4. **Read the prior validation (when re-validating)** — If
+   `{SPECS_DIR}/validation.md` already exists, this is a re-validation of
+   a revised implementation. Read its `Overall Status` and the issues
+   recorded under `## Issues Found` (including any `Resolved:` notes the
+   revision filled in). Carry each prior issue into the phases below and
+   specifically verify the revised implementation resolves it; an
+   unresolved prior issue must be reported again. If no prior validation
+   exists, skip this step.
 
 ### Phase 2: Task Verification
 
@@ -104,7 +112,7 @@ For each file listed in the "Affected Files" or "File Structure" section:
 
 ### Phase 5: Contract Verification (if applicable)
 
-Skip if no contracts exist in `SPECS_DIR/contracts/`.
+Skip if no contracts exist in `{SPECS_DIR}/contracts/`.
 
 1. **Verify API endpoints**
    - Check each endpoint exists
@@ -147,16 +155,16 @@ For each item in the "Final Verification" section of the spec:
 ### Phase 7: Generate Validation Report
 
 1. **Write the validation report**
-   - Write to `SPECS_DIR/validation.md`
+   - Write to `{SPECS_DIR}/validation.md`
    - Use the validation report template below
    - Replace all placeholders with concrete details
-   - If overall status is COMPLETE, also update spec status:
-     change status from "Implemented" to "Validated" in
-     `SPECS_DIR/spec.md`
+   - If overall status is Complete, also update spec status:
+      change status from "Implemented" to "Validated" in
+      `{SPECS_DIR}/spec.md`
 
 ## Finalize Specs Directory
 
-**Applies only when overall status is COMPLETE.**
+**Applies only when overall status is Complete.**
 
 If `SPECS_DIR` path ends with `.current` (the temporary work directory):
 
@@ -179,7 +187,7 @@ Read and follow the validation report template:
 
 ## Output
 
-1. **Write the validation report** to `SPECS_DIR/validation.md`
+1. **Write the validation report** to `{SPECS_DIR}/validation.md`
 2. **Display the validation report** in the chat
 
 ## Guidelines

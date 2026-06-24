@@ -30,6 +30,7 @@ async function withCommandsDir(fn: (dir: string) => Promise<void>): Promise<void
     writeCmd('prd-write', 'Write a PRD'),
     writeCmd('prd-to-issues', 'Break a PRD into issues'),
     writeCmd('prd-issue-to-plan', 'Plan a PRD issue'),
+    writeCmd('prd-review-plan', 'Review a PRD issue plan'),
     writeCmd('prd-implement-issue', 'Implement a PRD issue'),
     writeCmd('prd-validate-issue', 'Validate a PRD issue'),
     writeCmd('prd-validate', 'Validate the full PRD'),
@@ -111,7 +112,7 @@ describe('sdd plugin', () => {
     });
   });
 
-  it('registers all six PRD long-flow commands from Markdown', async () => {
+  it('registers all seven PRD long-flow commands from Markdown', async () => {
     await withCommandsDir(async () => {
       const hooks = await sddPlugin(pluginInput());
       const config: Config = {};
@@ -121,6 +122,7 @@ describe('sdd plugin', () => {
         'prd-write',
         'prd-to-issues',
         'prd-issue-to-plan',
+        'prd-review-plan',
         'prd-implement-issue',
         'prd-validate-issue',
         'prd-validate',

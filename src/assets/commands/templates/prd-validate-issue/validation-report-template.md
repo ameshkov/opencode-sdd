@@ -2,8 +2,9 @@
 
 - **Validated**: [DATE]
 - **Model**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]
-- **Issue**: `SPECS_DIR/issues/{ISSUE_ID}/issue.md`
-- **Plan**: `SPECS_DIR/issues/{ISSUE_ID}/plan.md`
+- **Issue**: `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`
+- **Plan**: `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md`
+- **Overall Status**: [Complete / Incomplete / Blocked / Revised]
 
 ## Summary
 
@@ -14,8 +15,6 @@
 | Entities | X | X | X | X |
 | Contracts | X | X | X | X |
 | Guidelines | X | X | X | X |
-
-**Overall Status**: [COMPLETE / INCOMPLETE / BLOCKED]
 
 ## Task Status
 
@@ -54,6 +53,9 @@
    - Description: [What's wrong]
    - Impact: [How it affects the feature]
    - Recommendation: [How to fix]
+   - Resolved: [Filled by `prd-implement-issue` when the revised
+     implementation addresses this issue — note how. Omit while a
+     validation is in progress.]
 
 ## Recommendations
 

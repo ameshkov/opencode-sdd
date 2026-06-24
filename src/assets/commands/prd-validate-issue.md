@@ -7,39 +7,38 @@ description: Validate a single PRD issue's implementation against its plan (prov
 Verify that a single PRD issue has been fully implemented according to its
 plan and acceptance criteria. Produces a validation report for the issue.
 
-Issue ID (e.g., 1-AFK): $ARGUMENTS
-
 ## Input
 
-`$ARGUMENTS` is the input. Extract the following from it:
+User input: $ARGUMENTS
+
+Extract the following from the user input:
 
 - **ISSUE_ID** (required): The issue identifier (e.g., `1-AFK`). This
-  corresponds to the directory name under `SPECS_DIR/issues/`.
+  corresponds to the directory name under `{SPECS_DIR}/issues/`.
 
-  > **STOP — required input.** If `$ARGUMENTS` is empty or does not contain
-  > an issue ID, you MUST stop execution immediately and ask the user to
-  > provide one. Do NOT proceed, do NOT guess, do NOT use a placeholder.
-  > Wait for the user's response before continuing.
+  > **STOP — required input.** If the user input is empty or does not
+  > contain an issue ID, you MUST stop execution immediately and ask the
+  > user to provide one. Do NOT proceed, do not guess, do not use a
+  > placeholder. Wait for the user's response before continuing.
 
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Prerequisites
 
 Check for the existence of the following files:
 
-1. `SPECS_DIR/issues/{ISSUE_ID}/issue.md` — the issue definition
-2. `SPECS_DIR/issues/{ISSUE_ID}/plan.md` — the implementation plan
+1. `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` — the issue definition
+2. `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` — the implementation plan
 
 If the issue file is missing:
 
-**ERROR: Issue not found at `SPECS_DIR/issues/{ISSUE_ID}/issue.md`. Check
+**ERROR: Issue not found at `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`. Check
 the ISSUE_ID.**
 
 If the plan is missing:
 
-**ERROR: Plan not found at `SPECS_DIR/issues/{ISSUE_ID}/plan.md`. Run
+**ERROR: Plan not found at `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md`. Run
 `prd-issue-to-plan {ISSUE_ID}` first.**
 
 ## Steps
@@ -47,7 +46,7 @@ If the plan is missing:
 ### Phase 1: Load Documentation
 
 1. **Read the issue**
-   - Read `SPECS_DIR/issues/{ISSUE_ID}/issue.md`
+   - Read `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`
    - Extract:
      - What to build (vertical slice description)
      - Acceptance criteria
@@ -55,7 +54,7 @@ If the plan is missing:
      - User stories addressed
 
 2. **Read the implementation plan**
-   - Read `SPECS_DIR/issues/{ISSUE_ID}/plan.md`
+   - Read `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md`
    - Extract:
      - All tasks with their verification criteria
      - Entity definitions
@@ -63,12 +62,21 @@ If the plan is missing:
      - File structure changes
 
 3. **Read any contract files**
-   - Check `SPECS_DIR/issues/{ISSUE_ID}/contracts/` directory
+   - Check `{SPECS_DIR}/issues/{ISSUE_ID}/contracts/` directory
    - Load OpenAPI or GraphQL schemas if present
 
 4. **Read project guidelines**
    - Read `AGENTS.md` if it exists
    - Extract Code Guidelines and Contribution Instructions
+
+5. **Read the prior validation (when re-validating)** — If
+   `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md` already exists, this is
+   a re-validation of a revised implementation. Read its overall status
+   and the issues recorded under `## Issues Found` (including any
+   `Resolved:` notes the revision filled in). Carry each prior issue
+   into Phase 2 and the later phases and specifically verify the revised
+   implementation resolves it; an unresolved prior issue must be reported
+   again. If no prior validation exists, skip this step.
 
 ### Phase 2: Task Verification
 
@@ -154,14 +162,14 @@ For each Code Guideline in `AGENTS.md`:
 ### Phase 7: Generate Validation Report
 
 1. **Write the validation report**
-   - Write to `SPECS_DIR/issues/{ISSUE_ID}/validation.md`
+   - Write to `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md`
    - Use the validation report template below
    - Replace all placeholders with concrete details
 
-2. **Update issue status** (if overall status is COMPLETE)
-   - Change Status in `SPECS_DIR/issues/{ISSUE_ID}/issue.md` from
+2. **Update issue status** (if overall status is Complete)
+   - Change Status in `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` from
      "Implemented" to "Validated"
-   - Change Status in `SPECS_DIR/issues/{ISSUE_ID}/plan.md` from
+   - Change Status in `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` from
      "Implemented" to "Validated"
 
 3. **Display the validation report** in the chat

@@ -10,17 +10,17 @@ Document through codebase exploration and relentless user interview.
 Use this command instead of `sdd-spec` when the feature is large or
 complex enough to require issue-level breakdown and phased implementation.
 
-Feature description: $ARGUMENTS
-
 ## Input
 
-`$ARGUMENTS` is the input. Extract the following from it:
+User input: $ARGUMENTS
+
+Extract the following from the user input:
 
 - **FEATURE_DESCRIPTION** (required): the feature description.
 
-  > **STOP — required input.** If `$ARGUMENTS` is empty or does not contain
-  > a feature description, you MUST stop execution immediately and ask the
-  > user to provide one. Do NOT proceed, do NOT guess, do NOT use a
+  > **STOP — required input.** If the user input is empty or does not
+  > contain a feature description, you MUST stop execution immediately and
+  > ask the user to provide one. Do NOT proceed, do not guess, do not use a
   > placeholder. Wait for the user's response before continuing.
 
   After extracting FEATURE_DESCRIPTION, **validate** that it is a genuine
@@ -45,8 +45,7 @@ Feature description: $ARGUMENTS
   > Please provide a clear feature description.
 
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Steps
 
@@ -132,8 +131,8 @@ Feature description: $ARGUMENTS
 ### Phase 4: Write PRD
 
 1. **Create the PRD file**
-   - Write to `SPECS_DIR/prd.md`
-   - Create the `SPECS_DIR/` directory if it doesn't exist
+   - Write to `{SPECS_DIR}/prd.md`
+   - Create the `{SPECS_DIR}/` directory if it doesn't exist
    - Use the PRD template below
    - Replace all placeholders with concrete details
    - Preserve section order and headings

@@ -17,18 +17,17 @@ Task scope or empty to implement all tasks: $ARGUMENTS
   instructions (e.g., "Task 1.1 only", "Phase 1"). Defaults to all tasks in
   order. If not specified, use `all tasks`.
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Prerequisites
 
 Check for the existence of the required file:
 
-1. `SPECS_DIR/spec.md` - The specification with implementation tasks
+1. `{SPECS_DIR}/spec.md` - The specification with implementation tasks
 
 If the file is missing:
 
-**ERROR: Required file not found. Ensure `SPECS_DIR/spec.md` exists.
+**ERROR: Required file not found. Ensure `{SPECS_DIR}/spec.md` exists.
 Run `sdd-spec` first.**
 
 ## Steps
@@ -36,7 +35,7 @@ Run `sdd-spec` first.**
 ### Phase 1: Load Context
 
 1. **Read the specification**
-   - Read `SPECS_DIR/spec.md`
+   - Read `{SPECS_DIR}/spec.md`
    - Extract all tasks with their:
      - Description and files (create, modify, test)
      - Steps with exact code and commands
@@ -51,8 +50,15 @@ Run `sdd-spec` first.**
    - These inform implementation style and conventions
 
 3. **Load contracts** (if applicable)
-   - Check `SPECS_DIR/contracts/` directory
+   - Check `{SPECS_DIR}/contracts/` directory
    - Load API schemas to guide implementation
+
+4. **Read the existing validation (when revising)**
+   - If `{SPECS_DIR}/validation.md` exists and its `Overall Status` is
+     not Complete, read it and extract the recorded issues and
+     recommendations. These are the failures the revision must fix —
+     treat them as required work alongside the spec's tasks. If no
+     incomplete validation exists, skip this step.
 
 ### Phase 2: Determine Scope from TASK_SCOPE
 
@@ -139,10 +145,22 @@ After completing all queued tasks:
 
 4. **Update spec status**
    - If all tasks completed successfully:
-     - Change status from "Draft" to "Implemented" in `SPECS_DIR/spec.md`
+     - Change status from "Draft", "Implemented", or "Validated" to
+       "Implemented" in `{SPECS_DIR}/spec.md`
      - Add `**Implemented by**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]`
        to the spec header metadata
      - Add implementation notes if helpful
+
+5. **Mark resolved validation issues (when revising)**
+   If this run was a revision after an incomplete validation
+   (`validation.md` existed with an `Overall Status` other than
+   Complete):
+   - For every issue recorded under `## Issues Found` in
+     `validation.md`, fill its `Resolved:` line noting how the revised
+     implementation addresses it.
+   - Change the `Overall Status` from "Incomplete" to "Revised" to
+     signal the implementation has been revised and is awaiting
+     re-validation.
 
 ## Task Execution Guidelines
 

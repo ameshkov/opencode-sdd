@@ -46,8 +46,7 @@ Brief description of the bug or small change: $ARGUMENTS
   > Please provide a clear problem or change description.
 
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Guidelines
 
@@ -166,8 +165,8 @@ Brief description of the bug or small change: $ARGUMENTS
 ### Phase 6: Write Implementation Plan
 
 1. **Create the implementation plan file**
-   - Write to `SPECS_DIR/spec.md`
-   - Create the `SPECS_DIR/` directory if it doesn't exist
+   - Write to `{SPECS_DIR}/spec.md`
+   - Create the `{SPECS_DIR}/` directory if it doesn't exist
    - Follow the Implementation Plan Guidelines below to write a
      comprehensive implementation plan.
 

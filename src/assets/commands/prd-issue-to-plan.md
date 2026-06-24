@@ -8,73 +8,84 @@ Generate a structured implementation plan for a single PRD issue. The plan
 includes technical context, research findings, entity definitions, API
 contracts, and actionable tasks — scoped to one vertical slice.
 
-Issue ID (e.g., 1-AFK): $ARGUMENTS
-
 ## Input
 
-`$ARGUMENTS` is the input. Extract the following from it:
+User input: $ARGUMENTS
+
+Extract the following from the user input:
 
 - **ISSUE_ID** (required): The issue identifier (e.g., `1-AFK`). This
-  corresponds to the directory name under `SPECS_DIR/issues/`.
+  corresponds to the directory name under `{SPECS_DIR}/issues/`.
 
-  > **STOP — required input.** If `$ARGUMENTS` is empty or does not contain
-  > an issue ID, you MUST stop execution immediately and ask the user to
-  > provide one. Do NOT proceed, do NOT guess, do NOT use a placeholder.
-  > Wait for the user's response before continuing.
+  > **STOP — required input.** If the user input is empty or does not
+  > contain an issue ID, you MUST stop execution immediately and ask the
+  > user to provide one. Do NOT proceed, do not guess, do not use a
+  > placeholder. Wait for the user's response before continuing.
 
 - **CONSTRAINTS** (optional, default: `no additional constraints`):
   Constraints or preferences for the plan. Defaults to no additional
   constraints.
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Prerequisites
 
 Check for the existence of the following files:
 
-1. `SPECS_DIR/prd.md` — the parent PRD
-2. `SPECS_DIR/issues/{ISSUE_ID}/issue.md` — the issue to plan
+1. `{SPECS_DIR}/prd.md` — the parent PRD
+2. `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` — the issue to plan
 
 If the PRD is missing:
 
-**ERROR: PRD not found at `SPECS_DIR/prd.md`. Run `prd-write` first to
+**ERROR: PRD not found at `{SPECS_DIR}/prd.md`. Run `prd-write` first to
 create a PRD.**
 
 If the issue file is missing:
 
-**ERROR: Issue not found at `SPECS_DIR/issues/{ISSUE_ID}/issue.md`. Run
+**ERROR: Issue not found at `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`. Run
 `prd-to-issues` first to create issues, or check the ISSUE_ID.**
 
-If `SPECS_DIR/issues/{ISSUE_ID}/plan.md` already exists, warn the user:
+If `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` already exists:
 
-> **WARNING**: A plan already exists for issue `{ISSUE_ID}`. Continuing
-> will overwrite the existing plan. Do you want to proceed?
+- If its Status is "Needs Revision" (a review rejected it), this is a
+  **plan revision**. Read `review.md` in the same directory and treat its
+  consolidated findings as required changes. Do not warn about
+  overwriting — this is the intended revision path.
+- Otherwise, warn the user:
 
-Wait for confirmation before continuing.
+  > **WARNING**: A plan already exists for issue `{ISSUE_ID}`. Continuing
+  > will overwrite the existing plan. Do you want to proceed?
+
+  Wait for confirmation before continuing.
 
 ## Steps
 
 ### Phase 1: Load Context
 
 1. **Read the parent PRD**
-   - Read `SPECS_DIR/prd.md`
+   - Read `{SPECS_DIR}/prd.md`
    - Extract the overall feature context, entities, module design, and
      implementation decisions
    - This provides the big picture for the issue
 
 2. **Read the issue**
-   - Read `SPECS_DIR/issues/{ISSUE_ID}/issue.md`
+   - Read `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`
    - Extract:
      - What to build (the vertical slice description)
      - Acceptance criteria
      - How to verify
      - Dependencies (blocked by)
 
-3. **Check dependency status**
+3. **Read the existing review (when revising)**
+   - If `{SPECS_DIR}/issues/{ISSUE_ID}/review.md` exists, read it and
+     extract the consolidated, deduplicated findings. These are required
+     changes the revision must address — every finding must be resolved
+     by the updated tasks. If no review exists, skip this step.
+
+4. **Check dependency status**
    For each issue listed in the "Blocked by" field:
 
-   - Read `SPECS_DIR/issues/{DEP_ISSUE_ID}/issue.md`
+   - Read `{SPECS_DIR}/issues/{DEP_ISSUE_ID}/issue.md`
    - Check the Status field
    - If any dependency has Status "Draft" (not yet planned), warn the
      user:
@@ -83,12 +94,12 @@ Wait for confirmation before continuing.
    > which has not been planned yet. The plan may need adjustment once
    > blocking issues are planned. Do you want to proceed?
 
-4. **Read project guidelines**
+5. **Read project guidelines**
    - Read `AGENTS.md` if it exists (coding standards and patterns)
    - Read `DEVELOPMENT.md` if it exists (development setup)
    - Read `README.md` to understand the product
 
-5. **Process user input** (if provided)
+6. **Process user input** (if provided)
    - Read CONSTRAINTS for technology preferences or clarifications
    - Use constraints to resolve any ambiguities
 
@@ -150,7 +161,7 @@ Skip this phase if the issue does not require API endpoints.
    - Document error responses
 
 2. **Output contract files**
-   - Create `SPECS_DIR/issues/{ISSUE_ID}/contracts/` if needed
+   - Create `{SPECS_DIR}/issues/{ISSUE_ID}/contracts/` if needed
    - Write OpenAPI or GraphQL schema files
 
 ### Phase 5: Task Breakdown
@@ -177,16 +188,20 @@ Skip this phase if the issue does not require API endpoints.
 ### Phase 6: Write Plan
 
 1. **Create the implementation plan**
-   - Write to `SPECS_DIR/issues/{ISSUE_ID}/plan.md`
+   - Write to `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md`
    - Use the plan template below
    - Replace all placeholders with concrete details
 
 2. **Create contract files** (if applicable)
-   - Write to `SPECS_DIR/issues/{ISSUE_ID}/contracts/`
+   - Write to `{SPECS_DIR}/issues/{ISSUE_ID}/contracts/`
 
 3. **Update issue status**
    - Change the Status field in
-     `SPECS_DIR/issues/{ISSUE_ID}/issue.md` from "Draft" to "Planned"
+     `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` from "Draft" or "Reviewing"
+     to "Planned"
+   - The rewritten `plan.md` Status resets to "Draft" (the template
+     default); the previous review verdict no longer applies to the
+     revised plan
 
 4. **Review the output**
    - Verify all sections are complete
@@ -207,6 +222,17 @@ After writing the complete plan, check it against the issue.
 
 3. **Type consistency**: Do the types, method signatures, and property
    names used in later tasks match earlier tasks?
+
+4. **Review findings resolved (when revising)**: If this was a revision
+   after a rejected review, confirm every consolidated finding from
+   `review.md` is addressed by an updated task. Re-check the affected
+   dimensions; any unresolved finding must be fixed before finishing.
+   Then update `review.md` so the next `/prd-review-plan` knows it is
+   re-reviewing a revised plan:
+   - For every consolidated finding, fill its `Resolved:` line noting
+     how the revised plan addresses it (e.g. the task that fixes it).
+   - Change the `Verdict` from "Rejected" to "Revised" to signal the
+     plan has been revised and is awaiting re-review.
 
 ## Plan Template
 

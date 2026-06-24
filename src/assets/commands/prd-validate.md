@@ -11,28 +11,27 @@ Produces a comprehensive validation report.
 Use this command after all individual issues have been implemented and
 validated with `prd-validate-issue`.
 
-Specs directory path or empty for default (`.sdd/.current/`): $ARGUMENTS
-
 ## Input
 
-`$ARGUMENTS` is the input. Extract the following from it:
+User input: $ARGUMENTS
+
+Extract the following from the user input:
 
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
-  specification files are stored. Defaults to `.sdd/.current/`. If not
-  specified, use `.sdd/.current/`.
+  specification files are stored.
 
 ## Prerequisites
 
-Check for the existence of `SPECS_DIR/prd.md`. If it does not exist,
+Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
 **STOP immediately** and show this error:
 
-**ERROR: PRD not found at `SPECS_DIR/prd.md`. Run `prd-write` first to
+**ERROR: PRD not found at `{SPECS_DIR}/prd.md`. Run `prd-write` first to
 create a PRD.**
 
-Check for the existence of `SPECS_DIR/issues/`. If the directory does not
+Check for the existence of `{SPECS_DIR}/issues/`. If the directory does not
 exist or is empty, **STOP immediately** and show:
 
-**ERROR: No issues found in `SPECS_DIR/issues/`. Run `prd-to-issues` first
+**ERROR: No issues found in `{SPECS_DIR}/issues/`. Run `prd-to-issues` first
 to create issues from the PRD.**
 
 ## Steps
@@ -40,7 +39,7 @@ to create issues from the PRD.**
 ### Phase 1: Load Documentation
 
 1. **Read the PRD**
-   - Read `SPECS_DIR/prd.md`
+   - Read `{SPECS_DIR}/prd.md`
    - Extract:
      - Problem statement and solution
      - All user stories with acceptance scenarios
@@ -49,7 +48,7 @@ to create issues from the PRD.**
      - Success criteria
 
 2. **Read all issues**
-   - Scan `SPECS_DIR/issues/` for issue directories
+   - Scan `{SPECS_DIR}/issues/` for issue directories
    - For each issue directory, read `issue.md`
    - Extract the Status field from each issue
 
@@ -60,14 +59,16 @@ to create issues from the PRD.**
 ### Phase 2: Check Issue Completion
 
 1. **Verify all issues are implemented**
-   For each issue in `SPECS_DIR/issues/`:
+   For each issue in `{SPECS_DIR}/issues/`:
 
    - Check the Status field in `issue.md`
    - Acceptable statuses: "Implemented" or "Validated"
    - Record the status
 
 2. **Stop if issues are not complete**
-   If any issue has Status "Draft", "Planned", or "In Progress":
+   If any issue does NOT have Status "Implemented" or "Validated" (for
+   example "Draft", "Planned", "Approved", "Reviewing", "Needs Revision",
+   or "In Progress"):
 
    > **ERROR: Not all issues are implemented. The following issues are not
    > complete:**
@@ -79,7 +80,7 @@ to create issues from the PRD.**
 
 3. **Read individual validation reports** (if they exist)
    For each issue, check for
-   `SPECS_DIR/issues/{ISSUE_ID}/validation.md` and note any outstanding
+   `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md` and note any outstanding
    issues from individual validations.
 
 ### Phase 3: Cross-Cutting Audit
@@ -183,18 +184,18 @@ For each Code Guideline in `AGENTS.md`:
      impact
 
 2. **Write the validation report**
-   - Write to `SPECS_DIR/validation.md`
+   - Write to `{SPECS_DIR}/validation.md`
    - Use the validation report template below
    - Replace all placeholders with concrete details
 
-3. **Update PRD status** (if overall status is COMPLETE)
-   - Change Status in `SPECS_DIR/prd.md` from "Draft" to "Validated"
+3. **Update PRD status** (if overall status is Complete)
+   - Change Status in `{SPECS_DIR}/prd.md` from "Draft" to "Validated"
 
 4. **Display the validation report** in the chat
 
 ## Finalize Specs Directory
 
-**Only execute when overall status is COMPLETE.**
+**Only execute when overall status is Complete.**
 
 If `SPECS_DIR` path ends with `.current` (the temporary work directory):
 
@@ -217,7 +218,7 @@ Read and follow the validation report template:
 
 ## Output
 
-1. **Write the validation report** to `SPECS_DIR/validation.md`
+1. **Write the validation report** to `{SPECS_DIR}/validation.md`
 2. **Display the validation report** in the chat
 3. If complete, **rename** the specs directory
 

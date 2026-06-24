@@ -2,7 +2,8 @@
 
 - **Validated**: [DATE]
 - **Model**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]
-- **Spec**: `SPECS_DIR/spec.md`
+- **Spec**: `{SPECS_DIR}/spec.md`
+- **Overall Status**: [Complete / Incomplete / Revised]
 
 ## Summary
 
@@ -14,8 +15,6 @@
 | Contracts | X | X | X |
 | Guidelines | X | X | X |
 | Final Checks | X | X | X |
-
-**Overall Status**: [COMPLETE / INCOMPLETE]
 
 ## Affected Files Status
 
@@ -60,6 +59,9 @@
 1. **[Issue Title]** (if any)
     - Description: [What's wrong]
     - Recommendation: [How to fix]
+    - Resolved: [Filled by `sdd-implement` when the revised implementation
+      addresses this issue — note how. Omit while a validation is in
+      progress.]
 
 ## Recommendations
 

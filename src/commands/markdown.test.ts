@@ -155,6 +155,29 @@ describe('prd-validate-issue command file', () => {
   });
 });
 
+describe('prd-review-plan command file', () => {
+  it('parses with a description, $ARGUMENTS, and the review report template reference', async () => {
+    const raw = await readFile(join(markdownDir, 'prd-review-plan.md'), 'utf8');
+    const result = parseCommandFile('prd-review-plan', raw);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.command.config.description).toBeTruthy();
+      expect(result.command.config.template).toContain('$ARGUMENTS');
+      expect(result.command.config.template).toContain(
+        '@opencode-sdd-templates/prd-review-plan/review-report-template.md',
+      );
+      expect(result.command.config.template).toContain('review.md');
+      expect(result.command.config.template).toContain('explore');
+      const asset = await readFile(
+        join(markdownDir, 'templates', 'prd-review-plan', 'review-report-template.md'),
+        'utf8',
+      );
+      expect(asset.trim()).not.toBe('');
+    }
+  });
+});
+
 describe('prd-validate command file', () => {
   it('parses with a description, $ARGUMENTS, and the cross-cutting validation template reference', async () => {
     const raw = await readFile(join(markdownDir, 'prd-validate.md'), 'utf8');

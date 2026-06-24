@@ -2,7 +2,8 @@
 
 - **Validated**: [DATE]
 - **Model**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]
-- **PRD**: `SPECS_DIR/prd.md`
+- **PRD**: `{SPECS_DIR}/prd.md`
+- **Overall Status**: [Complete / Incomplete / Blocked]
 
 ## Summary
 
@@ -13,8 +14,6 @@
 | Success Criteria | X | X | X | X |
 | Guidelines | X | X | X | X |
 | Cross-Cutting Audit | X | X | X | X |
-
-**Overall Status**: [COMPLETE / INCOMPLETE / BLOCKED]
 
 ## Issue Status
 

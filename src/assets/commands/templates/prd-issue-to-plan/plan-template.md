@@ -2,8 +2,8 @@
 
 - **Created**: [DATE]
 - **Status**: Draft
-- **Issue**: `SPECS_DIR/issues/{ISSUE_ID}/issue.md`
-- **PRD**: `SPECS_DIR/prd.md`
+- **Issue**: `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`
+- **PRD**: `{SPECS_DIR}/prd.md`
 - **Model**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]
 - **User Input**: [If provided: "CONSTRAINTS" or "None"]
 
