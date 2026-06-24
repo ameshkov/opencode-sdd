@@ -75,6 +75,13 @@ If the plan is missing:
 For each task in the implementation plan:
 
 1. **Check task completion**
+   Delegate the file locating and reading to the `explore` subagent via
+   the Task tool (`subagent_type: "explore"`). Give it the task's file
+   list and ask it to report whether the described implementation
+   exists and what it contains. It is read-only and returns findings;
+   do not write files from this step. You retain the run/judgment in
+   the last bullet.
+
    - Locate the files/code mentioned in the task
    - Verify the implementation exists
    - Run the verification criteria specified in the task

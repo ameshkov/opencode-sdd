@@ -35,6 +35,11 @@ proceed without.
     - Identify content worth preserving
 
 2. **Gather product information from the codebase**
+   Delegate this codebase gathering to the `explore` subagent via the
+   Task tool (`subagent_type: "explore"`). Give it a focused prompt
+   covering the bullets below; it is read-only and returns findings you
+   feed into the rest of this phase. Do not write files from this step.
+
     - Read `AGENTS.md` for project overview, technical context, and structure
     - Read `DEPLOYMENT.md` (if it exists) for understanding what the product
       does (not to copy content)

@@ -65,7 +65,12 @@ Feature description: $ARGUMENTS
 
 3. **Explore the codebase**
    Before interviewing the user, explore the repo to verify their
-   assertions and understand the current state. Look for:
+   assertions and understand the current state.
+
+   Delegate this codebase research to the `explore` subagent via the
+   Task tool (`subagent_type: "explore"`). Give it a focused prompt
+   covering the bullets below; it is read-only and returns findings you
+   feed into the next phase. Do not write files from this step. Look for:
 
    - Modules and files that will be affected by this change
    - Existing patterns, conventions, and abstractions to follow or

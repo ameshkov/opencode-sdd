@@ -16,6 +16,7 @@ describe('prd-write command file', () => {
       expect(result.command.config.template).toContain(
         '@opencode-sdd-templates/prd-write/prd-template.md',
       );
+      expect(result.command.config.template).toContain('subagent_type: "explore"');
     }
   });
 });
@@ -32,6 +33,7 @@ describe('sdd-spec command file', () => {
       expect(template).toContain('$ARGUMENTS');
       expect(template).toContain('@opencode-sdd-templates/sdd-spec/plan-template.md');
       expect(template).toContain('@opencode-sdd-templates/sdd-spec/task-structure-template.md');
+      expect(template).toContain('subagent_type: "explore"');
       const asset = await readFile(
         join(markdownDir, 'templates', 'sdd-spec', 'plan-template.md'),
         'utf8',
@@ -70,6 +72,7 @@ describe('sdd-validate command file', () => {
         '@opencode-sdd-templates/sdd-validate/validation-report-template.md',
       );
       expect(template).toContain('validation.md');
+      expect(template).toContain('subagent_type: "explore"');
     }
   });
 });
@@ -86,6 +89,7 @@ describe('prd-to-issues command file', () => {
       expect(template).toContain('$ARGUMENTS');
       expect(template).toContain('## Issue Template');
       expect(template).toContain('# Issue: [TITLE]');
+      expect(template).toContain('subagent_type: "explore"');
     }
   });
 });
@@ -103,6 +107,7 @@ describe('prd-issue-to-plan command file', () => {
         '@opencode-sdd-templates/prd-issue-to-plan/plan-template.md',
       );
       expect(result.command.config.template).toContain('plan.md');
+      expect(result.command.config.template).toContain('subagent_type: "explore"');
       const asset = await readFile(
         join(markdownDir, 'templates', 'prd-issue-to-plan', 'plan-template.md'),
         'utf8',
@@ -140,6 +145,7 @@ describe('prd-validate-issue command file', () => {
         '@opencode-sdd-templates/prd-validate-issue/validation-report-template.md',
       );
       expect(result.command.config.template).toContain('validation.md');
+      expect(result.command.config.template).toContain('subagent_type: "explore"');
       const asset = await readFile(
         join(markdownDir, 'templates', 'prd-validate-issue', 'validation-report-template.md'),
         'utf8',
@@ -162,6 +168,7 @@ describe('prd-validate command file', () => {
         '@opencode-sdd-templates/prd-validate/validation-report-template.md',
       );
       expect(result.command.config.template).toContain('validation.md');
+      expect(result.command.config.template).toContain('subagent_type: "explore"');
       const asset = await readFile(
         join(markdownDir, 'templates', 'prd-validate', 'validation-report-template.md'),
         'utf8',
@@ -184,6 +191,7 @@ describe('doc-readme command file', () => {
       expect(template).toContain('README.md');
       expect(template).toContain('@opencode-sdd-templates/doc-readme/readme-library.md');
       expect(template).toContain('@opencode-sdd-templates/doc-readme/readme-generic.md');
+      expect(template).toContain('subagent_type: "explore"');
       const asset = await readFile(
         join(markdownDir, 'templates', 'doc-readme', 'readme-library.md'),
         'utf8',
@@ -218,6 +226,7 @@ describe('doc-deployment command file', () => {
       expect(result.command.config.description).toBeTruthy();
       expect(result.command.config.template).toContain('$ARGUMENTS');
       expect(result.command.config.template).toContain('DEPLOYMENT.md');
+      expect(result.command.config.template).toContain('subagent_type: "explore"');
     }
   });
 });
@@ -232,6 +241,7 @@ describe('doc-development command file', () => {
       expect(result.command.config.description).toBeTruthy();
       expect(result.command.config.template).toContain('$ARGUMENTS');
       expect(result.command.config.template).toContain('DEVELOPMENT.md');
+      expect(result.command.config.template).toContain('subagent_type: "explore"');
     }
   });
 });
@@ -253,6 +263,7 @@ describe('doc-agents command file', () => {
       expect(template).toContain(
         '@opencode-sdd-templates/doc-agents/contribution-instructions-example.md',
       );
+      expect(template).toContain('subagent_type: "explore"');
       const assetsDir = join(markdownDir, 'templates', 'doc-agents');
       const exampleAsset = await readFile(
         join(assetsDir, 'contribution-instructions-example.md'),

@@ -95,6 +95,10 @@ Wait for confirmation before continuing.
 ### Phase 2: Research
 
 1. **Explore the codebase**
+   Delegate this codebase research to the `explore` subagent via the
+   Task tool (`subagent_type: "explore"`). Give it a focused prompt
+   covering the bullets below; it is read-only and returns findings you
+   feed into the rest of this phase. Do not write files from this step.
    Focus on the parts of the codebase touched by this issue:
 
    - Files and modules that will be created or modified

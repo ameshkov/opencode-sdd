@@ -89,7 +89,15 @@ to create issues from the PRD.**
    created or modified as part of this feature.
 
 2. **Explore the implementation**
-   Read all files in scope. For each module, understand:
+   Read all files in scope.
+
+   Delegate this read/scan to the `explore` subagent via the Task tool
+   (`subagent_type: "explore"`). Give it the full in-scope file list and
+   ask it to report, per module, what it is responsible for, its public
+   interface, and how it interacts with other in-scope modules and the
+   wider codebase. It is read-only and returns findings; do not write
+   files from this step. You retain the audit judgments in step 3. For
+   each module, understand:
 
    - What it is responsible for
    - What its public interface is

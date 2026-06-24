@@ -80,6 +80,11 @@ Brief description of the bug or small change: $ARGUMENTS
 ### Phase 2: Research
 
 1. **Search the codebase**
+   Delegate this codebase research to the `explore` subagent via the
+   Task tool (`subagent_type: "explore"`). Give it a focused prompt
+   covering the bullets below; it is read-only and returns findings you
+   feed into the rest of this phase. Do not write files from this step.
+
    - Find the code related to the problem
    - Identify where the issue manifests or where changes are needed
    - Look for similar patterns or related functionality

@@ -76,10 +76,10 @@ If the project has no source code yet, ask the user whether to create a skeleton
    - Identify testing framework from test files or config
    - Look for linter/formatter configs (`.eslintrc`, `ruff.toml`, etc.)
 
-3. **Research the codebase architecture** If the agent runtime supports
-   it, use the runSubagent tool to run an exploration sub-agent for
-   this research; otherwise do it yourself.
-   The research MUST answer:
+3. **Research the codebase architecture**
+   Delegate this codebase research to the `explore` subagent via the
+   Task tool (`subagent_type: "explore"`). It is read-only and returns
+   findings; do not write files from this step. The research MUST answer:
 
    - What layers exist in the codebase?
      (entry point, routes/handlers, services, data access, utilities, etc.)

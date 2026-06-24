@@ -35,6 +35,11 @@ proceed without.
    - Identify outdated or incorrect information
 
 2. **Gather development information from the codebase**
+   Delegate this codebase gathering to the `explore` subagent via the
+   Task tool (`subagent_type: "explore"`). Give it a focused prompt
+   covering the bullets below; it is read-only and returns findings you
+   feed into the rest of this phase. Do not write files from this step.
+
    - Read `AGENTS.md` for:
      - Language/version requirements
      - Build and test commands

@@ -44,6 +44,13 @@ Also verify these documents exist (optional but recommended):
     - Identify outdated or incorrect information
 
 2. **Analyze environment variable usage**
+
+   Steps 2–7 below gather deployment configuration from the codebase.
+   Delegate this scanning to the `explore` subagent via the Task tool
+   (`subagent_type: "explore"`). Give it a focused prompt covering all
+   of steps 2–7; it is read-only and returns findings you feed into
+   Phase 2. Do not write files from this step.
+
     - Search for `process.env`, `os.environ`, `env::var`, `os.Getenv`, or
       similar patterns
     - Check `.env.example`, `.env.sample`, or similar files

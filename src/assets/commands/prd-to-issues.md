@@ -51,7 +51,12 @@ Check for the existence of `SPECS_DIR/prd.md`. If it does not exist,
    - These inform how issues should be scoped
 
 3. **Explore the codebase**
-   If not already familiar with the codebase, explore to understand:
+   If not already familiar with the codebase, explore to understand it.
+
+   Delegate this codebase research to the `explore` subagent via the
+   Task tool (`subagent_type: "explore"`). Give it a focused prompt
+   covering the bullets below; it is read-only and returns findings you
+   feed into the next phase. Do not write files from this step.
 
    - Modules and files that will be affected
    - Existing patterns and conventions
