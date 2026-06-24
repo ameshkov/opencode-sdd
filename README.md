@@ -10,7 +10,7 @@
 
 <p align="center">
     <img src="docs/assets/demo.gif"
-         alt="MCP Compress Router" width="600"/>
+         alt="OpenCode SDD Demo" width="600"/>
 </p>
 
 You describe what you want in vague terms.

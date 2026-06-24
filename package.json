@@ -1,6 +1,6 @@
 {
   "name": "opencode-sdd",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Specification-Driven Development plugin for OpenCode.",
   "license": "MIT",
   "type": "module",

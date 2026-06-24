@@ -142,9 +142,7 @@ jobs:
       # No token needed: npm authenticates via OIDC (Trusted Publishers).
       # Provenance is generated automatically from the id-token permission.
       - name: Publish to npm
-        # TODO: Uncomment after making the repo public
-        # run: npm publish --provenance --access public
-        run: npm publish --access public
+        run: npm publish --provenance --access public
       - name: Build npm package tarball
         run: pnpm pack
       - name: Create GitHub release

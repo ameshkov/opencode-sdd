@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v1.0.0] - 2026-06-24
+
 ### Changed
 
 - Improved the documentation
@@ -38,5 +40,6 @@ and this project adheres to
   server.
 - Husky pre-commit hook running the full `pnpm check` gate.
 
-[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.0.0...HEAD
+[v1.0.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.0.0
 [v0.2.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v0.2.0
