@@ -2,6 +2,7 @@
 temp_todos="$(
 	git grep --cached -n -E 'FIXME|TODO.*!!' -- \
 		':!./.husky/pre-commit' \
+		':!./DEVELOPMENT.md' \
 		|| :
 )"
 

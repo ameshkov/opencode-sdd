@@ -8,16 +8,13 @@ opencode instance. For architecture and contribution rules, see
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Build Commands](#build-commands)
-- [Running Checks in Docker](#running-checks-in-docker)
+- [Development Workflow](#development-workflow)
+    - [Build Commands](#build-commands)
+    - [Debugging with opencode](#debugging-with-opencode)
+    - [Running Checks in Docker](#running-checks-in-docker)
 - [Continuous Integration](#continuous-integration)
-- [Debugging with opencode](#debugging-with-opencode)
-    - [How the plugin loads](#how-the-plugin-loads)
-    - [Load the plugin from a scratch project](#load-the-plugin-from-a-scratch-project)
-    - [The debug loop](#the-debug-loop)
-    - [Reading plugin logs](#reading-plugin-logs)
-    - [Unit debugging without opencode](#unit-debugging-without-opencode)
-    - [Recover when the plugin breaks startup](#recover-when-the-plugin-breaks-startup)
+- [Troubleshooting](#troubleshooting)
+- [Additional Resources](#additional-resources)
 
 ## Prerequisites
 
@@ -39,7 +36,19 @@ in `devDependencies`. After cloning:
 pnpm install
 ```
 
-## Build Commands
+No environment variables or `.env` files are required for local
+development. The plugin has zero runtime dependencies — the
+`@opencode-ai/plugin` and `@opencode-ai/sdk` packages are type-only and
+erased by the compiler — so the compiled `build/` is self-contained.
+
+## Development Workflow
+
+This section covers the day-to-day loop: building, running the checks,
+and debugging against a live opencode server. For code style, lint
+rules, and architectural guidelines, see
+[AGENTS.md](./AGENTS.md) — this document does not duplicate them.
+
+### Build Commands
 
 All commands run through pnpm scripts defined in
 [`package.json`](./package.json). The compiled plugin is emitted to
@@ -55,8 +64,9 @@ All commands run through pnpm scripts defined in
 - `pnpm knip` — run Knip unused-export analysis on its own.
 - `pnpm format:check` — check Prettier *and* Markdownlint formatting.
 - `pnpm format:fix` — auto-fix Prettier and Markdownlint issues.
-- `pnpm check` — the full CI gate: `format:check`, `lint`,
-  `typecheck`, and `test`. The `pre-commit` hook runs this too.
+- `pnpm check` — the full local gate: `format:check`, `lint`,
+  `typecheck`, and `test` (unit tests only; excludes `*.e2e.test.ts`).
+  The `pre-commit` hook runs this **and** the e2e suite — see below.
 - `pnpm test:e2e` — run the mock-LLM e2e suite against a real `opencode`
   server. **Not** part of `pnpm check`; requires the `opencode` binary on
   PATH and a built `build/` (run `pnpm build` first). Fails loudly if
@@ -71,76 +81,20 @@ pnpm build      # produce build/index.js — opencode loads this
 pnpm check      # verify everything before commit
 ```
 
-## Running Checks in Docker
+**Pre-commit hook.** The Husky `pre-commit` hook
+([`.husky/pre-commit`](./.husky/pre-commit)) runs on every commit and
+does three things in order, aborting the commit on any failure:
 
-[`Dockerfile`](./Dockerfile) is a multi-stage build that reproduces the
-full local gate (`format:check`, `lint`, `typecheck`, `test`) **plus**
-the mock-LLM e2e suite — without needing Node, pnpm, or the `opencode`
-binary installed on the host. Each gate is a stage that writes a
-`*-results.txt` file, and each has a companion `FROM scratch` collector
-stage, so BuildKit's `--output type=local` pulls just that result file
-into a local directory instead of producing a tagged image.
+1. Block staged lines matching `FIXME` or `TODO.*!!` scratch markers.
+2. Run `pnpm check` (format + lint + typecheck + unit tests).
+3. Build and run `pnpm test:e2e`.
 
-Build everything and collect all result files into `./ci-output/`:
+Because of step 3, every commit needs the `opencode` binary on PATH
+(see [Prerequisites](#prerequisites)). To bypass the hook for a WIP
+commit, use `git commit --no-verify` — but re-run the full gate before
+pushing, since CI enforces it anyway.
 
-```sh
-DOCKER_BUILDKIT=1 docker build --output type=local,dest=./ci-output .
-```
-
-Or run a single gate and collect only its result file:
-
-```sh
-# Lint + format + type-check
-DOCKER_BUILDKIT=1 docker build --target lint-output --output type=local,dest=./ci-output .
-# Unit tests
-DOCKER_BUILDKIT=1 docker build --target unit-test-output --output type=local,dest=./ci-output .
-# E2E tests (downloads and installs the opencode binary)
-DOCKER_BUILDKIT=1 docker build --target e2e-output --output type=local,dest=./ci-output .
-```
-
-`./ci-output/` then contains the matching `*-results.txt` file(s). A
-failing gate fails the build: the `bash -o pipefail` shell propagates the
-command's exit status through `tee`, so a non-zero `docker build` exit
-code means that gate failed.
-
-Notes:
-
-- BuildKit (`# syntax=docker/dockerfile:1`) is required for the pnpm
-  cache mounts and for `--output type=local`.
-- The `opencode` binary version is pinned via the `OPENCODE_VERSION`
-  build arg (default `1.17.8`, matching the version the e2e suite targets
-  in [docs/e2e.md](./docs/e2e.md)).
-  Override with `--build-arg OPENCODE_VERSION=...`.
-- `.dockerignore` excludes `build/`, `node_modules/`, and tooling
-  directories so the image always starts from a clean source tree.
-- `ci-output/` is gitignored (see [`.gitignore`](./.gitignore)).
-
-## Continuous Integration
-
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push
-to `main`/`master`, on `v*` tags, and on pull requests, with four jobs:
-
-- **ci** — the full local gate (`pnpm check`: format, lint, typecheck,
-  unit tests), on Ubuntu.
-- **e2e-tests** — the mock-LLM e2e suite (`pnpm test:e2e`) on an
-  Ubuntu/macOS/Windows matrix. Docker can only reproduce Linux, so these
-  run natively per OS to verify the plugin and its e2e suite work
-  cross-platform. The `opencode` binary is installed via the
-  `opencode-ai` npm package, pinned to the version in
-  [docs/e2e.md](./docs/e2e.md).
-- **docker** — the entire quality gate (format, lint, typecheck, unit
-  tests, and the e2e suite) built and run through the
-  [`Dockerfile`](./Dockerfile) `ci-output` collector on Ubuntu. It guards
-  the reproducible, host-tool-free CI path described above ("Running
-  Checks in Docker") alongside the native matrix.
-- **release** — on `v*` tags, once the other jobs pass, builds the plugin,
-  packs it, and publishes a GitHub Release with auto-generated notes and
-  the resulting `*.tgz`.
-
-The native matrix (Node + pnpm) covers Windows and macOS; the Docker lane
-reproduces the full containerized Linux gate.
-
-## Debugging with opencode
+### Debugging with opencode
 
 The plugin is *not* a standalone process. opencode imports the compiled
 module, calls its default `Plugin` function, and invokes the `config`
@@ -148,7 +102,7 @@ hook at startup. Debugging therefore means: build the plugin, point a
 scratch opencode project at it, start opencode with verbose logging, and
 inspect the logs.
 
-### How the plugin loads
+#### How the plugin loads
 
 Two facts shape every debugging workflow:
 
@@ -160,7 +114,7 @@ Two facts shape every debugging workflow:
    relative modules. You can drop `build/` anywhere opencode can resolve
    it.
 
-### Load the plugin from a scratch project
+#### Load the plugin from a scratch project
 
 Keep this repo as the source of truth and load it into a *separate*
 scratch project so you never pollute the plugin's working tree with
@@ -241,7 +195,7 @@ Either way, rebuild before each restart:
 pnpm build      # in the opencode-sdd repo
 ```
 
-### The debug loop
+#### The debug loop
 
 1. In one terminal, keep the compiler running against this repo:
 
@@ -264,10 +218,19 @@ pnpm build      # in the opencode-sdd repo
        "/prd-write <a short idea>" 2>./opencode.log
      ```
 
+     All plugin output goes through `client.app.log(...)` (see
+     `src/utils/logger.ts`), tagged with `service: 'opencode-sdd'`. The
+     log formatter does not print the `service` field, so filter for the
+     plugin's distinctive messages:
+
+     ```sh
+     grep -E "plugin loading|loading SDD commands|SDD commands registered|registered command|failed to register SDD commands" ./opencode.log
+     ```
+
    - **Interactive TUI**. Start opencode normally, then tail the
      on-disk log in a third terminal. `--print-logs` does **not** work
      here: the TUI owns the terminal and swallows stderr, so logs only
-     land on disk (see [Reading plugin logs](#reading-plugin-logs)):
+     land on disk (`~/.local/share/opencode/log/opencode.log`):
 
      ```sh
      opencode --log-level DEBUG
@@ -282,35 +245,11 @@ pnpm build      # in the opencode-sdd repo
 4. **Restart opencode** to reload the plugin after each rebuild.
    Plugins are only read at startup; there is no hot reload.
 
-### Reading plugin logs
-
-All plugin output is written through opencode's SDK via
-`client.app.log(...)`, tagged with `service: 'opencode-sdd'` (see
-`src/utils/logger.ts`). It never goes to `console.log`.
-
-- **On disk** (macOS/Linux): `~/.local/share/opencode/log/`, in
-  timestamped files such as `2026-06-08T163939.log` (plus an
-  `opencode.log` rollfile). A small number of recent files are kept.
-- **Where the stream shows up** depends on the opencode mode:
-    - `opencode run --print-logs 2>./opencode.log` — the full log
-      stream is written to your redirected file. This is the
-      recommended way to inspect plugin output.
-    - `opencode` (the TUI) — `--print-logs` is swallowed by the TUI and
-      never reaches your terminal; logs are only written to the on-disk
-      directory above. Tail that file from a separate terminal.
-- **Filter for this plugin**: opencode's log formatter does **not**
-  print the `service` field, so grep for the plugin's distinctive
-  messages instead — every line this plugin emits is one of these:
-
-  ```sh
-  grep -E "plugin loading|loading SDD commands|SDD commands registered|registered command|failed to register SDD commands" ./opencode.log
-  ```
-
 Do **not** use `console.log` for diagnostics: it is not captured by
 opencode's log pipeline and will not appear in the log files. Add
 temporary calls through the existing `Logger` instead.
 
-### Unit debugging without opencode
+#### Unit debugging without opencode
 
 Most behavior can be debugged faster in Vitest than through opencode.
 The suite in `src/*.test.ts` exercises the plugin against a stub SDK
@@ -331,7 +270,7 @@ interactively, run Vitest with an inspector:
 pnpm exec vitest --inspect-brk
 ```
 
-### Recover when the plugin breaks startup
+#### Recover when the plugin breaks startup
 
 Because opencode reads plugins at startup, a plugin that throws during
 load can stop opencode from starting. The `config` hook in
@@ -359,3 +298,128 @@ To recover:
 
 4. Re-enable the plugin and start opencode with
    `--log-level DEBUG --print-logs` to see the failure inline.
+
+### Running Checks in Docker
+
+[`Dockerfile`](./Dockerfile) is a multi-stage build that reproduces the
+full local gate (`format:check`, `lint`, `typecheck`, `test`) **plus**
+the mock-LLM e2e suite — without needing Node, pnpm, or the `opencode`
+binary installed on the host. Each gate is a stage that writes a
+`*-results.txt` file, and each has a companion `FROM scratch` collector
+stage, so BuildKit's `--output type=local` pulls just that result file
+into a local directory instead of producing a tagged image.
+
+Build everything and collect all result files into `./ci-output/`:
+
+```sh
+DOCKER_BUILDKIT=1 docker build --output type=local,dest=./ci-output .
+```
+
+Or run a single gate and collect only its result file:
+
+```sh
+# Lint + format + type-check
+DOCKER_BUILDKIT=1 docker build --target lint-output --output type=local,dest=./ci-output .
+# Unit tests
+DOCKER_BUILDKIT=1 docker build --target unit-test-output --output type=local,dest=./ci-output .
+# E2E tests (downloads and installs the opencode binary)
+DOCKER_BUILDKIT=1 docker build --target e2e-output --output type=local,dest=./ci-output .
+```
+
+`./ci-output/` then contains the matching `*-results.txt` file(s). A
+failing gate fails the build: the `bash -o pipefail` shell propagates the
+command's exit status through `tee`, so a non-zero `docker build` exit
+code means that gate failed.
+
+Notes:
+
+- BuildKit (`# syntax=docker/dockerfile:1`) is required for the pnpm
+  cache mounts and for `--output type=local`.
+- The `opencode` binary version is pinned via the `OPENCODE_VERSION`
+  build arg (default `1.17.8`, matching the version the e2e suite targets
+  in [docs/e2e.md](./docs/e2e.md)).
+  Override with `--build-arg OPENCODE_VERSION=...`.
+- `.dockerignore` excludes `build/`, `node_modules/`, and tooling
+  directories so the image always starts from a clean source tree.
+- `ci-output/` is gitignored (see [`.gitignore`](./.gitignore)).
+
+## Continuous Integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push
+to `main`/`master`, on `v*` tags, and on pull requests, with four jobs:
+
+- **ci** — the full local gate (`pnpm check`: format, lint, typecheck,
+  unit tests), on Ubuntu.
+- **e2e-tests** — the mock-LLM e2e suite (`pnpm test:e2e`) on an
+  Ubuntu/macOS/Windows matrix. Docker can only reproduce Linux, so these
+  run natively per OS to verify the plugin and its e2e suite work
+  cross-platform. The `opencode` binary is installed via the
+  `opencode-ai` npm package, pinned to the version in
+  [docs/e2e.md](./docs/e2e.md).
+- **docker** — the entire quality gate (format, lint, typecheck, unit
+  tests, and the e2e suite) built and run through the
+  [`Dockerfile`](./Dockerfile) `ci-output` collector on Ubuntu. It guards
+  the reproducible, host-tool-free CI path described above ("Running
+  Checks in Docker") alongside the native matrix.
+- **release** — on `v*` tags, once the other jobs pass, builds the plugin,
+  packs it, and publishes a GitHub Release with auto-generated notes and
+  the resulting `*.tgz`.
+
+The native matrix (Node + pnpm) covers Windows and macOS; the Docker lane
+reproduces the full containerized Linux gate.
+
+## Troubleshooting
+
+Common issues and their fixes:
+
+- **`pnpm test:e2e` fails with "opencode binary not found" or "build/
+  not found".** The e2e suite's `globalSetup`
+  ([`test-e2e/global-setup.ts`](./test-e2e/global-setup.ts)) fails fast
+  when either the `opencode` binary is not on PATH or `build/index.js`
+  is missing. Install the binary (`brew install opencode` on macOS) and
+  run `pnpm build` first.
+
+- **`file://` plugin loading stops working.** The `file:` specifier for
+  plugins is not in opencode's official config schema and has only been
+  verified against opencode 1.17.x. If it breaks on a newer opencode,
+  fall back to Method 2 (thin loader in `.opencode/plugins/`) described
+  in [Load the plugin from a scratch project](#load-the-plugin-from-a-scratch-project).
+
+- **Plugin logs are empty even with `--log-level DEBUG`.** You are
+  almost certainly in the TUI, where `--print-logs` is swallowed and
+  logs only land on disk. Tail the on-disk log file instead
+  (`~/.local/share/opencode/log/opencode.log`).
+
+- **`console.log` output never appears.** opencode does not capture
+  `console.log`. Route diagnostics through the plugin's `Logger`
+  (`src/utils/logger.ts`), which writes via `client.app.log(...)`.
+
+- **Pre-commit hook hangs or fails on the e2e step.** The hook runs the
+  full e2e suite, which needs the `opencode` binary. If you are
+  iterating on unit-testable code, commit with `--no-verify` for a WIP
+  commit, but re-run `pnpm check && pnpm test:e2e` before pushing —
+  CI will enforce it.
+
+- **TypeScript resolves Node built-ins (`node:url`) with errors in the
+  editor but `pnpm typecheck` passes.** The editor is keying off the
+  wrong tsconfig. Do not exclude `*.test.ts` from `tsconfig.json`; see
+  the "TypeScript project structure" note in
+  [AGENTS.md](./AGENTS.md#configuration--documentation).
+
+- **Stale commands after editing Markdown under `src/assets/commands/`.**
+  The loader reads bundled assets at registration time. Rebuild
+  (`pnpm build`) and restart opencode — there is no hot reload.
+
+- **Docker build fails on `--output type=local`.** BuildKit is required.
+  Prefix the command with `DOCKER_BUILDKIT=1` (see
+  [Running Checks in Docker](#running-checks-in-docker)).
+
+## Additional Resources
+
+- [AGENTS.md](./AGENTS.md) — code guidelines, project structure, and the
+  plugin surface contract.
+- [README.md](./README.md) — user-facing pitch and the SDD command
+  reference.
+- [CHANGELOG.md](./CHANGELOG.md) — release history.
+- [`docs/e2e.md`](./docs/e2e.md) — how the mock-LLM e2e suite works,
+  including the template-rewriting mechanism.

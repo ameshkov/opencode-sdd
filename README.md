@@ -4,32 +4,59 @@
 [![npm](https://img.shields.io/npm/v/opencode-sdd)](https://www.npmjs.com/package/opencode-sdd)
 [![GitHub release](https://img.shields.io/github/v/release/ameshkov/opencode-sdd)](https://github.com/ameshkov/opencode-sdd/releases)
 
-**Specification-Driven Development for OpenCode.**
+<p align="center">
+    Specification-Driven Development for OpenCode.
+</p>
+
+<p align="center">
+    <img src="docs/assets/demo.gif"
+         alt="MCP Compress Router" width="600"/>
+</p>
 
 You describe what you want in vague terms.
 The plugin produces a complete, validated development plan — PRD, issues,
 implementation plans, and validation reports — with every phase running in a
 clean, isolated session.
 
+## Table of Contents
+
+- [The Problem](#the-problem)
+- [The Solution](#the-solution)
+- [Install](#install)
+- [The SDD Short Flow](#the-sdd-short-flow)
+- [The PRD Long Flow](#the-prd-long-flow)
+- [Keeping Documentation Current](#keeping-documentation-current)
+- [Honorable Mentions](#honorable-mentions)
+- [Additional Resources](#additional-resources)
+
 ## The Problem
 
-AI coding agents are great at writing code.
-They’re terrible at *planning* code.
-
-You tell an agent “build a payment system” and it starts typing.
-No requirements. No architecture.
-No validation. By the time you realize it built the wrong thing, you’ve burned a
-session full of context and a pile of tokens.
-
-Manually writing PRDs and breaking down issues is slow.
-Chaining prompts across sessions is fragile.
-And every time you paste the previous step’s output into a new conversation,
-something gets lost.
+AI coding agents are great at writing code, but they're terrible at *planning*
+code. You tell an agent “build a payment system” and it starts typing without
+requirements, architecture, or validation. By the time you realize it built the
+wrong it built the wrong thing, you’ve burned a session full of context and
+a pile of tokens.
 
 ## The Solution
 
-**opencode-sdd** inverts the workflow: *plan everything before you build
-anything.*
+**opencode-sdd** is a tool that let's you have a proper workflow:
+**plan everything before you build anything.**
+
+## Install
+
+Add `opencode-sdd` to the `plugin` array in your project's `opencode.json`
+(or `opencode.jsonc`):
+
+```json
+{
+    "$schema": "https://opencode.ai/config.json",
+    "plugin": ["opencode-sdd"]
+}
+```
+
+opencode installs the plugin from npm on startup. Restart opencode (or start
+a new session) to load it; the `/sdd-*`, `/prd-*` and `/doc-*` commands become
+available immediately.
 
 ## The SDD Short Flow
 
@@ -49,6 +76,8 @@ required.
   `SPECS_DIR/validation.md`.
 
 `SPECS_DIR` defaults to `.sdd/.current/`.
+
+It's up to you whether you want to keep that directory in source control.
 
 ## The PRD Long Flow
 
@@ -82,16 +111,19 @@ file.
 - `/doc-agents` — update `AGENTS.md` (guidelines and project structure).
 - `/doc-changelog` — add the Unreleased entry to `CHANGELOG.md`.
 
-## Testing
+## Honorable Mentions
 
-The plugin has two Vitest suites:
+- [ascii-gif](https://github.com/tamnd/ascii-gif) — used to generate the
+  demo GIF in this README.
+- [spec-kit](https://github.com/github/spec-kit) — this project was
+  originally inspired by GitHub's Spec Kit, but is essentially a simplified
+  version of it.
 
-- **Unit tests** (`pnpm test`, part of `pnpm check`) — fast, no external
-  dependencies; assert command loading and reference resolution in memory.
-- **E2E tests** (`pnpm test:e2e`, **not** part of `pnpm check`) — spin up a
-  real `opencode` server with the plugin loaded, route its model at a local
-  mock LLM, run SDD commands, and assert on files written to disk.
-  Deterministic, offline, and free (no API keys). Requires the `opencode`
-  binary on PATH and a built `build/` (`pnpm build`). See
-  [DEVELOPMENT.md](./DEVELOPMENT.md) and [docs/e2e.md](./docs/e2e.md) for
-  details.
+## Additional Resources
+
+- [AGENTS.md](./AGENTS.md) — code guidelines, project structure, and the
+  plugin surface contract.
+- [DEVELOPMENT.md](./DEVELOPMENT.md) — build and debug guide.
+- [CHANGELOG.md](./CHANGELOG.md) — release history.
+- [`docs/e2e.md`](./docs/e2e.md) — how the mock-LLM e2e suite works,
+  including the template-rewriting mechanism.
