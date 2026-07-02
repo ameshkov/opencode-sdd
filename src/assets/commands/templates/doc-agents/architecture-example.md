@@ -2,8 +2,8 @@
 
 <universal principles — bulleted list, one per principle>
 
-The easiest way to achieve these principles is **layered architecture**.
-This project's layers, from top to bottom:
+The easiest way to achieve these principles is **layered architecture**. This
+project’s layers, from top to bottom:
 
 ```text
 Handlers (API routes, webhooks)

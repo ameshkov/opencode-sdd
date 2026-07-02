@@ -32,6 +32,19 @@ function shippedCommandNames(): string[] {
     .sort();
 }
 
+/**
+ * The exact set of agents shipped in the build. Derived from the built
+ * `assets/agents` directory so the test stays in sync with whatever is
+ * compiled — adding an agent automatically covers it here.
+ */
+function shippedAgentNames(): string[] {
+  const dir = join(REPO_ROOT, 'build', 'assets', 'agents');
+  return readdirSync(dir)
+    .filter((file) => file.endsWith('.md'))
+    .map((file) => file.slice(0, -'.md'.length))
+    .sort();
+}
+
 describe('smoke: plugin loads in a live opencode server', () => {
   // Both smoke tests only need a loaded plugin, so they share a single
   // opencode server across the describe block. This amortizes the slow server
@@ -63,5 +76,16 @@ describe('smoke: plugin loads in a live opencode server', () => {
     const res = await server.client.config.get();
     expect(res.error, `config.get() errored: ${JSON.stringify(res.error)}`).toBeUndefined();
     expect(res.data).toBeDefined();
+  });
+
+  it('registers every shipped agent under config.agent', async () => {
+    const res = await server.client.config.get();
+    expect(res.error).toBeUndefined();
+    const agents = (res.data?.agent ?? {}) as Record<string, { mode?: string }>;
+
+    for (const expected of shippedAgentNames()) {
+      expect(agents[expected], `missing agent: ${expected}`).toBeDefined();
+    }
+    expect(agents['sdd-explore']?.mode).toBe('subagent');
   });
 });

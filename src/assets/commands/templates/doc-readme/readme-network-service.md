@@ -3,18 +3,17 @@
 # Project Name
 
 <p align="center">
-  > *One-line description* — what the service does and who it's for.
-</p>
+> *One-line description* — what the service does and who it’s for.
+> </p>
 
 <p align="center">
-  <img src="assets/diagram.png" alt="Architecture diagram" width="600">
-</p>
+<img src="assets/diagram.png" alt="Architecture diagram" width="600"> </p>
 
 ## Description
 
 *Target audience* — who this service is for and what problem it solves.
-Explain the motivation for building it, the pain points it addresses,
-and the primary use case.
+Explain the motivation for building it, the pain points it addresses, and the
+primary use case.
 
 ## Table of Contents
 
@@ -27,7 +26,7 @@ and the primary use case.
 - [FAQ / Troubleshooting](#faq--troubleshooting)
 - [Documentation](#documentation)
 
----
+* * *
 
 ## Installation
 
@@ -96,8 +95,7 @@ project-name status
 
 ## Protocol / Interface
 
-Describe the protocol the service speaks (DNS, DHCP, SMTP, etc.).
-Include:
+Describe the protocol the service speaks (DNS, DHCP, SMTP, etc.). Include:
 
 - Transport (UDP, TCP, TLS, QUIC)
 - Default port(s)
@@ -135,7 +133,7 @@ project-name health
 Common issues, port conflicts, permission errors, and how to collect
 diagnostics.
 
----
+* * *
 
 ## Documentation
 

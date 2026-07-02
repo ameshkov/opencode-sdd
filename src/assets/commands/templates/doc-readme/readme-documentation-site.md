@@ -3,18 +3,17 @@
 # Project Name
 
 <p align="center">
-  > *One-line description* — what the documentation site covers.
-</p>
+> *One-line description* — what the documentation site covers.
+> </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Site screenshot" width="600">
-</p>
+<img src="assets/screenshot.png" alt="Site screenshot" width="600"> </p>
 
 ## Description
 
-*Target audience* — who this documentation is for and what problem it
-solves. Explain the motivation for building the docs, what knowledge
-gap they fill, and the primary use case.
+*Target audience* — who this documentation is for and what problem it solves.
+Explain the motivation for building the docs, what knowledge gap they fill, and
+the primary use case.
 
 ## Table of Contents
 
@@ -24,7 +23,7 @@ gap they fill, and the primary use case.
 - [Contributing](#contributing)
 - [Documentation](#documentation)
 
----
+* * *
 
 ## Access
 
@@ -49,11 +48,10 @@ A brief overview of how the documentation is organized:
 
 How to contribute to the documentation (link to contributing guide).
 
----
+* * *
 
 ## Documentation
 
-- [Development](DEVELOPMENT.md) — how to set up and build the site
-  locally
+- [Development](DEVELOPMENT.md) — how to set up and build the site locally
 - [Changelog](CHANGELOG.md) — version history
 - [LLM agent rules](AGENTS.md) — AI-assisted development guidelines

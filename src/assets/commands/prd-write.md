@@ -1,14 +1,13 @@
 ---
 description: Write a Product Requirements Document (PRD) from a feature idea (provided by opencode-sdd)
 ---
-
 # Write a PRD from a feature idea
 
 Turn a free-form feature description into a structured Product Requirements
 Document through codebase exploration and relentless user interview.
 
-Use this command instead of `sdd-spec` when the feature is large or
-complex enough to require issue-level breakdown and phased implementation.
+Use this command instead of `sdd-spec` when the feature is large or complex
+enough to require issue-level breakdown and phased implementation.
 
 ## Input
 
@@ -18,29 +17,30 @@ Extract the following from the user input:
 
 - **FEATURE_DESCRIPTION** (required): the feature description.
 
-  > **STOP — required input.** If the user input is empty or does not
-  > contain a feature description, you MUST stop execution immediately and
-  > ask the user to provide one. Do NOT proceed, do not guess, do not use a
-  > placeholder. Wait for the user's response before continuing.
+  > **STOP — required input.** If the user input is empty or does not contain a
+  > feature description, you MUST stop execution immediately and ask the user to
+  > provide one. Do NOT proceed, do not guess, do not use a placeholder.
+  > Wait for the user’s response before continuing.
 
   After extracting FEATURE_DESCRIPTION, **validate** that it is a genuine
-  feature or capability description. A valid feature description explains
-  **what** the system should do or **what capability** should be added or
-  changed. Reject inputs that are:
+  feature or capability description.
+  A valid feature description explains **what** the system should do or **what
+  capability** should be added or changed.
+  Reject inputs that are:
 
-    - Too vague to act on (e.g., "make it better", "fix stuff")
-    - Not a feature description at all (e.g., a file path, a command, a
-    question, a single word with no actionable meaning)
-    - Ambiguous to the point where multiple completely different features
-    could be implied
+    - Too vague to act on (e.g., “make it better”, “fix stuff”)
+    - Not a feature description at all (e.g., a file path, a command, a question,
+    a single word with no actionable meaning)
+    - Ambiguous to the point where multiple completely different features could be
+    implied
 
   If the input fails validation, **STOP** and tell the user:
 
-  > The provided input does not appear to be a feature description. A
-  > feature description should explain **what** the system should do or
-  > what **capability** should be added/changed.
+  > The provided input does not appear to be a feature description.
+  > A feature description should explain **what** the system should do or what
+  > **capability** should be added/changed.
   >
-  > Example: "Add a user registration flow with email verification"
+  > Example: “Add a user registration flow with email verification”
   >
   > Please provide a clear feature description.
 
@@ -62,27 +62,26 @@ Extract the following from the user input:
    - Read `DEVELOPMENT.md` if it exists (development setup)
    - These inform constraints and conventions
 
-3. **Explore the codebase**
-   Before interviewing the user, explore the repo to verify their
-   assertions and understand the current state.
+3. **Explore the codebase** Before interviewing the user, explore the repo to
+   verify their assertions and understand the current state.
 
-   Delegate this codebase research to the `explore` subagent via the
-   Task tool (`subagent_type: "explore"`). Give it a focused prompt
-   covering the bullets below; it is read-only and returns findings you
-   feed into the next phase. Do not write files from this step. Look for:
+   Delegate this codebase research to the `explore` subagent via the “task”
+   tool. Give it a focused prompt covering the bullets below; it is read-only and
+   returns findings you feed into the next phase.
+   Do not write files from this step.
+   Look for:
 
    - Modules and files that will be affected by this change
-   - Existing patterns, conventions, and abstractions to follow or
-     build on
-   - Anything that contradicts or complicates the user's description
+   - Existing patterns, conventions, and abstractions to follow or build on
+   - Anything that contradicts or complicates the user’s description
 
 ### Phase 2: User Interview
 
-1. **Interview the user about every aspect of the feature**
-   Walk down each branch of the design tree, resolving dependencies
-   between decisions one by one. Do not move to the next branch until
-   the current one is resolved. Do not accept vague answers — if the
-   user says "it depends", ask what it depends on and resolve each case.
+1. **Interview the user about every aspect of the feature** Walk down each
+   branch of the design tree, resolving dependencies between decisions one by
+   one. Do not move to the next branch until the current one is resolved.
+   Do not accept vague answers — if the user says “it depends”, ask what it
+   depends on and resolve each case.
 
    Cover at minimum:
 
@@ -94,11 +93,11 @@ Extract the following from the user input:
    - Security and privacy considerations
 
 2. **Resolve ambiguity relentlessly**
-   - Prioritize clarifications by impact:
-     **scope > security/privacy > UX > technical details**
+   - Prioritize clarifications by impact: **scope > security/privacy > UX >
+     technical details**
    - Only stop asking when every branch has an unambiguous answer
-   - If a question has a clear industry-standard default, propose it and
-     confirm with the user
+   - If a question has a clear industry-standard default, propose it and confirm
+     with the user
 
 ### Phase 3: Design
 
@@ -106,22 +105,20 @@ Extract the following from the user input:
    - Order stories by importance (P1, P2, P3, etc.)
    - Each story must be **independently testable**
    - Use Given/When/Then format for acceptance scenarios
-   - Be exhaustive — include stories for error states, edge cases, and
-     secondary actors
+   - Be exhaustive — include stories for error states, edge cases, and secondary
+     actors
 
-2. **Identify key entities**
-   For each entity involved in the feature:
+2. **Identify key entities** For each entity involved in the feature:
 
    - What it represents and its key attributes
    - How it relates to other entities
    - Validation rules and constraints
    - State transitions (if applicable)
 
-3. **Sketch module design**
-   Identify the major modules that will be built or modified. Actively
-   look for opportunities to extract deep modules — modules that
-   encapsulate significant functionality behind a simple, stable,
-   testable interface. For each module, note:
+3. **Sketch module design** Identify the major modules that will be built or
+   modified. Actively look for opportunities to extract deep modules — modules
+   that encapsulate significant functionality behind a simple, stable, testable
+   interface. For each module, note:
 
    - What it is responsible for
    - Its public interface (inputs, outputs, failure modes)
@@ -132,7 +129,7 @@ Extract the following from the user input:
 
 1. **Create the PRD file**
    - Write to `{SPECS_DIR}/prd.md`
-   - Create the `{SPECS_DIR}/` directory if it doesn't exist
+   - Create the `{SPECS_DIR}/` directory if it doesn’t exist
    - Use the PRD template below
    - Replace all placeholders with concrete details
    - Preserve section order and headings
@@ -153,13 +150,11 @@ Read and follow the PRD template:
 ## Guidelines
 
 - **Technology-agnostic**: Focus on what, not how
-- **Exhaustive user stories**: Cover every actor, every error state,
-  every edge case
-- **Relentless interview**: Do not accept vague answers — resolve every
-  branch
-- **Deep modules**: Prefer fewer modules with simple interfaces over
-  many shallow ones
-- **Preserve context**: Reference how the feature fits into the existing
-  product
-- **No implementation details**: No file paths or code snippets in the
-  PRD — these become outdated quickly
+- **Exhaustive user stories**: Cover every actor, every error state, every edge
+  case
+- **Relentless interview**: Do not accept vague answers — resolve every branch
+- **Deep modules**: Prefer fewer modules with simple interfaces over many
+  shallow ones
+- **Preserve context**: Reference how the feature fits into the existing product
+- **No implementation details**: No file paths or code snippets in the PRD —
+  these become outdated quickly

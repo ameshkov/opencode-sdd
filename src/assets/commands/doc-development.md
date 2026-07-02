@@ -1,7 +1,6 @@
 ---
 description: Create or update DEVELOPMENT.md for the development guide (provided by opencode-sdd)
 ---
-
 # Create or update DEVELOPMENT.md
 
 Create or update `DEVELOPMENT.md` to comply with the development guide
@@ -34,11 +33,11 @@ proceed without.
    - Identify incomplete or generic content that needs to be filled in
    - Identify outdated or incorrect information
 
-2. **Gather development information from the codebase**
-   Delegate this codebase gathering to the `explore` subagent via the
-   Task tool (`subagent_type: "explore"`). Give it a focused prompt
-   covering the bullets below; it is read-only and returns findings you
-   feed into the rest of this phase. Do not write files from this step.
+2. **Gather development information from the codebase** Delegate this codebase
+   gathering to the `explore` subagent via the “task” tool.
+   Give it a focused prompt covering the bullets below; it is read-only and
+   returns findings you feed into the rest of this phase.
+   Do not write files from this step.
 
    - Read `AGENTS.md` for:
      - Language/version requirements
@@ -51,11 +50,13 @@ proceed without.
      - Available scripts/commands
      - Dependencies
    - Examine configuration files (`.env.example`, `docker-compose.yml`, etc.)
-   - Look for existing documentation in code comments or READMEs in subdirectories
+   - Look for existing documentation in code comments or READMEs in
+     subdirectories
 
-3. **Identify information gaps**
-   After gathering information, determine if you can answer these questions:
-   - What tools are required to develop? (language runtime, package manager)
+3. **Identify information gaps** After gathering information, determine if you
+   can answer these questions:
+   - What tools are required to develop?
+     (language runtime, package manager)
    - How do you install dependencies?
    - How do you configure the environment?
    - How do you run the project locally?
@@ -66,13 +67,12 @@ proceed without.
    - What are common development tasks?
    - What are common issues and solutions?
 
-   If any critical questions cannot be answered from the codebase,
-   **ask the user for clarification** before proceeding.
+   If any critical questions cannot be answered from the codebase, **ask the
+   user for clarification** before proceeding.
 
 ### Phase 2: Content Planning
 
-1. **Plan the DEVELOPMENT.md structure**
-   Ensure these sections are present:
+1. **Plan the DEVELOPMENT.md structure** Ensure these sections are present:
    - Prerequisites (required tools and versions)
    - Getting Started (clone, install, configure, run)
    - Development Workflow (branching, code style, testing, building)
@@ -80,8 +80,7 @@ proceed without.
    - Troubleshooting (common issues and solutions)
    - Additional Resources (links to related docs)
 
-2. **Map information to sections**
-   For each section, note:
+2. **Map information to sections** For each section, note:
    - Specific commands to include
    - Configuration steps needed
    - Content to update or remove (outdated info, incorrect commands)
@@ -91,11 +90,10 @@ proceed without.
 The generated document MUST include a table of contents after the main heading,
 listing all sections of heading levels 1 through 3 as markdown links.
 
-1. **Update the DEVELOPMENT.md**
-   Apply these rules strictly:
+1. **Update the DEVELOPMENT.md** Apply these rules strictly:
 
    **Include:**
-   - Specific tool versions required (not just "Node.js" but "Node.js 20.x")
+   - Specific tool versions required (not just “Node.js” but “Node.js 20.x”)
    - Exact commands that work (test them if possible)
    - Step-by-step setup instructions
    - Environment variable documentation
@@ -111,16 +109,15 @@ listing all sections of heading levels 1 through 3 as markdown links.
 
 2. **Ensure all content is project-specific**
    - Replace generic examples with project-specific commands
-   - Remove sections that don't apply to this project
+   - Remove sections that don’t apply to this project
 
 3. **Ensure commands are accurate**
-   - Verify commands match what's in `package.json` scripts, `Makefile`, etc.
+   - Verify commands match what’s in `package.json` scripts, `Makefile`, etc.
    - Use the exact command syntax from the project
 
 ### Phase 4: Validation
 
-1. **Review against requirements**
-   Verify the DEVELOPMENT.md:
+1. **Review against requirements** Verify the DEVELOPMENT.md:
    - [ ] Lists all required tools with versions
    - [ ] Provides complete setup instructions
    - [ ] Documents all available development commands
@@ -146,6 +143,6 @@ listing all sections of heading levels 1 through 3 as markdown links.
 - **No duplication**: Link to AGENTS.md for code guidelines; link to
   DEPLOYMENT.md for deployment if it exists
 - **Ask when uncertain**: If setup steps are unclear, ask the user
-- **Preserve valid content**: Don't discard good existing content that fits
+- **Preserve valid content**: Don’t discard good existing content that fits
   requirements
 - **Test commands**: When possible, verify commands work before documenting them

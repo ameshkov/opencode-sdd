@@ -65,7 +65,16 @@ opencode-sdd/
 │   └── e2e.md                    # How the E2E test suite works and why
 ├── src/                          # Plugin source code
 │   ├── index.ts                  # Plugin entry point; returns Hooks
-│   ├── index.test.ts             # Unit tests for the plugin entry point
+│   ├── index.test.ts             # Unit tests for the plugin entry point (commands, templates)
+│   ├── index-agents.test.ts      # Agent/tool registration unit tests (split from index.test.ts)
+│   ├── index-permission.test.ts  # external_directory templates-permission grant unit tests
+│   ├── agents/                   # Agent definitions (loader, parser, barrel)
+│   │   ├── index.ts              # Barrel exports (public API)
+│   │   ├── frontmatter-parser.ts # Markdown frontmatter parser for agent files
+│   │   ├── frontmatter-parser.test.ts # Unit tests for the agent parser
+│   │   ├── loader.ts             # Scans directory for *.md, parses, returns map
+│   │   ├── loader.test.ts        # Unit tests for the agent loader
+│   │   └── markdown.test.ts      # Wiring regression test for shipped agents
 │   ├── commands/                 # Command definitions CODE (loader, parser, rewriter)
 │   │   ├── index.ts              # Barrel exports (public API)
 │   │   ├── frontmatter-parser.ts # Markdown frontmatter parser for command files
@@ -75,7 +84,15 @@ opencode-sdd/
 │   │   ├── markdown.test.ts      # Wiring regression test for shipped commands
 │   │   ├── template-rewriter.ts  # Rewrites @opencode-sdd-templates/ to abs path
 │   │   └── template-rewriter.test.ts # Unit tests for the template rewriter
-│   ├── assets/                   # Bundled command and template data
+│   ├── assets/                   # Bundled agent and command/template data
+│   │   ├── agents/               # Bundled agent Markdown files
+│   │   │   ├── sdd-build.md          # sdd-build agent (general-purpose primary build agent)
+│   │   │   ├── sdd-explore.md        # sdd-explore agent (read-only researcher)
+│   │   │   ├── sdd-plan-reviewer.md  # sdd-plan-reviewer agent (read-only plan reviewer)
+│   │   │   ├── sdd-planner.md        # sdd-planner worker (plan stage)
+│   │   │   ├── sdd-reviewer.md       # sdd-reviewer worker (review stage)
+│   │   │   ├── sdd-coder.md          # sdd-coder worker (implement stage)
+│   │   │   └── sdd-validator.md      # sdd-validator worker (validate stage)
 │   │   └── commands/             # Command Markdown files + referenced templates
 │   │       ├── prd-write.md      # prd-write command (PRD writer)
 │   │       ├── prd-to-issues.md  # prd-to-issues command (PRD -> issues)
@@ -83,6 +100,7 @@ opencode-sdd/
 │   │       ├── prd-review-plan.md      # prd-review-plan command (plan reviewer)
 │   │       ├── prd-implement-issue.md # prd-implement-issue command (run a plan)
 │   │       ├── prd-validate-issue.md  # prd-validate-issue command (per-issue validation)
+│   │       ├── prd-auto-implement.md # prd-auto-implement command (SDD orchestrator entry point)
 │   │       ├── prd-validate.md   # prd-validate command (cross-cutting validation)
 │   │       ├── sdd-implement.md  # sdd-implement command (spec + plan runner)
 │   │       ├── sdd-spec.md  # sdd-spec command (spec writer)
@@ -115,14 +133,25 @@ opencode-sdd/
 │   │           │   └── task-structure-template.md
 │   │           └── sdd-validate/         # Validation template
 │   │               └── validation-report-template.md
-│   └── utils/                    # Shared internal utilities
-│       ├── index.ts              # Barrel exports (public API): Logger, createLogger
+│   ├── sdd-command/               # sdd-command tool (allowlist, source loader, definition)
+│   │   ├── index.ts              # Barrel exports (public API): createSddCommandTool
+│   │   ├── allowlist.ts          # Hardcoded allowlist + formatCommandError
+│   │   ├── allowlist.test.ts     # Unit tests for the allowlist + error formatter
+│   │   ├── source-loader.ts      # Loads <commandsDir>/<name>.md, strips frontmatter
+│   │   ├── source-loader.test.ts # Unit tests for the source loader
+│   │   ├── definition.ts         # createSddCommandTool ToolDefinition factory
+│   │   └── definition.test.ts    # Unit tests for the tool execute pipeline
+│   └── utils/                    # Shared internal utilities (logger, frontmatter helpers)
+│       ├── index.ts              # Barrel exports (public API): Logger, createLogger, frontmatter
+│       ├── frontmatter.ts        # Generic Markdown frontmatter helpers (split/parse)
+│       ├── frontmatter.test.ts   # Unit tests for the generic frontmatter helpers
 │       ├── logger.ts             # Plugin logger (opencode client.app.log)
 │       └── logger.test.ts        # Unit tests for the logger
 ├── scripts/                      # Build-time helper scripts
 │   └── copy-assets.mjs           # Copies src/assets/ into build/assets/
 ├── test/                         # Shared test support code (not test cases)
 │   ├── __fixtures__/             # Loader test fixtures (ignored by markdownlint)
+│   ├── plugin-helpers.ts         # Shared plugin entry-point test helpers
 │   └── stub-client.ts            # Stub opencode SDK client for tests
 ├── test-e2e/                     # Mock-LLM e2e suite (runs via pnpm test:e2e)
 │   ├── harness.ts                # Binary/build guards, server lifecycle, session helpers
@@ -131,8 +160,16 @@ opencode-sdd/
 │   ├── mock-server-chunks.ts     # SSE chunk builders for the mock
 │   ├── mock-server.test.ts       # Standalone unit test for the mock
 │   ├── scenarios.ts              # writeFileScenario / writeFilesScenario builders
+│   ├── cross-cutting-scenarios.ts # Cross-cutting prd-auto-implement loop scenario builders
+│   ├── resume-scenarios.ts       # Resume prd-auto-implement loop scenario builders
 │   ├── smoke.e2e.test.ts         # Commands register in a live opencode server
 │   ├── command.e2e.test.ts       # Mock-LLM-driven command -> file on disk
+│   ├── sdd-command.e2e.test.ts   # sdd-command tool global deny in live config
+│   ├── templates-permission.e2e.test.ts # Bundled templates external_directory grant in live config
+│   ├── agent-model.e2e.test.ts  # User agent model override survives plugin load
+│   ├── prd-auto-implement-helpers.ts  # Shared server lifecycle + helpers for prd-auto-implement e2e tests
+│   ├── prd-auto-implement.e2e.test.ts # prd-auto-implement dispatch/cap e2e plumbing
+│   ├── prd-auto-implement-resume.e2e.test.ts # prd-auto-implement resume-after-interruption e2e tests
 │   └── global-setup.ts           # Vitest globalSetup: binary + build guards
 ├── .husky/
 │   └── pre-commit                # Runs pnpm check before every commit
@@ -269,24 +306,27 @@ The project's layers, from top to bottom:
 
 - **Entry point** (`src/index.ts`) — exports the `Plugin` function,
   returns the `Hooks` object, and wires together the registered surface.
-- **Definitions** (`src/commands/`) — Markdown command files loaded at
-  startup via the loader, plus the frontmatter parser and the template
-  rewriter that rewrites the portable `@opencode-sdd-templates/` token to
-  the resolved absolute templates directory at registration time. No side
-  effects beyond logging.
-- **Data** (`src/assets/commands/` + `src/assets/commands/templates/`) —
-  Bundled command Markdown files and prompt template assets embedded by
-  command prompts via native `@<abs-path>` mention resolution.
+- **Definitions** (`src/agents/`, `src/commands/`) — Markdown agent and
+  command files loaded at startup via their loaders, plus their frontmatter
+  parsers and the command template rewriter that rewrites the portable
+  `@opencode-sdd-templates/` token to the resolved absolute templates
+  directory at registration time. No side effects beyond logging.
+- **Data** (`src/assets/agents/`, `src/assets/commands/` +
+  `src/assets/commands/templates/`) — Bundled agent Markdown files,
+  command Markdown files, and prompt template assets embedded by command
+  prompts via native `@<abs-path>` mention resolution.
 
 ```text
 Entry point (index.ts)
       ↓
-Definitions (commands/)
+Definitions (agents/, commands/)
       ↓
-Data (assets/commands/, assets/commands/templates/)
+Data (assets/agents/, assets/commands/, assets/commands/templates/)
 ```
 
-Definitions MUST NOT import from the entry point. New layers (e.g.,
+Definitions MUST NOT import from the entry point. Sibling definition
+layers (`agents/`, `commands/`) MUST NOT import from each other; shared
+parsing helpers live in the `utils/` layer below them. New layers (e.g.,
 services, utilities) introduced in later iterations MUST sit below the
 entry point and above definitions only when they are consumed by them.
 
@@ -298,9 +338,17 @@ This plugin talks to opencode exclusively through the `config` hook:
   `config` hook receives opencode's live merged `Config` object and mutates
   it in place. Agents go under `config.agent`; commands go under
   `config.command`.
-- **Never overwrite existing user configuration.** Always spread-merge so
-  the plugin adds its entries without clobbering keys the user already
-  defined: `config.agent = { ...config.agent, <key>: <value> }`.
+- **Never overwrite existing user configuration.** Always spread-merge at
+  the top level so the plugin adds its entries without clobbering keys the
+  user already defined: `config.agent = { ...config.agent, <key>: <value> }`.
+  When the same entry already exists (`config.agent[<key>]` was user-set),
+  also shallow-merge at the entry level — `{ ...existing, ...pluginConfig }`
+  — so plugin-defined fields (`description`, `mode`, `permission`, `prompt`)
+  take precedence while user-only fields the plugin never sets (notably
+  `model`, e.g. from `opencode.json`) are preserved instead of clobbered.
+  Commands are exempt: a colliding command is fully replaced (its
+  `template` is the plugin's contract), and the overwrite is logged as a
+  warning.
 - **Rewriting template asset mentions is a config-hook concern.**
   Command Markdown files embed bundled template assets using the portable
   token `@opencode-sdd-templates/<subdir>/<file>.md` (environment-
@@ -308,16 +356,40 @@ This plugin talks to opencode exclusively through the `config` hook:
   known at runtime (`resolveTemplatesDir()` in `src/index.ts`), so the
   `config` hook rewrites each loaded command template at registration
   time, replacing `@opencode-sdd-templates/` with `@<abs-templates-dir>/`
-  via `rewriteAssetReferences`. opencode's `resolvePromptParts` then
-  inlines the file via the `read` tool with `bypassCwdCheck: true`, so
-  bundled assets outside the worktree need no `external_directory`
-  permission.
+  via `rewriteAssetReferences`. opencode's `resolvePromptParts` inlines
+  the file via the `read` tool with `bypassCwdCheck: true`, so the
+  mention-inlining path itself needs no `external_directory` permission.
+  As a defensive measure the hook ALSO grants `external_directory` read
+  access to `<abs-templates-dir>/**` (spread-merged onto any existing
+  `config.permission`, preserving other categories and path-glob rules,
+  and never loosening a global `"deny"`/`"ask"` string into object form)
+  so an SDD worker that reads a template file directly via the `read`
+  tool is not gated behind a prompt. The grant is layered in
+  `registerBundledTemplatesPermission` and verified by a live-config e2e
+  test.
 - **Command shape:** `{ template: string, description?: string, agent?:
   string, model?: string, subtask?: boolean }`. `template` is required and
   is the prompt body; `$ARGUMENTS` is interpolated with the user's input.
 - **Agent shape:** `{ description?: string, mode?: 'subagent' | 'primary'
-  | 'all', prompt?: string, model?: string, ... }`. The orchestrator is a
-  `subagent` so it coexists with opencode's built-in agents.
+  | 'all', prompt?: string, model?: string, tools?: { [name: string]:
+  boolean }, permission?: { read?, edit?, bash?, glob?, grep?, task?,
+  websearch?, webfetch?, ... }, hidden?: boolean, ... }`. Agents are loaded
+  from bundled Markdown+frontmatter assets under `src/assets/agents/`
+  (mirroring the command loader); the file name (minus `.md`) becomes the
+  agent name, frontmatter becomes the `AgentConfig` fields, and the Markdown
+  body becomes `prompt`. `hidden: true` hides a `subagent` from the Tab
+  switcher. The orchestrator is a `subagent` so it coexists with opencode's
+  built-in agents.
+- **Prefer `permission` over the deprecated `tools` field.** opencode
+  marks `tools` as deprecated in favour of `permission` for finer-grained
+  control. All shipped agents use `permission` for tool-access control
+  (read, edit, bash, etc.). The sole exception is the `sdd-command` custom
+  tool: its global deny (`config.tools['sdd-command'] = false` in the
+  `config` hook) and per-worker override (`tools: { sdd-command: true }` in
+  the worker frontmatter) must use the `tools` field because, as of
+  opencode 1.17.x, per-agent `permission` overrides are not honoured at
+  runtime for custom (non-built-in) tool names. When a future opencode
+  release fixes this, the `tools` usage can be dropped entirely.
 - **Type the surface against the SDK.** Import `AgentConfig` from
   `@opencode-ai/sdk` and derive command types from `Config` so the
   compiler catches shape mistakes early. opencode hard-fails on invalid

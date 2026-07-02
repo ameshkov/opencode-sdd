@@ -25,6 +25,7 @@ clean, isolated session.
 - [Install](#install)
 - [The SDD Short Flow](#the-sdd-short-flow)
 - [The PRD Long Flow](#the-prd-long-flow)
+    - [Auto-Implement](#auto-implement)
 - [Keeping Documentation Current](#keeping-documentation-current)
 - [Honorable Mentions](#honorable-mentions)
 - [Additional Resources](#additional-resources)
@@ -122,6 +123,30 @@ passes:
   Each revision marks the validation's issues as resolved and sets the
   overall status to `REVISED`; re-run `/prd-validate-issue` until the
   overall status is `COMPLETE`.
+
+### Auto-Implement
+
+Once the PRD and its issues exist (steps 1–2 above), `/prd-auto-implement`
+orchestrates the rest in a single session on the `sdd-build` orchestrator:
+it plans, reviews, implements, and validates every issue in numeric order,
+then runs the cross-cutting validation. It hard-stops if the PRD or issues
+are missing. Each review, validation, and cross-cutting loop is capped at
+`MAX_ATTEMPTS` (default `3`) and escalates to you when it can't converge;
+re-running it after an interruption (crash, stop, or escalation) resumes
+where it left off without redoing completed work.
+
+- `/prd-auto-implement` — orchestrate the full PRD implementation end-to-end.
+  `SPECS_DIR` (default `.sdd/.current/`) sets where specs live; `MAX_ATTEMPTS`
+  (default `3`) caps every loop.
+
+The full run can take hours depending on the number of issues. A `HITL` issue
+records its human decisions in a `## Human Decisions` section, each tagged
+`before-planning` or `before-implementation`. The planner (`prd-issue-to-plan`)
+owns HITL: it asks those decisions at their gate (before-planning before it
+writes the plan, before-implementation after), and records your answers back in
+the issue. Under `/prd-auto-implement` it surfaces the questions to you, records
+your answers, and re-dispatches the planner. `AFK` issues proceed without
+asking.
 
 ## Keeping Documentation Current
 

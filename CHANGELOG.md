@@ -8,7 +8,17 @@ and this project adheres to
 
 ## [Unreleased]
 
-<!-- Add unreleased changes here -->
+### Added
+
+- `prd-auto-implement` command: orchestrates the full PRD implementation
+  pipeline on `sdd-build`, with prerequisite hard-stops and optimistic-path
+  per-issue dispatch of the `sdd-planner`, `sdd-reviewer`, `sdd-coder`, and
+  `sdd-validator` workers.
+- The `config` hook now grants `external_directory` read access to the
+  bundled templates directory (`<abs-templates-dir>/**` -> `"allow"`), so
+  SDD workers reading template files via the `read` tool are no longer
+  gated behind a permission prompt. Spread-merged onto existing user
+  permissions without loosening a global deny/ask posture.
 
 ## [v1.1.0] - 2026-06-24
 

@@ -2,55 +2,9 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { Config, PluginInput } from '@opencode-ai/plugin';
+import type { Config } from '@opencode-ai/plugin';
 import sddPlugin from './index.js';
-import { stubClient } from '../test/stub-client.js';
-
-/** Builds a {@link PluginInput} with a stubbed SDK client for logging. */
-function pluginInput(): PluginInput {
-  return { client: stubClient() } as unknown as PluginInput;
-}
-
-async function withCommandsDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'entry-'));
-  const writeCmd = (name: string, description: string) =>
-    writeFile(
-      join(dir, `${name}.md`),
-      [
-        '---',
-        `description: ${description}`,
-        '---',
-        '',
-        `Command ${name}. Input: $ARGUMENTS`,
-        `@opencode-sdd-templates/${name}/template.md`,
-        '',
-      ].join('\n'),
-    );
-  await Promise.all([
-    writeCmd('prd-write', 'Write a PRD'),
-    writeCmd('prd-to-issues', 'Break a PRD into issues'),
-    writeCmd('prd-issue-to-plan', 'Plan a PRD issue'),
-    writeCmd('prd-review-plan', 'Review a PRD issue plan'),
-    writeCmd('prd-implement-issue', 'Implement a PRD issue'),
-    writeCmd('prd-validate-issue', 'Validate a PRD issue'),
-    writeCmd('prd-validate', 'Validate the full PRD'),
-    writeCmd('sdd-spec', 'Produce a spec'),
-    writeCmd('sdd-implement', 'Implement a spec'),
-    writeCmd('sdd-validate', 'Validate a spec'),
-    writeCmd('doc-agents', 'Actualize AGENTS.md'),
-    writeCmd('doc-changelog', 'Update CHANGELOG.md'),
-    writeCmd('doc-deployment', 'Actualize DEPLOYMENT.md'),
-    writeCmd('doc-development', 'Actualize DEVELOPMENT.md'),
-    writeCmd('doc-readme', 'Actualize README.md'),
-  ]);
-  process.env['SDD_COMMANDS_DIR'] = dir;
-  try {
-    await fn(dir);
-  } finally {
-    delete process.env['SDD_COMMANDS_DIR'];
-    await rm(dir, { recursive: true, force: true });
-  }
-}
+import { pluginInput, withCommandsDir } from '../test/plugin-helpers.js';
 
 async function withTemplatesDir(fn: (dir: string) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), 'templates-'));
@@ -300,7 +254,61 @@ describe('sdd plugin', () => {
     const errorCalls = vi
       .mocked(input.client.app.log)
       .mock.calls.filter((call) => call[0]?.body?.level === 'error');
-    expect(errorCalls).toHaveLength(1);
-    expect(errorCalls[0]?.[0]?.body?.message).toBe('failed to register SDD commands');
+    expect(errorCalls).toHaveLength(4);
+    const messages = errorCalls.map((call) => call[0]?.body?.message);
+    expect(messages).toContain('failed to register SDD commands');
+    expect(messages).toContain('failed to register SDD agents');
+    expect(messages).toContain('failed to register sdd-command global deny');
+    expect(messages).toContain('failed to register bundled templates permission');
+  });
+});
+
+describe('sdd plugin prd-auto-implement command registration', () => {
+  it('registers prd-auto-implement bound to sdd-build with no subtask flag', async () => {
+    // Load the real bundled commands (where prd-auto-implement.md lives) and
+    // neutralise agent loading for determinism, mirroring the sdd-build
+    // agent test's env-isolation pattern (inverted: commands real, agents
+    // missing).
+    delete process.env['SDD_COMMANDS_DIR'];
+    process.env['SDD_AGENTS_DIR'] = join(tmpdir(), 'definitely-missing-agents');
+    try {
+      const hooks = await sddPlugin(pluginInput());
+      const config: Config = {};
+      await hooks.config?.(config);
+
+      const command = config.command?.['prd-auto-implement'];
+      expect(command).toBeDefined();
+      expect(command?.agent).toBe('sdd-build');
+      expect(command?.subtask).toBeUndefined();
+      // The template is the orchestrator prompt (the `sdd-build` binding is
+      // verified above via `agent`; the body identifies the orchestrator
+      // role rather than naming the agent).
+      expect(command?.template).toContain('orchestrator');
+      expect(command?.template).toContain('sdd-planner');
+      // No portable template token to rewrite; the rewriter is a no-op and
+      // the template survives unchanged.
+      expect(command?.template).not.toContain('@opencode-sdd-templates/');
+    } finally {
+      delete process.env['SDD_COMMANDS_DIR'];
+      delete process.env['SDD_AGENTS_DIR'];
+    }
+  });
+
+  it('preserves an existing user command via spread-merge alongside prd-auto-implement', async () => {
+    delete process.env['SDD_COMMANDS_DIR'];
+    process.env['SDD_AGENTS_DIR'] = join(tmpdir(), 'definitely-missing-agents');
+    try {
+      const hooks = await sddPlugin(pluginInput());
+      const config: Config = {
+        command: { 'user-cmd': { template: 'keep me' } },
+      };
+      await hooks.config?.(config);
+
+      expect(config.command?.['user-cmd']).toBeDefined();
+      expect(config.command?.['prd-auto-implement']).toBeDefined();
+    } finally {
+      delete process.env['SDD_COMMANDS_DIR'];
+      delete process.env['SDD_AGENTS_DIR'];
+    }
   });
 });

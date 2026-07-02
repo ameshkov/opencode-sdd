@@ -1,11 +1,10 @@
 ---
 description: Generate a structured implementation plan for a single PRD issue (provided by opencode-sdd)
 ---
-
 # Generate implementation plan
 
-Generate a structured implementation plan for a single PRD issue. The plan
-includes technical context, research findings, entity definitions, API
+Generate a structured implementation plan for a single PRD issue.
+The plan includes technical context, research findings, entity definitions, API
 contracts, and actionable tasks — scoped to one vertical slice.
 
 ## Input
@@ -17,14 +16,15 @@ Extract the following from the user input:
 - **ISSUE_ID** (required): The issue identifier (e.g., `1-AFK`). This
   corresponds to the directory name under `{SPECS_DIR}/issues/`.
 
-  > **STOP — required input.** If the user input is empty or does not
-  > contain an issue ID, you MUST stop execution immediately and ask the
-  > user to provide one. Do NOT proceed, do not guess, do not use a
-  > placeholder. Wait for the user's response before continuing.
+  > **STOP — required input.** If the user input is empty or does not contain an
+  > issue ID, you MUST stop execution immediately and ask the user to provide
+  > one. Do NOT proceed, do not guess, do not use a placeholder.
+  > Wait for the user’s response before continuing.
 
-- **CONSTRAINTS** (optional, default: `no additional constraints`):
-  Constraints or preferences for the plan. Defaults to no additional
-  constraints.
+- **CONSTRAINTS** (optional, default: `no additional constraints`): Constraints
+  or preferences for the plan.
+  Defaults to no additional constraints.
+
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
   specification files are stored.
 
@@ -37,8 +37,8 @@ Check for the existence of the following files:
 
 If the PRD is missing:
 
-**ERROR: PRD not found at `{SPECS_DIR}/prd.md`. Run `prd-write` first to
-create a PRD.**
+**ERROR: PRD not found at `{SPECS_DIR}/prd.md`. Run `prd-write` first to create
+a PRD.**
 
 If the issue file is missing:
 
@@ -47,16 +47,53 @@ If the issue file is missing:
 
 If `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` already exists:
 
-- If its Status is "Needs Revision" (a review rejected it), this is a
-  **plan revision**. Read `review.md` in the same directory and treat its
-  consolidated findings as required changes. Do not warn about
-  overwriting — this is the intended revision path.
+- If its Status is “Needs Revision” (a review rejected it), this is a **plan
+  revision**. Read `review.md` in the same directory and treat its consolidated
+  findings as required changes.
+  Do not warn about overwriting — this is the intended revision path.
+
+- If you are being re-dispatched after HITL resolution (the plan exists, its
+  Status is not “Needs Revision”, and every `## Human Decisions` decision is
+  `Resolved`), **finish without rewriting** — report that planning is complete
+  and stop. This is the idempotent resume path.
+
 - Otherwise, warn the user:
 
-  > **WARNING**: A plan already exists for issue `{ISSUE_ID}`. Continuing
-  > will overwrite the existing plan. Do you want to proceed?
+  > **WARNING**: A plan already exists for issue `{ISSUE_ID}`. Continuing will
+  > overwrite the existing plan.
+  > Do you want to proceed?
 
   Wait for confirmation before continuing.
+
+## Resolve HITL decisions
+
+For a HITL issue (`issue.md` has a `## Human Decisions` section), resolve Open
+decisions at their gate. Each `### Decision:` block carries a `**Gate**`
+(`before-planning` or `before-implementation`) and a `**Status**` (`Open` or
+`Resolved`).
+
+1. Read `## Human Decisions`. Collect the decisions whose `**Status**` is
+   `Open` and whose `**Gate**` matches the gate you are resolving (passed in by
+   the calling step). If none are Open at this gate, proceed without pausing.
+
+2. If you have the `question` tool, ask them now in a single `question` tool
+   call — one question per decision, using each decision’s recorded
+   `**Options**` as the choices. Wait for the user’s answers.
+
+3. If you do NOT have the `question` tool (e.g. you were delegated by another
+   agent), do NOT ask the user yourself. Stop and report the Open decisions for
+   this gate in your final output — for each, its title, `**Gate**`, and
+   `**Options**`. Then end your turn. The caller will ask the user, record the
+   answers, and re-dispatch you.
+
+4. Once answers are available, for each answered decision edit `issue.md`:
+   fill its `**Answer**:` line with the chosen option (or the user’s free-text
+   guidance) and set its `**Status**` to `Resolved`. Edit only those two fields
+   per decision; leave the rest of the issue intact.
+
+The before-planning gate is resolved after loading context (before the plan is
+written); the before-implementation gate is resolved after the plan is written
+(see Phase 8).
 
 ## Steps
 
@@ -77,22 +114,24 @@ If `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` already exists:
      - Dependencies (blocked by)
 
 3. **Read the existing review (when revising)**
-   - If `{SPECS_DIR}/issues/{ISSUE_ID}/review.md` exists, read it and
-     extract the consolidated, deduplicated findings. These are required
-     changes the revision must address — every finding must be resolved
-     by the updated tasks. If no review exists, skip this step.
+   - If `{SPECS_DIR}/issues/{ISSUE_ID}/review.md` exists, read it and extract
+     the consolidated, deduplicated findings.
+     The **Open** findings are the required changes the revision must address —
+     every `**Status**: Open` finding must be resolved by the updated tasks.
+     Findings already marked `**Status**: Resolved` or `**Status**: Dismissed`
+     are history, not work items.
+     If no review exists, skip this step.
 
-4. **Check dependency status**
-   For each issue listed in the "Blocked by" field:
+4. **Check dependency status** For each issue listed in the “Blocked by” field:
 
    - Read `{SPECS_DIR}/issues/{DEP_ISSUE_ID}/issue.md`
    - Check the Status field
-   - If any dependency has Status "Draft" (not yet planned), warn the
-     user:
+   - If any dependency has Status “Draft” (not yet planned), warn the user:
 
-   > **WARNING**: Issue `{ISSUE_ID}` is blocked by `{DEP_ISSUE_ID}`
-   > which has not been planned yet. The plan may need adjustment once
-   > blocking issues are planned. Do you want to proceed?
+   > **WARNING**: Issue `{ISSUE_ID}` is blocked by `{DEP_ISSUE_ID}` which has
+   > not been planned yet.
+   > The plan may need adjustment once blocking issues are planned.
+   > Do you want to proceed?
 
 5. **Read project guidelines**
    - Read `AGENTS.md` if it exists (coding standards and patterns)
@@ -103,27 +142,34 @@ If `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` already exists:
    - Read CONSTRAINTS for technology preferences or clarifications
    - Use constraints to resolve any ambiguities
 
+7. **Resolve before-planning HITL decisions** If `issue.md` has a `## Human
+   Decisions` section, resolve Open decisions whose `**Gate**` is
+   `before-planning` (see “Resolve HITL decisions”). These shape the plan —
+   they must be settled before you write it. Carry each resolved answer into
+   the plan. Do NOT resolve `before-implementation` decisions here: they
+   cannot be settled until the plan exists (they may depend on what the plan
+   decides to migrate or set up), so leave them `Open` for now — they are
+   resolved later, in Phase 8, after the plan is written.
+
 ### Phase 2: Research
 
-1. **Explore the codebase**
-   Delegate this codebase research to the `explore` subagent via the
-   Task tool (`subagent_type: "explore"`). Give it a focused prompt
-   covering the bullets below; it is read-only and returns findings you
-   feed into the rest of this phase. Do not write files from this step.
+1. **Explore the codebase** Delegate this codebase research to the `explore`
+   subagent via the “task” tool.
+   Give it a focused prompt covering the bullets below; it is read-only and
+   returns findings you feed into the rest of this phase.
+   Do not write files from this step.
    Focus on the parts of the codebase touched by this issue:
 
    - Files and modules that will be created or modified
    - Existing patterns to follow (naming, error handling, tests)
    - Any interfaces or contracts this issue must respect
 
-2. **Research unknowns**
-   For each unclear technical aspect:
+2. **Research unknowns** For each unclear technical aspect:
 
    - Search the codebase for related patterns
    - Document findings with specifics
 
-3. **Fill technical context**
-   Determine from the codebase:
+3. **Fill technical context** Determine from the codebase:
 
    - **Language/Version**: Programming language and version
    - **Primary Dependencies**: Key frameworks and libraries
@@ -135,8 +181,7 @@ If `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` already exists:
 
 Skip this phase if the issue does not involve data entities.
 
-1. **Extract entities relevant to this issue**
-   For each entity:
+1. **Extract entities relevant to this issue** For each entity:
 
    - **Name**: Entity identifier
    - **Fields**: Key attributes with types
@@ -153,8 +198,8 @@ Skip this phase if the issue does not involve data entities.
 
 Skip this phase if the issue does not require API endpoints.
 
-1. **Generate contracts from the issue's scope**
-   For each user action that requires an API within this slice:
+1. **Generate contracts from the issue’s scope** For each user action that
+   requires an API within this slice:
 
    - Define the endpoint (method, path, parameters)
    - Specify request/response schemas
@@ -176,13 +221,13 @@ Skip this phase if the issue does not require API endpoints.
    - List modifications to existing files
    - Note responsibilities of each file
 
-3. **Generate implementation tasks**
-   Break the issue into discrete, testable tasks:
+3. **Generate implementation tasks** Break the issue into discrete, testable
+   tasks:
 
    - Each task is a single action (2–5 minutes)
    - Order tasks by dependency (prerequisites first)
-   - Follow TDD flow: write failing test → verify failure → implement →
-     verify pass
+   - Follow TDD flow: write failing test → verify failure → implement → verify
+     pass
    - Include verification criteria for each task
 
 ### Phase 6: Write Plan
@@ -196,12 +241,12 @@ Skip this phase if the issue does not require API endpoints.
    - Write to `{SPECS_DIR}/issues/{ISSUE_ID}/contracts/`
 
 3. **Update issue status**
-   - Change the Status field in
-     `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` from "Draft" or "Reviewing"
-     to "Planned"
-   - The rewritten `plan.md` Status resets to "Draft" (the template
-     default); the previous review verdict no longer applies to the
-     revised plan
+   - Change the Status field in `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` from
+     “Draft” or “Reviewing” to “Planned”
+   - The rewritten `plan.md` Status resets to “Draft” (the template default);
+     the previous review verdict no longer applies to the revised plan
+   - This is performed by you after writing the plan; it MUST NOT be encoded as
+     a task in the plan
 
 4. **Review the output**
    - Verify all sections are complete
@@ -213,26 +258,46 @@ Skip this phase if the issue does not require API endpoints.
 
 After writing the complete plan, check it against the issue.
 
-1. **Issue coverage**: Skim the acceptance criteria in the issue. Can you
-   point to a task that implements each criterion? List any gaps.
+1. **Issue coverage**: Skim the acceptance criteria in the issue.
+   Can you point to a task that implements each criterion?
+   List any gaps.
 
-2. **Placeholder scan**: Search the plan for "TBD", "TODO", "implement
-   later", "fill in details", "similar to Task N", or steps that describe
-   what to do without showing how. Fix them.
+2. **Placeholder scan**: Search the plan for “TBD”, “TODO”, “implement later”,
+   “fill in details”, “similar to Task N”, or steps that describe what to do
+   without showing how.
+   Fix them.
 
-3. **Type consistency**: Do the types, method signatures, and property
-   names used in later tasks match earlier tasks?
+3. **Type consistency**: Do the types, method signatures, and property names
+   used in later tasks match earlier tasks?
 
-4. **Review findings resolved (when revising)**: If this was a revision
-   after a rejected review, confirm every consolidated finding from
-   `review.md` is addressed by an updated task. Re-check the affected
-   dimensions; any unresolved finding must be fixed before finishing.
-   Then update `review.md` so the next `/prd-review-plan` knows it is
-   re-reviewing a revised plan:
-   - For every consolidated finding, fill its `Resolved:` line noting
+4. **Review findings resolved (when revising)**: If this was a revision after a
+   rejected review, confirm every consolidated **Open** finding from `review.md`
+   is addressed by an updated task.
+   Re-check the affected dimensions; any unresolved finding must be fixed before
+   finishing. Then update `review.md` in place (do not overwrite it) so the next
+   `/prd-review-plan` knows it is re-reviewing a revised plan:
+   - For every consolidated **Open** finding, fill its `Resolved:` line noting
      how the revised plan addresses it (e.g. the task that fixes it).
-   - Change the `Verdict` from "Rejected" to "Revised" to signal the
-     plan has been revised and is awaiting re-review.
+     The `Resolved:` line records the *expectation* the reviewer confirms on
+     re-review — it does not by itself mark the finding resolved; the reviewer
+     sets `**Status**: Resolved` after verifying.
+   - Do **not** remove or overwrite other findings: prior `**Status**: Resolved`
+     and `**Status**: Dismissed` findings stay inline as-is, the
+     `**Review attempt**` counter is left for the reviewer to increment, and
+     `## Dismissed Findings` entries are preserved.
+   - Change the `Verdict` from “Rejected” to “Revised” to signal the plan has
+     been revised and is awaiting re-review.
+
+### Phase 8: Resolve before-implementation HITL decisions
+
+After the plan is written and self-reviewed, resolve Open decisions whose
+`**Gate**` is `before-implementation` (see “Resolve HITL decisions”). These
+are the decisions that could not be made until the plan existed — e.g.
+approving a schema migration now that the planned changes to migrate are
+known, or a human setting up / configuring an environment the build needs
+before it can be implemented. They are settled after the plan is written and
+before implementation. The plan phase is not complete until every
+`## Human Decisions` decision is `Resolved`.
 
 ## Plan Template
 
@@ -243,13 +308,16 @@ Read and follow the plan template:
 ## Guidelines
 
 - **Be specific**: List exact files, line ranges, and commands
-- **Zero context assumed**: Write as if the engineer knows nothing about
-  the codebase
+- **Zero context assumed**: Write as if the engineer knows nothing about the
+  codebase
 - **TDD always**: Every behavior change starts with a failing test
 - **DRY and YAGNI**: No speculative abstractions or duplicate logic
 - **Dependency order**: Tasks must be ordered so prerequisites come first
 - **Existing patterns**: Follow conventions already established
-- **Scoped to the issue**: Do not plan work outside the issue's vertical
-  slice
-- **No placeholders**: Every step must contain actual content — never
-  "TBD", "TODO", or "similar to Task N"
+- **Scoped to the issue**: Do not plan work outside the issue’s vertical slice
+- **HITL first**: Resolve Open `before-planning` decisions before writing the
+  plan, and Open `before-implementation` decisions after writing it (see
+  “Resolve HITL decisions”). Planning is not complete until every `## Human
+  Decisions` decision is `Resolved`.
+- **No placeholders**: Every step must contain actual content — never “TBD”,
+  “TODO”, or “similar to Task N”

@@ -5,7 +5,7 @@
 - **Issue**: `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`
 - **PRD**: `{SPECS_DIR}/prd.md`
 - **Model**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]
-- **User Input**: [If provided: "CONSTRAINTS" or "None"]
+- **User Input**: [If provided: “CONSTRAINTS” or "None"]
 
 ## Summary
 
@@ -55,6 +55,7 @@
 **Files:**
 
 - Create: `exact/path/to/file.ext`
+
 - Test: `tests/exact/path/to/test.ext`
 
 - [ ] **Step 1: Write the failing test**
@@ -65,8 +66,7 @@
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `test command`
-Expected: FAIL with "[expected error message]"
+Run: `test command` Expected: FAIL with “[expected error message]”
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -76,8 +76,7 @@ Expected: FAIL with "[expected error message]"
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `test command`
-Expected: PASS
+Run: `test command` Expected: PASS
 
 **Verification**: [How to verify the task is complete]
 

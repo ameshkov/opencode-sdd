@@ -1,11 +1,11 @@
 ---
 description: Validate a single PRD issue's implementation against its plan (provided by opencode-sdd)
 ---
-
 # Validate a single PRD issue implementation
 
-Verify that a single PRD issue has been fully implemented according to its
-plan and acceptance criteria. Produces a validation report for the issue.
+Verify that a single PRD issue has been fully implemented according to its plan
+and acceptance criteria.
+Produces a validation report for the issue.
 
 ## Input
 
@@ -16,10 +16,10 @@ Extract the following from the user input:
 - **ISSUE_ID** (required): The issue identifier (e.g., `1-AFK`). This
   corresponds to the directory name under `{SPECS_DIR}/issues/`.
 
-  > **STOP — required input.** If the user input is empty or does not
-  > contain an issue ID, you MUST stop execution immediately and ask the
-  > user to provide one. Do NOT proceed, do not guess, do not use a
-  > placeholder. Wait for the user's response before continuing.
+  > **STOP — required input.** If the user input is empty or does not contain an
+  > issue ID, you MUST stop execution immediately and ask the user to provide
+  > one. Do NOT proceed, do not guess, do not use a placeholder.
+  > Wait for the user’s response before continuing.
 
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
   specification files are stored.
@@ -33,8 +33,8 @@ Check for the existence of the following files:
 
 If the issue file is missing:
 
-**ERROR: Issue not found at `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`. Check
-the ISSUE_ID.**
+**ERROR: Issue not found at `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`. Check the
+ISSUE_ID.**
 
 If the plan is missing:
 
@@ -70,25 +70,25 @@ If the plan is missing:
    - Extract Code Guidelines and Contribution Instructions
 
 5. **Read the prior validation (when re-validating)** — If
-   `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md` already exists, this is
-   a re-validation of a revised implementation. Read its overall status
-   and the issues recorded under `## Issues Found` (including any
-   `Resolved:` notes the revision filled in). Carry each prior issue
-   into Phase 2 and the later phases and specifically verify the revised
-   implementation resolves it; an unresolved prior issue must be reported
-   again. If no prior validation exists, skip this step.
+   `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md` already exists, this is a
+   re-validation of a revised implementation.
+   Read its overall status, its `**Validation attempt**` counter, and the issues
+   recorded under `## Issues Found` (including any `Resolved:` notes the
+   revision filled in).
+   Carry each prior issue into Phase 2 and the later phases and specifically
+   verify the revised implementation resolves it; an unresolved prior issue must
+   be reported again. If no prior validation exists, skip this step.
 
 ### Phase 2: Task Verification
 
 For each task in the implementation plan:
 
-1. **Check task completion**
-   Delegate the file locating and reading to the `explore` subagent via
-   the Task tool (`subagent_type: "explore"`). Give it the task's file
-   list and ask it to report whether the described implementation
-   exists and what it contains. It is read-only and returns findings;
-   do not write files from this step. You retain the run/judgment in
-   the last bullet.
+1. **Check task completion** Delegate the file locating and reading to the
+   `explore` subagent via the “task” tool.
+   Give it the task’s file list and ask it to report whether the described
+   implementation exists and what it contains.
+   It is read-only and returns findings; do not write files from this step.
+   You retain the run/judgment in the last bullet.
 
    - Locate the files/code mentioned in the task
    - Verify the implementation exists
@@ -165,12 +165,15 @@ For each Code Guideline in `AGENTS.md`:
    - Write to `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md`
    - Use the validation report template below
    - Replace all placeholders with concrete details
+   - Set `**Validation attempt**` to `1` on the first validation, or to the
+     prior validation’s `**Validation attempt**` value plus one on a
+     re-validation (a missing prior counter counts as `0`)
 
 2. **Update issue status** (if overall status is Complete)
    - Change Status in `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md` from
-     "Implemented" to "Validated"
-   - Change Status in `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` from
-     "Implemented" to "Validated"
+     “Implemented” to “Validated”
+   - Change Status in `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` from “Implemented”
+     to “Validated”
 
 3. **Display the validation report** in the chat
 
@@ -184,8 +187,7 @@ Read and follow the validation report template:
 
 - **Evidence-based**: Every status must have supporting evidence
 - **Non-destructive**: Only read and verify, never modify code
-- **Comprehensive**: Check all items, don't skip any
+- **Comprehensive**: Check all items, don’t skip any
 - **Actionable**: Issues must include clear recommendations
 - **Objective**: Report actual state, not expected state
-- **Scoped to the issue**: Only validate work within this issue's
-  vertical slice
+- **Scoped to the issue**: Only validate work within this issue’s vertical slice

@@ -3,7 +3,9 @@
 **Files:**
 
 - Create: `exact/path/to/file.ext`
+
 - Modify: `exact/path/to/existing.ext:123-145`
+
 - Test: `tests/exact/path/to/test.ext`
 
 - [ ] **Step 1: Write the failing test**
@@ -14,8 +16,8 @@
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `test command for specific test`
-Expected: FAIL with "[expected error message]"
+Run: `test command for specific test` Expected: FAIL with
+“[expected error message]”
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -25,7 +27,6 @@ Expected: FAIL with "[expected error message]"
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `test command for specific test`
-Expected: PASS
+Run: `test command for specific test` Expected: PASS
 
 **Verification**: [How to verify the task is complete]

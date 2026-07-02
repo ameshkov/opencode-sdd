@@ -3,18 +3,17 @@
 # Project Name
 
 <p align="center">
-  > *One-line description* — what the application does and who it's for.
-</p>
+> *One-line description* — what the application does and who it’s for.
+> </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Application screenshot" width="600">
-</p>
+<img src="assets/screenshot.png" alt="Application screenshot" width="600"> </p>
 
 ## Description
 
-*Target audience* — who this application is for and what problem it
-solves. Explain the motivation for building it, the pain points it
-addresses, and the primary use case.
+*Target audience* — who this application is for and what problem it solves.
+Explain the motivation for building it, the pain points it addresses, and the
+primary use case.
 
 ## Table of Contents
 
@@ -30,14 +29,13 @@ addresses, and the primary use case.
 - [Administration](#administration)
 - [Documentation](#documentation)
 
----
+* * *
 
 ## Access
 
 - **Web app URL**: https://app.example.com
 - **API base URL**: https://api.example.com/v1
-- **Supported browsers**: Chrome, Firefox, Safari, Edge (last 2 major
-  versions)
+- **Supported browsers**: Chrome, Firefox, Safari, Edge (last 2 major versions)
 - **Authentication**: Sign up or sign in with email/password or SSO
 
 ## Quick Start
@@ -79,13 +77,13 @@ Step-by-step guides for the main tasks users perform in the application.
 
 ## API Overview
 
-The API is available at `https://api.example.com/v1`. All requests must
-be authenticated (see [Authentication](#authentication)).
+The API is available at `https://api.example.com/v1`. All requests must be
+authenticated (see [Authentication](#authentication)).
 
 ## Authentication
 
-How to obtain and use API keys or tokens. Include the expected header
-format (e.g., `Authorization: Bearer <token>`).
+How to obtain and use API keys or tokens.
+Include the expected header format (e.g., `Authorization: Bearer <token>`).
 
 ## Endpoints
 
@@ -124,15 +122,14 @@ curl -X POST https://api.example.com/v1/users \
 
 ## Rate Limits
 
-Requests per minute/hour, how to check remaining quota (response
-headers).
+Requests per minute/hour, how to check remaining quota (response headers).
 
 ## Administration
 
-Configuration options available to administrators (user management,
-settings, billing).
+Configuration options available to administrators (user management, settings,
+billing).
 
----
+* * *
 
 ## Documentation
 

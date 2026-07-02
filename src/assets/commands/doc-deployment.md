@@ -1,16 +1,16 @@
 ---
 description: Create or update DEPLOYMENT.md for production deployment configuration (provided by opencode-sdd)
 ---
-
 # Create or update DEPLOYMENT.md
 
 Create or update `DEPLOYMENT.md` to document the production deployment
-configuration for a deployable application. Cover environment variables,
-infrastructure dependencies, external integrations, error reporting, and logging
-configuration.
+configuration for a deployable application.
+Cover environment variables, infrastructure dependencies, external integrations,
+error reporting, and logging configuration.
 
-**Note**: This document is optional. It is only relevant for deployable
-applications, not for libraries or documentation-only projects.
+**Note**: This document is optional.
+It is only relevant for deployable applications, not for libraries or
+documentation-only projects.
 
 Optional focus or scope (may be empty): $ARGUMENTS
 
@@ -38,150 +38,147 @@ Also verify these documents exist (optional but recommended):
 ### Phase 1: Information Gathering
 
 1. **Read the current DEPLOYMENT.md** (if it exists)
-    - Review existing content
-    - Note what sections exist and their quality
-    - Identify incomplete or generic content that needs to be filled in
-    - Identify outdated or incorrect information
+   - Review existing content
+   - Note what sections exist and their quality
+   - Identify incomplete or generic content that needs to be filled in
+   - Identify outdated or incorrect information
 
 2. **Analyze environment variable usage**
 
    Steps 2–7 below gather deployment configuration from the codebase.
-   Delegate this scanning to the `explore` subagent via the Task tool
-   (`subagent_type: "explore"`). Give it a focused prompt covering all
-   of steps 2–7; it is read-only and returns findings you feed into
-   Phase 2. Do not write files from this step.
+   Delegate this scanning to the `explore` subagent via the “task” tool.
+   Give it a focused prompt covering all of steps 2–7; it is read-only and
+   returns findings you feed into Phase 2. Do not write files from this step.
 
-    - Search for `process.env`, `os.environ`, `env::var`, `os.Getenv`, or
-      similar patterns
-    - Check `.env.example`, `.env.sample`, or similar files
-    - Look for configuration loading code (config files, settings modules)
-    - Document each variable: name, purpose, required/optional, example value
+   - Search for `process.env`, `os.environ`, `env::var`, `os.Getenv`, or similar
+     patterns
+   - Check `.env.example`, `.env.sample`, or similar files
+   - Look for configuration loading code (config files, settings modules)
+   - Document each variable: name, purpose, required/optional, example value
 
 3. **Detect infrastructure dependencies**
-    - **Databases**: Look for connection strings, ORM configurations, database
-      clients (PostgreSQL, MySQL, MongoDB, SQLite, etc.)
-    - **Caches**: Look for Redis, Memcached, or other cache client usage
-    - **Message queues**: Look for RabbitMQ, Kafka, SQS, or similar
-    - **Object storage**: Look for S3, GCS, or blob storage clients
-    - Document connection configuration for each
+   - **Databases**: Look for connection strings, ORM configurations, database
+     clients (PostgreSQL, MySQL, MongoDB, SQLite, etc.)
+   - **Caches**: Look for Redis, Memcached, or other cache client usage
+   - **Message queues**: Look for RabbitMQ, Kafka, SQS, or similar
+   - **Object storage**: Look for S3, GCS, or blob storage clients
+   - Document connection configuration for each
 
 4. **Identify external integrations**
-    - Search for API client initializations (Stripe, SendGrid, Twilio, etc.)
-    - Look for OAuth/SSO provider configurations
-    - Check for webhook endpoints that receive external calls
-    - Document each integration and its required configuration
+   - Search for API client initializations (Stripe, SendGrid, Twilio, etc.)
+   - Look for OAuth/SSO provider configurations
+   - Check for webhook endpoints that receive external calls
+   - Document each integration and its required configuration
 
 5. **Check error reporting configuration**
-    - Look for Sentry SDK initialization (`Sentry.init`, `sentry_sdk.init`)
-    - Check for other error reporting tools (Bugsnag, Rollbar, etc.)
-    - Document DSN configuration and any custom options
+   - Look for Sentry SDK initialization (`Sentry.init`, `sentry_sdk.init`)
+   - Check for other error reporting tools (Bugsnag, Rollbar, etc.)
+   - Document DSN configuration and any custom options
 
 6. **Analyze logging configuration**
-    - Look for logging framework setup (winston, pino, logrus, Python logging)
-    - Check where logs are written (stdout, files, external services)
-    - Identify log format (JSON, plain text, structured)
-    - Document log level configuration
+   - Look for logging framework setup (winston, pino, logrus, Python logging)
+   - Check where logs are written (stdout, files, external services)
+   - Identify log format (JSON, plain text, structured)
+   - Document log level configuration
 
 7. **Identify health check endpoints** (optional)
-    - Look for `/health`, `/ready`, `/live`, or similar endpoints
-    - Document what each endpoint checks
+   - Look for `/health`, `/ready`, `/live`, or similar endpoints
+   - Document what each endpoint checks
 
-8. **Identify information gaps**
-    After gathering information, determine if you can document:
-    - All required environment variables
-    - All infrastructure dependencies and their connection config
-    - All external integrations and their setup
-    - Error reporting configuration
-    - Logging output and format
+8. **Identify information gaps** After gathering information, determine if you
+   can document:
+   - All required environment variables
+   - All infrastructure dependencies and their connection config
+   - All external integrations and their setup
+   - Error reporting configuration
+   - Logging output and format
 
-    If critical information cannot be detected from the codebase,
-    **ask the user for clarification** before proceeding.
+   If critical information cannot be detected from the codebase, **ask the user
+   for clarification** before proceeding.
 
 ### Phase 2: Content Planning
 
-1. **Determine applicable sections**
-    Based on gathered information, decide which sections to include:
-    - Environment Variables (always include if any exist)
-    - Infrastructure Dependencies (include if databases, caches, queues exist)
-    - Integrations (include if external APIs or auth providers exist)
-    - Error Reporting (include if Sentry or similar is configured)
-    - Logging (include if logging configuration exists)
-    - Health Checks (include if health endpoints exist)
+1. **Determine applicable sections** Based on gathered information, decide which
+   sections to include:
+   - Environment Variables (always include if any exist)
+   - Infrastructure Dependencies (include if databases, caches, queues exist)
+   - Integrations (include if external APIs or auth providers exist)
+   - Error Reporting (include if Sentry or similar is configured)
+   - Logging (include if logging configuration exists)
+   - Health Checks (include if health endpoints exist)
 
-2. **Plan content for each section**
-    For each applicable section, note:
-    - Specific items to document
-    - Configuration details to include
-    - Content to update or remove (if updating existing doc)
+2. **Plan content for each section** For each applicable section, note:
+   - Specific items to document
+   - Configuration details to include
+   - Content to update or remove (if updating existing doc)
 
-3. **Handle non-deployable projects**
-    If no deployment configuration is detected:
-    - Ask the user if the project has deployment requirements not visible in code
-    - If confirmed non-deployable, suggest skipping this workflow
+3. **Handle non-deployable projects** If no deployment configuration is
+   detected:
+   - Ask the user if the project has deployment requirements not visible in code
+   - If confirmed non-deployable, suggest skipping this workflow
 
 ### Phase 3: Writing
 
 The generated document MUST include a table of contents after the main heading,
 listing all sections of heading levels 1 through 3 as markdown links.
 
-1. **Create or update DEPLOYMENT.md**
-    Apply these rules strictly:
+1. **Create or update DEPLOYMENT.md** Apply these rules strictly:
 
-    **Include:**
-    - All environment variables with name, purpose, required/optional, example
-    - Infrastructure dependencies with type, version, connection configuration
-    - External integrations with purpose and required credentials
-    - Error reporting setup (Sentry DSN, environment, release tracking)
-    - Logging output location, format, and level configuration
-    - Health check endpoints and their purpose
+   **Include:**
+   - All environment variables with name, purpose, required/optional, example
+   - Infrastructure dependencies with type, version, connection configuration
+   - External integrations with purpose and required credentials
+   - Error reporting setup (Sentry DSN, environment, release tracking)
+   - Logging output location, format, and level configuration
+   - Health check endpoints and their purpose
 
-    **Exclude (belongs in other documents):**
-    - Development setup (belongs in DEVELOPMENT.md)
-    - Build instructions (belongs in DEVELOPMENT.md)
-    - User-facing documentation (belongs in README.md)
-    - Code guidelines (belongs in AGENTS.md)
-    - CI/CD pipeline configuration (separate concern)
+   **Exclude (belongs in other documents):**
+   - Development setup (belongs in DEVELOPMENT.md)
+   - Build instructions (belongs in DEVELOPMENT.md)
+   - User-facing documentation (belongs in README.md)
+   - Code guidelines (belongs in AGENTS.md)
+   - CI/CD pipeline configuration (separate concern)
 
 2. **Ensure all content is project-specific**
-    - Replace generic examples with project-specific values
-    - Remove sections that don't apply to this project
+   - Replace generic examples with project-specific values
+   - Remove sections that don’t apply to this project
 
 3. **Handle secrets appropriately**
-    - Never include actual secret values
-    - Document that secrets should be provided via environment variables
-    - Reference secrets management practices if applicable
+   - Never include actual secret values
+   - Document that secrets should be provided via environment variables
+   - Reference secrets management practices if applicable
 
 ### Phase 4: Validation
 
-1. **Review against requirements**
-    Verify the DEPLOYMENT.md:
-    - [ ] Lists all environment variables with purpose and examples
-    - [ ] Documents all infrastructure dependencies
-    - [ ] Explains external integration configuration
-    - [ ] Covers error reporting setup (if applicable)
-    - [ ] Documents logging configuration
-    - [ ] Contains NO development setup content
-    - [ ] Contains NO generic or incomplete content
-    - [ ] Does not expose actual secrets
+1. **Review against requirements** Verify the DEPLOYMENT.md:
+   - [ ] Lists all environment variables with purpose and examples
+   - [ ] Documents all infrastructure dependencies
+   - [ ] Explains external integration configuration
+   - [ ] Covers error reporting setup (if applicable)
+   - [ ] Documents logging configuration
+   - [ ] Contains NO development setup content
+   - [ ] Contains NO generic or incomplete content
+   - [ ] Does not expose actual secrets
 
 2. **Cross-reference with codebase**
-    - Verify documented env vars match what code actually uses
-    - Confirm infrastructure dependencies are accurate
-    - Check that integration configuration is complete
+   - Verify documented env vars match what code actually uses
+   - Confirm infrastructure dependencies are accurate
+   - Check that integration configuration is complete
 
 3. **Format and finalize**
-    - Check markdown formatting
-    - Ensure consistent heading levels
-    - Verify all relative links work
-    - Ensure tables are properly formatted
+   - Check markdown formatting
+   - Ensure consistent heading levels
+   - Verify all relative links work
+   - Ensure tables are properly formatted
 
 ## Guidelines
 
-- **Production focus**: Document what's needed to run in production, not develop
+- **Production focus**: Document what’s needed to run in production, not develop
 - **Security conscious**: Never include actual secrets, always use placeholders
-- **Complete but concise**: Include all necessary config without excessive detail
+- **Complete but concise**: Include all necessary config without excessive
+  detail
 - **Ask when uncertain**: If deployment requirements are unclear, ask the user
-- **Preserve valid content**: Don't discard good existing content that fits
+- **Preserve valid content**: Don’t discard good existing content that fits
   requirements
 - **Skip gracefully**: For non-deployable projects, confirm with user before
   skipping

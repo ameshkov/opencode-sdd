@@ -3,18 +3,17 @@
 # Project Name
 
 <p align="center">
-  > *One-line description* — what the tool does and who it's for.
-</p>
+> *One-line description* — what the tool does and who it’s for.
+> </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Project screenshot" width="600">
-</p>
+<img src="assets/screenshot.png" alt="Project screenshot" width="600"> </p>
 
 ## Description
 
 *Target audience* — who this tool is for and what problem it solves.
-Explain the motivation for building it, the pain points it addresses,
-and the primary use case.
+Explain the motivation for building it, the pain points it addresses, and the
+primary use case.
 
 ## Table of Contents
 
@@ -24,12 +23,12 @@ and the primary use case.
 - [Configuration](#configuration)
 - [Documentation](#documentation)
 
----
+* * *
 
 ## Installation
 
-Platform-specific install instructions (Homebrew, apt, npm, binary
-download, etc.).
+Platform-specific install instructions (Homebrew, apt, npm, binary download,
+etc.).
 
 ```bash
 brew install project-name
@@ -71,7 +70,7 @@ Step-by-step guides for common tasks the product supports.
 
 Configuration files, environment variables, and their defaults.
 
----
+* * *
 
 ## Documentation
 

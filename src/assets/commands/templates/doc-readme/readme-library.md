@@ -3,18 +3,17 @@
 # Project Name
 
 <p align="center">
-  > *One-line description* — what the library does and who it's for.
-</p>
+> *One-line description* — what the library does and who it’s for.
+> </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Project screenshot" width="600">
-</p>
+<img src="assets/screenshot.png" alt="Project screenshot" width="600"> </p>
 
 ## Description
 
 *Target audience* — who this library is for and what problem it solves.
-Explain the motivation for building it, the pain points it addresses,
-and the primary use case.
+Explain the motivation for building it, the pain points it addresses, and the
+primary use case.
 
 ## Table of Contents
 
@@ -25,7 +24,7 @@ and the primary use case.
 - [Configuration](#configuration)
 - [Documentation](#documentation)
 
----
+* * *
 
 ## Installation
 
@@ -45,20 +44,20 @@ console.log(greet('World'));
 
 ## API Overview
 
-High-level summary of the public API — main functions, classes, and
-modules that users interact with. Link to full API docs when available.
+High-level summary of the public API — main functions, classes, and modules that
+users interact with.
+Link to full API docs when available.
 
 ## Usage Examples
 
-Common scenarios with code samples. Each example should solve one real
-task.
+Common scenarios with code samples.
+Each example should solve one real task.
 
 ## Configuration
 
-Options, environment variables, and configuration files the library
-accepts.
+Options, environment variables, and configuration files the library accepts.
 
----
+* * *
 
 ## Documentation
 

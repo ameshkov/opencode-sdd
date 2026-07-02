@@ -8,7 +8,7 @@
 ## Summary
 
 | Category | Pass | Fail | Total |
-| -------- | ---- | ---- | ----- |
+| --- | --- | --- | --- |
 | Affected Files | X | X | X |
 | Tasks | X | X | X |
 | Verification Steps | X | X | X |
@@ -19,7 +19,7 @@
 ## Affected Files Status
 
 | File | Expected Change | Status |
-| ---- | --------------- | ------ |
+| --- | --- | --- |
 | [path] | [description] | MODIFIED / UNCHANGED / MISSING |
 
 ## Task Status
@@ -37,16 +37,16 @@
 <!-- Omit this section if no contracts exist -->
 
 | Endpoint | Method | Status | Notes |
-| -------- | ------ | ------ | ----- |
-| /api/resource | POST | PASS | |
+| --- | --- | --- | --- |
+| /api/resource | POST | PASS | [Notes if any] |
 
 ## Guidelines Compliance
 
 <!-- Omit this section if AGENTS.md does not exist -->
 
 | Guideline | Status | Notes |
-| --------- | ------ | ----- |
-| [Guideline description] | COMPLIANT | |
+| --- | --- | --- |
+| [Guideline description] | COMPLIANT | [Notes if any] |
 | [Guideline description] | NON-COMPLIANT | [What violates it] |
 
 ## Final Verification
@@ -57,11 +57,10 @@
 ## Issues Found
 
 1. **[Issue Title]** (if any)
-    - Description: [What's wrong]
-    - Recommendation: [How to fix]
-    - Resolved: [Filled by `sdd-implement` when the revised implementation
-      addresses this issue — note how. Omit while a validation is in
-      progress.]
+   - Description: [What’s wrong]
+   - Recommendation: [How to fix]
+   - Resolved:
+     [Filled by `sdd-implement` when the revised implementation addresses this issue — note how. Omit while a validation is in progress.]
 
 ## Recommendations
 

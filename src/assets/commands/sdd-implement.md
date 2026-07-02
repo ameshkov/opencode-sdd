@@ -1,20 +1,20 @@
 ---
 description: Execute the tasks in an existing spec following TDD (provided by opencode-sdd)
 ---
-
 # Implement from a spec
 
-Implement a change by executing the tasks defined in the specification
-`spec.md` following the TDD flow.
+Implement a change by executing the tasks defined in the specification `spec.md`
+following the TDD flow.
 
 Task scope or empty to implement all tasks: $ARGUMENTS
 
 ## Input
 
-`$ARGUMENTS` is the input. Extract the following from it:
+`$ARGUMENTS` is the input.
+Extract the following from it:
 
 - **TASK_SCOPE** (optional, default: `all tasks`): Task selection or scope
-  instructions (e.g., "Task 1.1 only", "Phase 1"). Defaults to all tasks in
+  instructions (e.g., “Task 1.1 only”, “Phase 1”). Defaults to all tasks in
   order. If not specified, use `all tasks`.
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
   specification files are stored.
@@ -27,7 +27,8 @@ Check for the existence of the required file:
 
 If the file is missing:
 
-**ERROR: Required file not found. Ensure `{SPECS_DIR}/spec.md` exists.
+**ERROR: Required file not found.
+Ensure `{SPECS_DIR}/spec.md` exists.
 Run `sdd-spec` first.**
 
 ## Steps
@@ -54,19 +55,19 @@ Run `sdd-spec` first.**
    - Load API schemas to guide implementation
 
 4. **Read the existing validation (when revising)**
-   - If `{SPECS_DIR}/validation.md` exists and its `Overall Status` is
-     not Complete, read it and extract the recorded issues and
-     recommendations. These are the failures the revision must fix —
-     treat them as required work alongside the spec's tasks. If no
-     incomplete validation exists, skip this step.
+   - If `{SPECS_DIR}/validation.md` exists and its `Overall Status` is not
+     Complete, read it and extract the recorded issues and recommendations.
+     These are the failures the revision must fix — treat them as required work
+     alongside the spec’s tasks.
+     If no incomplete validation exists, skip this step.
 
 ### Phase 2: Determine Scope from TASK_SCOPE
 
 1. **Parse TASK_SCOPE**
    - Match TASK_SCOPE against supported patterns (see Input section)
    - Identify selected tasks, skipped tasks, and starting point
-   - For resume requests, check `spec.md` for `[x]` markers to find the
-     last completed task and begin from the next one
+   - For resume requests, check `spec.md` for `[x]` markers to find the last
+     completed task and begin from the next one
 
 2. **Build task queue**
    - If TASK_SCOPE is empty: queue all tasks in plan order
@@ -74,8 +75,8 @@ Run `sdd-spec` first.**
    - If TASK_SCOPE skips tasks: queue all except skipped ones
    - For combined patterns, apply filters in order: select → skip
    - Verify prerequisites are satisfied for every queued task
-   - If a prerequisite task is not in the queue and not already completed,
-     warn the user before proceeding
+   - If a prerequisite task is not in the queue and not already completed, warn
+     the user before proceeding
 
 3. **Report scope**
    - Display TASK_SCOPE as interpreted
@@ -92,20 +93,19 @@ For each task in the queue:
    - List files to create, modify, and test
    - List prerequisites and their status
 
-2. **Execute task steps**
-   Each task in the plan contains numbered steps. Execute them in order,
-   following the TDD flow:
+2. **Execute task steps** Each task in the plan contains numbered steps.
+   Execute them in order, following the TDD flow:
 
-   - **Write the failing test**: Copy the exact test code from the plan
-     into the test file
-   - **Run the test to verify it fails**: Execute the specified test
-     command and confirm the expected failure
-   - **Write minimal implementation**: Copy the exact implementation code
-     from the plan into the source file
-   - **Run the test to verify it passes**: Execute the test command and
-     confirm the test passes
-   - If a step's code needs adjustment to work with the actual codebase
-     state, make minimal changes and document why
+   - **Write the failing test**: Copy the exact test code from the plan into the
+     test file
+   - **Run the test to verify it fails**: Execute the specified test command and
+     confirm the expected failure
+   - **Write minimal implementation**: Copy the exact implementation code from
+     the plan into the source file
+   - **Run the test to verify it passes**: Execute the test command and confirm
+     the test passes
+   - If a step’s code needs adjustment to work with the actual codebase state,
+     make minimal changes and document why
 
 3. **Verify the task**
    - Execute the verification criteria from the plan
@@ -140,34 +140,31 @@ After completing all queued tasks:
    - List completed tasks
    - List remaining tasks (those outside TASK_SCOPE or blocked)
    - Note issues encountered
-   - If TASK_SCOPE was a partial selection, suggest the next TASK_SCOPE
-     value to continue (e.g., "Continue from Task 2.1")
+   - If TASK_SCOPE was a partial selection, suggest the next TASK_SCOPE value to
+     continue (e.g., “Continue from Task 2.1”)
 
 4. **Update spec status**
    - If all tasks completed successfully:
-     - Change status from "Draft", "Implemented", or "Validated" to
-       "Implemented" in `{SPECS_DIR}/spec.md`
-     - Add `**Implemented by**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]`
-       to the spec header metadata
+     - Change status from “Draft”, “Implemented”, or “Validated” to
+       “Implemented” in `{SPECS_DIR}/spec.md`
+     - Add `**Implemented by**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]` to
+       the spec header metadata
      - Add implementation notes if helpful
 
-5. **Mark resolved validation issues (when revising)**
-   If this run was a revision after an incomplete validation
-   (`validation.md` existed with an `Overall Status` other than
-   Complete):
-   - For every issue recorded under `## Issues Found` in
-     `validation.md`, fill its `Resolved:` line noting how the revised
-     implementation addresses it.
-   - Change the `Overall Status` from "Incomplete" to "Revised" to
-     signal the implementation has been revised and is awaiting
-     re-validation.
+5. **Mark resolved validation issues (when revising)** If this run was a
+   revision after an incomplete validation (`validation.md` existed with an
+   `Overall Status` other than Complete):
+   - For every issue recorded under `## Issues Found` in `validation.md`, fill
+     its `Resolved:` line noting how the revised implementation addresses it.
+   - Change the `Overall Status` from “Incomplete” to “Revised” to signal the
+     implementation has been revised and is awaiting re-validation.
 
 ## Task Execution Guidelines
 
 ### Code Quality
 
-- **Follow the plan**: Use the exact code from the plan steps; only adjust
-  when the actual codebase state requires it
+- **Follow the plan**: Use the exact code from the plan steps; only adjust when
+  the actual codebase state requires it
 - **Follow existing patterns**: Match the style of surrounding code
 - **Minimal changes**: Implement only what the task requires
 - **No premature optimization**: Focus on correctness first
@@ -175,15 +172,15 @@ After completing all queued tasks:
 
 ### Testing
 
-- **TDD flow**: Write failing test → verify failure → implement → verify
-  pass. Follow this order strictly.
+- **TDD flow**: Write failing test → verify failure → implement → verify pass.
+  Follow this order strictly.
 - **Cover acceptance scenarios**: Each scenario should have a test
 - **Test edge cases**: Include boundary conditions from the spec
 
 ### Error Handling
 
 - **Task blocked**: Stop and report the blocker clearly
-- **Plan divergence**: If the plan's code doesn't work as-is, make minimal
+- **Plan divergence**: If the plan’s code doesn’t work as-is, make minimal
   adjustments and document the deviation
 - **Test failure**: Fix the issue before proceeding
 - **Build failure**: Resolve before moving to next task
@@ -214,12 +211,12 @@ After implementation:
 
 ## Guidelines
 
-- **Follow plan steps exactly**: Each task has numbered steps with exact
-  code — execute them in order
+- **Follow plan steps exactly**: Each task has numbered steps with exact code —
+  execute them in order
 - **TDD always**: Every behavior change starts with a failing test
 - **Incremental progress**: Complete tasks one at a time
-- **Verify continuously**: Don't accumulate unverified changes
-- **Respect prerequisites**: Don't skip task dependencies
+- **Verify continuously**: Don’t accumulate unverified changes
+- **Respect prerequisites**: Don’t skip task dependencies
 - **Stay in scope**: Implement what the plan specifies, no more
 - **DRY and YAGNI**: No speculative abstractions or duplicate logic
 - **Document blockers**: If stuck, explain clearly and stop

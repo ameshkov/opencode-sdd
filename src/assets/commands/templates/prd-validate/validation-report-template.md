@@ -4,6 +4,8 @@
 - **Model**: [MODEL_NAME MODEL_VERSION THINKING_EFFORT]
 - **PRD**: `{SPECS_DIR}/prd.md`
 - **Overall Status**: [Complete / Incomplete / Blocked]
+- **Cross-cutting attempt**:
+  [1 on first cross-cutting pass; increment on each re-validation]
 
 ## Summary
 
@@ -40,7 +42,7 @@
 
 | Guideline | Status | Notes |
 | --- | --- | --- |
-| [Description] | COMPLIANT | |
+| [Description] | COMPLIANT | [Notes if any] |
 
 ## Cross-Cutting Findings
 
@@ -67,8 +69,7 @@
 
 ## Overall Assessment
 
-[2-3 sentence assessment. Is this feature safe to leave in
-production? What is the most important thing to fix?]
+[2-3 sentence assessment. Is this feature safe to leave in production? What is the most important thing to fix?]
 
 ## Recommendations
 

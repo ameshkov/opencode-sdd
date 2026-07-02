@@ -219,6 +219,8 @@ export async function withOpencodeServer<T>(
 export interface OpencodeServerHandle {
   /** Client bound to the running server's base URL. */
   client: OpencodeClient;
+  /** Base URL of the running server (for raw API calls not wrapped by the SDK). */
+  url: string;
   /** Close the server and restore the isolated home. Idempotent. */
   close(): void;
 }
@@ -245,6 +247,7 @@ export async function startOpencodeServer(config: Config): Promise<OpencodeServe
   const client = createOpencodeClient({ baseUrl: server.url });
   return {
     client,
+    url: server.url,
     close() {
       server.close();
       auth.restore();
@@ -260,4 +263,45 @@ export async function createSession(client: OpencodeClient, directory: string): 
     throw new Error(`session.create failed: ${JSON.stringify(res.error ?? 'no data')}`);
   }
   return res.data;
+}
+
+/**
+ * Poll the `/question` endpoint for a pending question and reply with
+ * `answer`.
+ *
+ * The `question` tool blocks the agent loop until the user answers. In
+ * e2e tests there is no interactive user, so this helper programmatically
+ * replies via the raw HTTP API (the v1 SDK client does not wrap
+ * `/question`). The `/question` routes are server-global (not
+ * session-scoped), scoped by the `directory` query param.
+ *
+ * @param baseUrl - The opencode server base URL.
+ * @param directory - The project directory (scoping query param).
+ * @param answer - The option labels to select, one array per question.
+ * @param timeoutMs - How long to wait for a question to appear.
+ */
+export async function replyToPendingQuestion(
+  baseUrl: string,
+  directory: string,
+  answer: string[][],
+  timeoutMs = 5_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${baseUrl}/question?directory=${encodeURIComponent(directory)}`);
+    const questions = (await res.json()) as Array<{ id: string }>;
+    if (questions.length > 0) {
+      await fetch(
+        `${baseUrl}/question/${questions[0].id}/reply?directory=${encodeURIComponent(directory)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers: answer }),
+        },
+      );
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('No pending question appeared within the timeout');
 }

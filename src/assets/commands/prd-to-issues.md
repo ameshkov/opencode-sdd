@@ -1,12 +1,11 @@
 ---
 description: Break a PRD into independently-grabbable vertical-slice issues (provided by opencode-sdd)
 ---
-
 # Break PRD into issues
 
-Break a Product Requirements Document into independently-grabbable issues
-using vertical slices (tracer bullets). Each issue is a thin slice that cuts
-through all integration layers end-to-end.
+Break a Product Requirements Document into independently-grabbable issues using
+vertical slices (tracer bullets).
+Each issue is a thin slice that cuts through all integration layers end-to-end.
 
 ## Input
 
@@ -14,17 +13,16 @@ User input: $ARGUMENTS
 
 Extract the following from the user input:
 
-- **CONSTRAINTS** (optional, default: `no additional constraints`):
-  Constraints or preferences for the breakdown (e.g., "keep it under 10
-  issues", "focus on the API first"). Defaults to no additional
-  constraints.
+- **CONSTRAINTS** (optional, default: `no additional constraints`): Constraints
+  or preferences for the breakdown (e.g., “keep it under 10 issues”, “focus on
+  the API first”). Defaults to no additional constraints.
 - **SPECS_DIR** (optional, default: `.sdd/.current/`): Directory where
   specification files are stored.
 
 ## Prerequisites
 
-Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
-**STOP immediately** and show this error:
+Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist, **STOP
+immediately** and show this error:
 
 **ERROR: PRD not found at `{SPECS_DIR}/prd.md`.**
 
@@ -49,13 +47,13 @@ Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
    - Read `DEVELOPMENT.md` if it exists
    - These inform how issues should be scoped
 
-3. **Explore the codebase**
-   If not already familiar with the codebase, explore to understand it.
+3. **Explore the codebase** If not already familiar with the codebase, explore
+   to understand it.
 
-   Delegate this codebase research to the `explore` subagent via the
-   Task tool (`subagent_type: "explore"`). Give it a focused prompt
-   covering the bullets below; it is read-only and returns findings you
-   feed into the next phase. Do not write files from this step.
+   Delegate this codebase research to the `explore` subagent via the “task”
+   tool. Give it a focused prompt covering the bullets below; it is read-only and
+   returns findings you feed into the next phase.
+   Do not write files from this step.
 
    - Modules and files that will be affected
    - Existing patterns and conventions
@@ -63,30 +61,41 @@ Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
 
 ### Phase 2: Draft Vertical Slices
 
-1. **Break the PRD into tracer-bullet issues**
-   Each issue is a thin vertical slice that cuts through ALL integration
-   layers end-to-end — schema, logic, API, UI, and tests — not a
-   horizontal slice of a single layer.
+1. **Break the PRD into tracer-bullet issues** Each issue is a thin vertical
+   slice that cuts through ALL integration layers end-to-end — schema, logic,
+   API, UI, and tests — not a horizontal slice of a single layer.
 
    Slices are classified by type:
 
-   - **AFK** (Away From Keyboard): Can be implemented and merged without
-     human interaction
-   - **HITL** (Human In The Loop): Requires a human decision or review at
-     some point — for example, an architectural decision, a design
-     review, or approval of a schema migration
+   - **AFK** (Away From Keyboard): Can be implemented and merged without human
+     interaction
+   - **HITL** (Human In The Loop): Requires one or more human decisions at some
+     point — for example, an architectural decision, a design review, or
+     approval of a schema migration
 
    Prefer AFK over HITL wherever possible.
 
+   A HITL slice may carry several decisions, each resolved at the point it
+   can first be soundly made. Most are settled `before-planning`: they shape
+   the approach, scope, architecture, data model, core technology choices,
+   design, or UX/copy trade-offs — the plan cannot be written without them. A
+   few cannot be made until the plan exists and so are
+   `before-implementation`: notably approving a schema migration once the
+   planned changes to migrate are known, or a human setting up or configuring
+   an environment (credentials, infrastructure, third-party access) the build
+   needs before it can be implemented. Record every decision in the issue’s
+   `## Human Decisions` section (see the issue template) and tag each with its
+   gate: `before-planning` or `before-implementation`. The planner reads that
+   gate to decide when to ask.
+
    Slice design rules:
 
-   - Each slice delivers a narrow but complete path through every
-     relevant layer
+   - Each slice delivers a narrow but complete path through every relevant layer
    - A completed slice is demoable or independently verifiable
    - Prefer many thin slices over few thick ones
    - Slices that cannot be verified on their own are too coarse
-   - Flag any slice that addresses more than 2–3 user stories or would
-     likely take more than half a day — it should be split
+   - Flag any slice that addresses more than 2–3 user stories or would likely
+     take more than half a day — it should be split
 
 2. **Determine dependency order**
    - Identify which issues block other issues
@@ -95,43 +104,42 @@ Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
 
 ### Phase 3: User Review
 
-1. **Present the proposed breakdown**
-   For each slice show:
+1. **Present the proposed breakdown** For each slice show:
 
    - **Title**: Short descriptive name
    - **Type**: HITL / AFK
    - **Blocked by**: Which other slices must complete first
-   - **User stories covered**: Which numbered user stories from the PRD
-     this addresses
+   - **User stories covered**: Which numbered user stories from the PRD this
+     addresses
 
 2. **Ask the user**:
-   - Does the granularity feel right? (too coarse / too fine)
+   - Does the granularity feel right?
+     (too coarse / too fine)
    - Are the dependency relationships correct?
    - Should any slices be merged or split further?
    - Are all HITL slices correctly identified?
+   - For each HITL slice, are the recorded `## Human Decisions` complete —
+     every human judgement captured as a decision, with its options and a
+     `before-planning` / `before-implementation` gate?
 
 3. **Iterate until the user approves the breakdown**
 
 ### Phase 4: Write Issues
 
 1. **Create the issues directory**
-   - Create `{SPECS_DIR}/issues/` if it doesn't exist
+   - Create `{SPECS_DIR}/issues/` if it doesn’t exist
 
-2. **Write each issue to its own directory**
-   For each approved issue:
+2. **Write each issue to its own directory** For each approved issue:
 
-   - Derive the ISSUE_ID as `{NUMBER}-{TYPE}` where NUMBER is the
-     sequential issue number and TYPE is the slice type (e.g., `1-AFK`,
-     `2-HITL`, `3-AFK`)
+   - Derive the ISSUE_ID as `{NUMBER}-{TYPE}` where NUMBER is the sequential
+     issue number and TYPE is the slice type (e.g., `1-AFK`, `2-HITL`, `3-AFK`)
    - Create `{SPECS_DIR}/issues/{ISSUE_ID}/issue.md`
    - Use the issue template below
    - Replace all placeholders with concrete details
-   - Cross-reference other issues by their ISSUE_ID in the "Blocked by"
-     field
+   - Cross-reference other issues by their ISSUE_ID in the “Blocked by” field
 
 3. **Review the issues**
-   - Verify every user story from the PRD is covered by at least one
-     issue
+   - Verify every user story from the PRD is covered by at least one issue
    - Check that cross-references are consistent (no dangling references)
    - Confirm dependency order is correct (no circular dependencies)
 
@@ -159,6 +167,36 @@ Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
 
 [Description of the vertical slice]
 
+## Human Decisions
+
+<!--
+  HITL issues only. Omit this entire section for AFK issues.
+  One `### Decision:` block per decision. Tag each with its gate:
+  - before-planning: most decisions — they shape the approach, scope,
+    architecture, data model, core technology choices, design, or UX/copy
+    trade-offs. The plan cannot be soundly written without them.
+  - before-implementation: decisions that cannot be made until the plan
+    exists — e.g. approving a schema migration once the planned changes to
+    migrate are known, or a human setting up / configuring an environment
+    the build needs before it can be implemented. Resolved after the plan is
+    written, before implementing.
+  The planner (`prd-issue-to-plan`) asks Open decisions at their gate
+  and fills `**Answer**` + sets `**Status**: Resolved` when answered.
+  Leave `**Status**: Open` and `**Answer**: ` blank until then.
+-->
+
+### Decision: [SHORT TITLE]
+
+- **Gate**: before-planning | before-implementation
+- **Status**: Open
+- **What to decide**: [The specific question a human must answer]
+- **Why a human**: [What makes this need human judgement — e.g. it is
+  an architectural choice, a UX trade-off, a migration approval]
+- **Options**:
+  - **[Option A]**: [What it means and its trade-offs]
+  - **[Option B]**: [What it means and its trade-offs]
+- **Answer**: 
+
 ## How to Verify
 
 <!--
@@ -184,12 +222,13 @@ Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
 
 ## Guidelines
 
-- **Vertical slices only**: Each issue must cut through all layers, not
-  just one
+- **Vertical slices only**: Each issue must cut through all layers, not just one
 - **AFK preferred**: Minimize HITL issues where possible
+- **Decisions are explicit**: Every HITL slice lists its human decisions in
+  `## Human Decisions` (one `### Decision:` block each, with its options and a
+  `before-planning` / `before-implementation` gate)
 - **Thin over thick**: Many small issues beat few large ones
 - **Dependency order**: Blockers come first
 - **Cross-reference**: Issues reference each other by ISSUE_ID
-- **Complete coverage**: Every PRD user story must map to at least one
-  issue
+- **Complete coverage**: Every PRD user story must map to at least one issue
 - **No duplication**: Reference the PRD instead of copying content

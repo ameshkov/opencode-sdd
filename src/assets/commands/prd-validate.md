@@ -1,15 +1,14 @@
 ---
 description: Validate the full PRD implementation across all issues (provided by opencode-sdd)
 ---
-
 # Validate the entire PRD implementation
 
 Verify that the entire PRD has been fully implemented by checking that all
 issues are done and running a cross-cutting audit across the full feature.
 Produces a comprehensive validation report.
 
-Use this command after all individual issues have been implemented and
-validated with `prd-validate-issue`.
+Use this command after all individual issues have been implemented and validated
+with `prd-validate-issue`.
 
 ## Input
 
@@ -22,17 +21,17 @@ Extract the following from the user input:
 
 ## Prerequisites
 
-Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist,
-**STOP immediately** and show this error:
+Check for the existence of `{SPECS_DIR}/prd.md`. If it does not exist, **STOP
+immediately** and show this error:
 
-**ERROR: PRD not found at `{SPECS_DIR}/prd.md`. Run `prd-write` first to
-create a PRD.**
+**ERROR: PRD not found at `{SPECS_DIR}/prd.md`. Run `prd-write` first to create
+a PRD.**
 
 Check for the existence of `{SPECS_DIR}/issues/`. If the directory does not
 exist or is empty, **STOP immediately** and show:
 
-**ERROR: No issues found in `{SPECS_DIR}/issues/`. Run `prd-to-issues` first
-to create issues from the PRD.**
+**ERROR: No issues found in `{SPECS_DIR}/issues/`. Run `prd-to-issues` first to
+create issues from the PRD.**
 
 ## Steps
 
@@ -56,65 +55,66 @@ to create issues from the PRD.**
    - Read `AGENTS.md` if it exists
    - Extract Code Guidelines and Contribution Instructions
 
+4. **Read the prior cross-cutting validation (when re-validating)** — If
+   `{SPECS_DIR}/validation.md` already exists, this is a re-run of the
+   cross-cutting audit.
+   Read its `**Cross-cutting attempt**` counter so Phase 6 can increment it.
+   If it does not exist, the counter starts at `1` on this pass.
+
 ### Phase 2: Check Issue Completion
 
-1. **Verify all issues are implemented**
-   For each issue in `{SPECS_DIR}/issues/`:
+1. **Verify all issues are implemented** For each issue in
+   `{SPECS_DIR}/issues/`:
 
    - Check the Status field in `issue.md`
-   - Acceptable statuses: "Implemented" or "Validated"
+   - Acceptable statuses: “Implemented” or “Validated”
    - Record the status
 
-2. **Stop if issues are not complete**
-   If any issue does NOT have Status "Implemented" or "Validated" (for
-   example "Draft", "Planned", "Approved", "Reviewing", "Needs Revision",
-   or "In Progress"):
+2. **Stop if issues are not complete** If any issue does NOT have Status
+   “Implemented” or “Validated” (for example “Draft”, “Planned”, “Approved”,
+   “Reviewing”, “Needs Revision”, or “In Progress”):
 
-   > **ERROR: Not all issues are implemented. The following issues are not
-   > complete:**
+   > **ERROR: Not all issues are implemented.
+   > The following issues are not complete:**
    >
    > - `{ISSUE_ID}`: Status = {STATUS}
    > - `{ISSUE_ID}`: Status = {STATUS}
    >
    > Implement all issues first, then retry.
 
-3. **Read individual validation reports** (if they exist)
-   For each issue, check for
-   `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md` and note any outstanding
+3. **Read individual validation reports** (if they exist) For each issue, check
+   for `{SPECS_DIR}/issues/{ISSUE_ID}/validation.md` and note any outstanding
    issues from individual validations.
 
 ### Phase 3: Cross-Cutting Audit
 
-1. **Identify the full scope**
-   From the PRD and all issues, build a list of every file that was
-   created or modified as part of this feature.
+1. **Identify the full scope** From the PRD and all issues, build a list of
+   every file that was created or modified as part of this feature.
 
-2. **Explore the implementation**
-   Read all files in scope.
+2. **Explore the implementation** Read all files in scope.
 
-   Delegate this read/scan to the `explore` subagent via the Task tool
-   (`subagent_type: "explore"`). Give it the full in-scope file list and
-   ask it to report, per module, what it is responsible for, its public
-   interface, and how it interacts with other in-scope modules and the
-   wider codebase. It is read-only and returns findings; do not write
-   files from this step. You retain the audit judgments in step 3. For
-   each module, understand:
+   Delegate this read/scan to the `explore` subagent via the “task” tool.
+   Give it the full in-scope file list and ask it to report, per module, what it
+   is responsible for, its public interface, and how it interacts with other
+   in-scope modules and the wider codebase.
+   It is read-only and returns findings; do not write files from this step.
+   You retain the audit judgments in step 3. For each module, understand:
 
    - What it is responsible for
    - What its public interface is
    - How it interacts with other modules in scope
    - How it interacts with the rest of the codebase
 
-3. **Audit for systemic issues**
-   Check for the following categories across the entire implementation:
+3. **Audit for systemic issues** Check for the following categories across the
+   entire implementation:
 
    **Consistency**:
 
    - Do all modules follow the same naming conventions?
    - Are error types and error handling patterns consistent?
    - Are similar operations implemented the same way everywhere?
-   - Are internal API contracts consistent — do callers and
-     implementations agree on types and failure modes?
+   - Are internal API contracts consistent — do callers and implementations
+     agree on types and failure modes?
 
    **Security**:
 
@@ -125,12 +125,11 @@ to create issues from the PRD.**
 
    **Logic**:
 
-   - Are there race conditions or ordering assumptions that could fail
-     under concurrent use?
+   - Are there race conditions or ordering assumptions that could fail under
+     concurrent use?
    - Are all failure modes handled?
    - Are there off-by-one errors or incorrect boundary conditions?
-   - Does the implementation match the acceptance criteria in every
-     issue?
+   - Does the implementation match the acceptance criteria in every issue?
 
    **Best practices**:
 
@@ -141,15 +140,13 @@ to create issues from the PRD.**
 
 ### Phase 4: User Story Coverage
 
-1. **Trace user stories to implementation**
-   For each user story in the PRD:
+1. **Trace user stories to implementation** For each user story in the PRD:
 
    - Find the issue(s) that cover it
    - Verify the acceptance scenarios are satisfied
    - Note any gaps
 
-2. **Check success criteria**
-   For each success criterion (SC-XXX) in the PRD:
+2. **Check success criteria** For each success criterion (SC-XXX) in the PRD:
 
    - Evaluate whether it can be measured with current implementation
    - What evidence supports meeting this criterion?
@@ -171,25 +168,26 @@ For each Code Guideline in `AGENTS.md`:
 
 ### Phase 6: Generate Validation Report
 
-1. **Prioritize findings**
-   Group findings by severity:
+1. **Prioritize findings** Group findings by severity:
 
-   - **Critical**: Security vulnerability, data loss risk, or logic error
-     that will cause incorrect behaviour in production
-   - **High**: Inconsistency or logic error that will cause problems
-     under realistic conditions
+   - **Critical**: Security vulnerability, data loss risk, or logic error that
+     will cause incorrect behaviour in production
+   - **High**: Inconsistency or logic error that will cause problems under
+     realistic conditions
    - **Medium**: Best practice violation or inconsistency that will cause
      maintenance problems
-   - **Low**: Minor inconsistency or style issue with no functional
-     impact
+   - **Low**: Minor inconsistency or style issue with no functional impact
 
 2. **Write the validation report**
    - Write to `{SPECS_DIR}/validation.md`
    - Use the validation report template below
    - Replace all placeholders with concrete details
+   - Set `**Cross-cutting attempt**` to `1` on the first cross-cutting pass, or
+     to the prior report’s `**Cross-cutting attempt**` value plus one on a
+     re-validation (a missing prior counter counts as `0`)
 
 3. **Update PRD status** (if overall status is Complete)
-   - Change Status in `{SPECS_DIR}/prd.md` from "Draft" to "Validated"
+   - Change Status in `{SPECS_DIR}/prd.md` from “Draft” to “Validated”
 
 4. **Display the validation report** in the chat
 
@@ -202,13 +200,13 @@ If `SPECS_DIR` path ends with `.current` (the temporary work directory):
 1. **Derive feature directory name**
    - Extract the feature name from the PRD
    - Convert to a kebab-case short description (maximum 60 characters)
-   - Format the new directory name as `yyyymmdd-SHORT_DESCRIPTION` where
-     `dd`, `mm`, `yyyy` are the current day, month, and year
+   - Format the new directory name as `yyyymmdd-SHORT_DESCRIPTION` where `dd`,
+     `mm`, `yyyy` are the current day, month, and year
    - Example: `.sdd/.current` → `.sdd/20260323-add-user-authentication`
 
 2. **Rename the directory**
-   - Rename the `.current` directory to the derived name within the same
-     parent directory
+   - Rename the `.current` directory to the derived name within the same parent
+     directory
 
 ## Validation Report Template
 

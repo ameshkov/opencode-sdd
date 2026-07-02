@@ -3,18 +3,17 @@
 # Project Name
 
 <p align="center">
-  > *One-line description* — what the extension does and who it's for.
-</p>
+> *One-line description* — what the extension does and who it’s for.
+> </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Extension screenshot" width="600">
-</p>
+<img src="assets/screenshot.png" alt="Extension screenshot" width="600"> </p>
 
 ## Description
 
 *Target audience* — who this extension is for and what problem it solves.
-Explain the motivation for building it, the pain points it addresses,
-and the primary use case.
+Explain the motivation for building it, the pain points it addresses, and the
+primary use case.
 
 ## Table of Contents
 
@@ -27,7 +26,7 @@ and the primary use case.
 - [FAQ / Troubleshooting](#faq--troubleshooting)
 - [Documentation](#documentation)
 
----
+* * *
 
 ## Installation
 
@@ -43,8 +42,7 @@ Or search for the extension in the Extensions view (`Cmd+Shift+X`).
 
 ### Install from VSIX
 
-1. Download the `.vsix` file from the
-   [releases page](https://github.com/...).
+1. Download the `.vsix` file from the [releases page](https://github.com/...).
 2. In VS Code, run **Extensions → Install from VSIX**.
 3. Select the downloaded file.
 
@@ -52,21 +50,19 @@ Or search for the extension in the Extensions view (`Cmd+Shift+X`).
 
 1. Install the extension
 2. Open a file of the relevant type
-3. Trigger the extension via the command palette (`Cmd+Shift+P`) or
-   a keybinding
+3. Trigger the extension via the command palette (`Cmd+Shift+P`) or a keybinding
 4. The extension activates on demand
 
 ## Features
 
 ### Feature One
 
-Describe what it does, when it activates, and how users interact with
-it (command palette, context menu, code lens, hover, etc.).
+Describe what it does, when it activates, and how users interact with it
+(command palette, context menu, code lens, hover, etc.).
 
 ### Feature Two
 
-Describe what it does, when it activates, and how users interact with
-it.
+Describe what it does, when it activates, and how users interact with it.
 
 ## Commands
 
@@ -94,7 +90,7 @@ Default keyboard shortcuts (if any).
 
 Common issues, extension host debugging tips, and how to report bugs.
 
----
+* * *
 
 ## Documentation
 

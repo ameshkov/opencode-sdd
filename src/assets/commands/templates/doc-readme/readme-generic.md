@@ -3,18 +3,17 @@
 # Project Name
 
 <p align="center">
-  > *One-line description* — what the product does and who it's for.
-</p>
+> *One-line description* — what the product does and who it’s for.
+> </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Product screenshot" width="600">
-</p>
+<img src="assets/screenshot.png" alt="Product screenshot" width="600"> </p>
 
 ## Description
 
 *Target audience* — who this product is for and what problem it solves.
-Explain the motivation for building it, the pain points it addresses,
-and the primary use case.
+Explain the motivation for building it, the pain points it addresses, and the
+primary use case.
 
 ## Table of Contents
 
@@ -24,12 +23,12 @@ and the primary use case.
 - [FAQ / Troubleshooting](#faq--troubleshooting)
 - [Documentation](#documentation)
 
----
+* * *
 
 ## Getting Started
 
-How to obtain, install, or access the product and take the first steps
-with it. This section adapts to the product's distribution model:
+How to obtain, install, or access the product and take the first steps with it.
+This section adapts to the product’s distribution model:
 
 - **Package managers**: `npm install`, `pip install`, `brew install`
 - **Downloads**: link to releases page or app store
@@ -41,8 +40,9 @@ Provide a minimal working example or walkthrough.
 
 ## Usage
 
-How users interact with the product day-to-day. The structure of this
-section depends heavily on the product type. Possible subsections:
+How users interact with the product day-to-day.
+The structure of this section depends heavily on the product type.
+Possible subsections:
 
 - Commands and flags (CLI tools)
 - Functions and classes (libraries)
@@ -54,17 +54,17 @@ Cover the most common user tasks with concrete examples.
 
 ## Configuration
 
-Configuration options, settings, environment variables, config file
-formats and locations — if applicable.
+Configuration options, settings, environment variables, config file formats and
+locations — if applicable.
 
----
+* * *
 
 ## FAQ / Troubleshooting
 
-Common issues and their solutions. Include links to issue trackers or
-support resources.
+Common issues and their solutions.
+Include links to issue trackers or support resources.
 
----
+* * *
 
 ## Documentation
 

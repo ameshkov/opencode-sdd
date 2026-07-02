@@ -1,7 +1,6 @@
 ---
 description: Update or create AGENTS.md for LLM agent guidance (provided by opencode-sdd)
 ---
-
 # Update or create AGENTS.md
 
 Update or create `AGENTS.md` — a document that provides LLM agents (and human
@@ -76,10 +75,10 @@ If the project has no source code yet, ask the user whether to create a skeleton
    - Identify testing framework from test files or config
    - Look for linter/formatter configs (`.eslintrc`, `ruff.toml`, etc.)
 
-3. **Research the codebase architecture**
-   Delegate this codebase research to the `explore` subagent via the
-   Task tool (`subagent_type: "explore"`). It is read-only and returns
-   findings; do not write files from this step. The research MUST answer:
+3. **Research the codebase architecture** Delegate this codebase research to the
+   `explore` subagent via the “task” tool.
+   It is read-only and returns findings; do not write files from this step.
+   The research MUST answer:
 
    - What layers exist in the codebase?
      (entry point, routes/handlers, services, data access, utilities, etc.)
@@ -219,8 +218,8 @@ listing all sections of heading levels 1 through 3 as markdown links.
    checks”. Focus on post-task verification steps — running linters, formatters,
    type checkers, and unit tests — not on commit or merge procedures.
 
-   Example of the expected style (fill in with the project’s actual
-   commands). Read the example in
+   Example of the expected style (fill in with the project’s actual commands).
+   Read the example in
    @opencode-sdd-templates/doc-agents/contribution-instructions-example.md
 
    The following rules MUST appear in every Contribution Instructions section,
@@ -256,8 +255,7 @@ listing all sections of heading levels 1 through 3 as markdown links.
      environment: Read the template in
      @opencode-sdd-templates/doc-agents/system-design-web-service.md
 
-   - **Mobile app** — device-resident, latency-sensitive: Read the template
-     in
+   - **Mobile app** — device-resident, latency-sensitive: Read the template in
      @opencode-sdd-templates/doc-agents/system-design-mobile-app.md
 
    - **Desktop app** — long-running, resource-rich: Read the template in
@@ -272,8 +270,7 @@ listing all sections of heading levels 1 through 3 as markdown links.
    - **Library / Package** — consumed by other code: Read the template in
      @opencode-sdd-templates/doc-agents/system-design-library.md
 
-   - **Documentation site** — static content, no server: Read the template
-     in
+   - **Documentation site** — static content, no server: Read the template in
      @opencode-sdd-templates/doc-agents/system-design-documentation-site.md
 
    If the project does not fit any of the above types, write a System Design
@@ -324,7 +321,8 @@ listing all sections of heading levels 1 through 3 as markdown links.
    layered dependency rules, list them as explicit exclusions that may be fixed
    in the future. If there are no violations, omit the exclusions list.
 
-   Example of the expected output. Read the example in
+   Example of the expected output.
+   Read the example in
    @opencode-sdd-templates/doc-agents/architecture-example.md
 
    **6.3. Code Quality** (third subsection of Code Guidelines):

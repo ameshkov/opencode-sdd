@@ -3,18 +3,17 @@
 # Project Name
 
 <p align="center">
-  > *One-line description* — what the app does and who it's for.
-</p>
+> *One-line description* — what the app does and who it’s for.
+> </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="App screenshot" width="300">
-</p>
+<img src="assets/screenshot.png" alt="App screenshot" width="300"> </p>
 
 ## Description
 
 *Target audience* — who this app is for and what problem it solves.
-Explain the motivation for building it, the pain points it addresses,
-and the primary use case.
+Explain the motivation for building it, the pain points it addresses, and the
+primary use case.
 
 ## Table of Contents
 
@@ -24,18 +23,12 @@ and the primary use case.
 - [FAQ / Troubleshooting](#faq--troubleshooting)
 - [Documentation](#documentation)
 
----
+* * *
 
 ## Installation
 
-[![App Store](https://img.shields.io/badge/Download-App_Store-blue)](
-  https://apps.apple.com/...
-)
-[![Google Play](
-  https://img.shields.io/badge/Download-Google_Play-green
-)](
-  https://play.google.com/...
-)
+[![App Store](https://img.shields.io/badge/Download-App_Store-blue)](https://apps.apple.com/...)
+[![Google Play](https://img.shields.io/badge/Download-Google_Play-green)](https://play.google.com/...)
 
 - **iOS**: Requires iOS 16.0 or later
 - **Android**: Requires Android 12.0 or later
@@ -57,13 +50,13 @@ What it does and how to access it from the app UI.
 
 What it does and how to access it from the app UI.
 
----
+* * *
 
 ## FAQ / Troubleshooting
 
 Common issues and their solutions.
 
----
+* * *
 
 ## Documentation
 

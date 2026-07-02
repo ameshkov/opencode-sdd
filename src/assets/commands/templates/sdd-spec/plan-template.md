@@ -21,8 +21,7 @@
 
 ### Patterns to Follow
 
-[Coding conventions, similar implementations, test patterns found in
-the codebase that the implementation should follow]
+[Coding conventions, similar implementations, test patterns found in the codebase that the implementation should follow]
 
 ### Edge Cases
 
@@ -32,8 +31,8 @@ the codebase that the implementation should follow]
 ### Entities
 
 <!--
-  Include only if the task adds new functionality or changes existing
-  entities. Remove this section for minor bug fixes and refactorings.
+Include only if the task adds new functionality or changes existing
+entities. Remove this section for minor bug fixes and refactorings.
 -->
 
 - **[Entity]**: [Key attributes, relationships, validation rules]
