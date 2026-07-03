@@ -1,4 +1,4 @@
-import { tool, type ToolDefinition } from '@opencode-ai/plugin';
+import type { ToolDefinition } from '@opencode-ai/plugin';
 import { rewriteAssetReferences } from '../commands/index.js';
 import { ALLOWED_COMMANDS, AVAILABLE_COMMANDS, formatCommandError } from './allowlist.js';
 import { loadCommandSource } from './source-loader.js';
@@ -19,6 +19,19 @@ export interface SddCommandToolDeps {
 }
 
 /**
+ * Argument values opencode passes to the tool's `execute`.
+ *
+ * opencode decodes the LLM-produced arguments against the tool's JSON Schema
+ * and hands the result to `execute` as a plain object. The registry's runtime
+ * `parameters` falls back to `Schema.Unknown` for non-Zod `args` (see the
+ * {@link createSddCommandTool} docblock), so the value is typed `unknown` and
+ * validated manually inside `execute`.
+ */
+interface SddCommandExecuteArgs {
+  command: unknown;
+}
+
+/**
  * Build the `sdd-command` {@link ToolDefinition}.
  *
  * The tool loads an allowlisted command's Markdown body, rewrites every
@@ -26,17 +39,32 @@ export interface SddCommandToolDeps {
  * header line + blank line + rewritten body. Every failure (empty arg, not
  * allowlisted, missing/unreadable source) returns the single-line error
  * string produced by {@link formatCommandError}; the tool never throws.
+ *
+ * The `args` field is a plain JSON Schema fragment (not a Zod schema). This is
+ * deliberate: opencode's plugin-tool registry (`fromPlugin` in
+ * `packages/opencode/src/tool/registry.ts`) duck-types each `args` entry with
+ * the `"_zod" in value` check and, for non-Zod entries, builds the LLM-facing
+ * JSON Schema via its `legacyJsonSchema` fallback (wrapping each fragment as a
+ * property). Producing a plain fragment here avoids importing `tool.schema`
+ * (Zod) from `@opencode-ai/plugin` as a runtime value — the SDK packages are
+ * devDependencies (type-only), and a surviving `import { tool } from
+ * '@opencode-ai/plugin'` breaks the published plugin at module-load time when
+ * the SDK is absent from the npm install (Node throws `ERR_MODULE_NOT_FOUND`
+ * before the `config` hook ever runs). The SDK's `ToolDefinition` type models
+ * Zod args, so the returned literal is cast to that type at the single point
+ * below; the runtime deliberately accepts the plain-schema shape.
  */
 export function createSddCommandTool(deps: SddCommandToolDeps): ToolDefinition {
   const allowset = new Set(ALLOWED_COMMANDS);
-  return tool({
-    description: `Load a command's instructions. Available commands: ` + `${AVAILABLE_COMMANDS}.`,
+  const definition = {
+    description: `Load a command's instructions. Available commands: ${AVAILABLE_COMMANDS}.`,
     args: {
-      command: tool.schema
-        .string()
-        .describe('Name of the command to load; must be one of: ' + AVAILABLE_COMMANDS + '.'),
+      command: {
+        type: 'string',
+        description: 'Name of the command to load; must be one of: ' + AVAILABLE_COMMANDS + '.',
+      },
     },
-    async execute(args) {
+    async execute(args: SddCommandExecuteArgs): Promise<string> {
       const input = args.command;
       if (typeof input !== 'string' || input === '') {
         return formatCommandError(String(input ?? ''), 'empty');
@@ -52,5 +80,8 @@ export function createSddCommandTool(deps: SddCommandToolDeps): ToolDefinition {
       const rewritten = rewriteAssetReferences(result.body, templatesDir);
       return `Loaded command "${input}" from ${result.absPath}.\n\n${rewritten}`;
     },
-  });
+  };
+  // Bridge the SDK's Zod-modeled `ToolDefinition` type to the dependency-free
+  // plain-schema shape we ship (see the function docblock for why).
+  return definition as unknown as ToolDefinition;
 }

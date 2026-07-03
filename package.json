@@ -39,7 +39,7 @@
     "orchestrator"
   ],
   "scripts": {
-    "build": "rm -rf build && tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "build": "rm -rf build && tsc -p tsconfig.build.json && node scripts/copy-assets.mjs && node scripts/check-runtime-imports.mjs",
     "typecheck": "tsc -p tsconfig.build.json && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.test-e2e.config.ts",

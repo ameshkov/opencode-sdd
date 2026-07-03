@@ -148,7 +148,8 @@ opencode-sdd/
 │       ├── logger.ts             # Plugin logger (opencode client.app.log)
 │       └── logger.test.ts        # Unit tests for the logger
 ├── scripts/                      # Build-time helper scripts
-│   └── copy-assets.mjs           # Copies src/assets/ into build/assets/
+│   ├── copy-assets.mjs           # Copies src/assets/ into build/assets/
+│   └── check-runtime-imports.mjs # Fails build if any @opencode-ai runtime import leaked
 ├── test/                         # Shared test support code (not test cases)
 │   ├── __fixtures__/             # Loader test fixtures (ignored by markdownlint)
 │   ├── plugin-helpers.ts         # Shared plugin entry-point test helpers
@@ -256,8 +257,10 @@ Design for a library (an opencode plugin loaded inside the host process):
   barrel `index.ts` files.
 - Keep the dependency footprint minimal — the OpenCode Plugin and SDK
   packages are type-only (`devDependencies`, erased at compile time), so
-  the compiled `build/` output has zero runtime imports. Verify this
-  after structural changes.
+  the compiled `build/` output has zero runtime imports. This is enforced
+  by `scripts/check-runtime-imports.mjs` in `pnpm build` (fails the build
+  on any leaked `@opencode-ai/*` value import); `import type { ... }` is
+  the only correct form for these packages.
 - Side effects are confined to the `config` hook: it mutates opencode's
   merged `Config` in place to register agents and commands. The only
   other side effect is filesystem reads of bundled asset Markdown at
@@ -516,7 +519,10 @@ The `test-e2e/` suite exercises the plugin against a real `opencode` server
 - **Type-only dependencies are devDependencies**: The OpenCode Plugin and
   SDK packages are imported only for types (erased at compile time), so
   they live in `devDependencies`. The compiled output has no runtime
-  imports — verify this after structural changes.
+  imports — enforced by `scripts/check-runtime-imports.mjs` in `pnpm
+  build`, which fails the build on any leaked `@opencode-ai/*` value
+  import (a surviving value import breaks the published plugin at
+  module-load time when the SDK is absent from the npm install).
 
 External dependencies MUST be carefully evaluated before adoption:
 

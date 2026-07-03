@@ -8,6 +8,22 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- Plugin silently failed to load from npm: a leaked runtime `tool` import
+  from `@opencode-ai/plugin` (a type-only devDependency) in
+  `src/sdd-command/definition.ts` survived into `build/`, so Node threw
+  `ERR_MODULE_NOT_FOUND` on import before the `config` hook ran. Replaced the
+  `tool()` call with a plain `ToolDefinition` literal (JSON Schema `args`),
+  restoring the zero-runtime-imports invariant. Masked by `file://` loading;
+  only npm installs were affected.
+
+### Changed
+
+- `pnpm build` now runs `scripts/check-runtime-imports.mjs`, which fails if
+  any compiled `build/` module imports from `@opencode-ai/*` (type-only
+  devDependencies), preventing regressions of the issue above.
+
 ## [v1.2.0] - 2026-07-03
 
 ### Added

@@ -55,7 +55,9 @@ All commands run through pnpm scripts defined in
 `build/` and is what opencode loads.
 
 - `pnpm install` — install pinned dependencies.
-- `pnpm build` — compile TypeScript to `build/` (`tsc`).
+- `pnpm build` — compile TypeScript to `build/` (`tsc`), copy bundled
+  assets, and verify no `@opencode-ai/*` runtime imports leaked into
+  `build/` (the SDK packages are type-only devDependencies).
 - `pnpm typecheck` — type-check production *and* test code (no emit).
 - `pnpm test` — run the Vitest suite once.
 - `pnpm test:watch` — run Vitest in watch mode for iterative TDD.
