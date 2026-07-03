@@ -52,11 +52,15 @@ pnpm test:e2e -- test-e2e/command.e2e.test.ts
 pnpm test:e2e -t "writes a single scripted file"
 ```
 
-The e2e config (`vitest.test-e2e.config.ts`) uses a 120s test timeout and
-a 120s hook timeout. Server startup dominates wall-clock on a loaded
-Windows CI runner (it can exceed 60s for a cold start), so each e2e test
-file shares **one** opencode server across its `describe` block via
+The e2e config (`vitest.test-e2e.config.ts`) uses a 240s test timeout and
+a 240s hook timeout. Server startup dominates wall-clock on a loaded
+Windows CI runner (a cold start plus the first command on a freshly
+spawned server can approach two minutes), so each e2e test file shares
+**one** opencode server across its `describe` block via
 `beforeAll`/`afterAll` (`smoke.e2e.test.ts`, `command.e2e.test.ts`)
-rather than spawning a fresh server per test. The command tests reload
-their per-test scripted scenario into a shared mock LLM via
-`MockLlmState.reset(...)` before driving a fresh session.
+rather than spawning a fresh server per test. To keep Windows from being
+over-subscribed, file parallelism is disabled there (the ~9 files would
+otherwise contend for the runner's cores and push cold starts past the
+timeout); Linux/macOS keep parallelism and their fast startup. The
+command tests reload their per-test scripted scenario into a shared mock
+LLM via `MockLlmState.reset(...)` before driving a fresh session.

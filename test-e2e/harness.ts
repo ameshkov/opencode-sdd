@@ -266,6 +266,35 @@ export async function createSession(client: OpencodeClient, directory: string): 
 }
 
 /**
+ * Reply to a pending question by id via the raw `/question/:id/reply` API.
+ *
+ * The v1 SDK client does not wrap `/question`, so this posts the answer
+ * directly. The `/question` routes are server-global (not session-scoped),
+ * scoped by the `directory` query param. Use {@link replyToPendingQuestion}
+ * to wait for a question to appear before replying.
+ *
+ * @param baseUrl - The opencode server base URL.
+ * @param directory - The project directory (scoping query param).
+ * @param questionId - The id of the pending question to answer.
+ * @param answer - The option labels to select, one array per question.
+ */
+export async function replyToQuestion(
+  baseUrl: string,
+  directory: string,
+  questionId: string,
+  answer: string[][],
+): Promise<void> {
+  await fetch(
+    `${baseUrl}/question/${questionId}/reply?directory=${encodeURIComponent(directory)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: answer }),
+    },
+  );
+}
+
+/**
  * Poll the `/question` endpoint for a pending question and reply with
  * `answer`.
  *
@@ -275,33 +304,35 @@ export async function createSession(client: OpencodeClient, directory: string): 
  * `/question`). The `/question` routes are server-global (not
  * session-scoped), scoped by the `directory` query param.
  *
+ * The default wait is deliberately generous: on a loaded CI runner the
+ * orchestrator's first model turn (command dispatch, prompt assembly, and
+ * the mock LLM round trip that emits the `question` tool-call) can take
+ * several seconds to register the pending question, and a too-short wait
+ * would abandon a command now blocked on an answer this helper has stopped
+ * trying to send. The helper returns as soon as a question appears, so the
+ * longer cap only costs time on the failure path.
+ *
  * @param baseUrl - The opencode server base URL.
  * @param directory - The project directory (scoping query param).
  * @param answer - The option labels to select, one array per question.
  * @param timeoutMs - How long to wait for a question to appear.
+ * @throws When no question appears within `timeoutMs`.
  */
 export async function replyToPendingQuestion(
   baseUrl: string,
   directory: string,
   answer: string[][],
-  timeoutMs = 5_000,
+  timeoutMs = 10_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const res = await fetch(`${baseUrl}/question?directory=${encodeURIComponent(directory)}`);
     const questions = (await res.json()) as Array<{ id: string }>;
     if (questions.length > 0) {
-      await fetch(
-        `${baseUrl}/question/${questions[0].id}/reply?directory=${encodeURIComponent(directory)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ answers: answer }),
-        },
-      );
+      await replyToQuestion(baseUrl, directory, questions[0].id, answer);
       return;
     }
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw new Error('No pending question appeared within the timeout');
 }

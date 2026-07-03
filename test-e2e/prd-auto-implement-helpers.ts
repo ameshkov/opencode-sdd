@@ -12,7 +12,7 @@ import {
   createSession,
   mockProviderConfig,
   pluginConfig,
-  replyToPendingQuestion,
+  replyToQuestion,
   startOpencodeServer,
   type OpencodeServerHandle,
 } from './harness.js';
@@ -139,11 +139,36 @@ export async function setupAutoImplementServer(cleanup: CleanupFn[]): Promise<Au
 }
 
 /**
+ * How long {@link probeQuestionTool} waits for a pending question to appear
+ * before concluding the `question` tool is unavailable. Generous by design:
+ * the probe runs the orchestrator's first (cold) model turn, and on a loaded
+ * CI runner the round trip from command dispatch to the `question` tool
+ * registering a pending question can take several seconds. When the tool is
+ * genuinely unavailable the command finishes first, so the probe returns
+ * immediately rather than waiting out this cap.
+ */
+const PROBE_QUESTION_WAIT_MS = 30_000;
+
+/**
  * Probe whether the `question` tool is registered by running a single
- * scripted question tool-call against a throwaway session. If the tool is
- * available, the call blocks on a pending question (which the helper
- * answers); if unavailable, opencode resolves it as an `invalid` tool and
- * the command completes without a pending question.
+ * scripted question tool-call against a throwaway session.
+ *
+ * The probe must terminate deterministically whether or not the tool is
+ * available — and it must never block `beforeAll` on a command parked on
+ * an unanswered question. Two natural terminations are watched in one poll
+ * loop: (a) a pending question appears on the `/question` endpoint (the
+ * tool is available, its blocking call registered one); or (b) the command
+ * finishes without ever presenting a question (the tool is unavailable,
+ * opencode resolved the call as invalid and the orchestrator ran to
+ * completion). Whichever fires first ends the probe.
+ *
+ * If a question appears, the probe answers it (unblocking the command) and
+ * waits for it to finish. If the command finishes first, the probe returns
+ * `false` immediately — it never awaits a possibly-still-blocked command,
+ * which is the hang a naive "wait then `await commandPromise`" sequence
+ * hits on a slow CI runner where the question appears just after the wait
+ * times out. A bound ({@link PROBE_QUESTION_WAIT_MS}) guards the
+ * pathological "neither fires" case so the hook can never hang.
  */
 async function probeQuestionTool(
   server: OpencodeServerHandle,
@@ -154,12 +179,41 @@ async function probeQuestionTool(
   mock.reset(autoImplementHitlPauseScenario());
   const session = await createSession(server.client, directory);
   const commandPromise = runAutoImplement(server.client, session.id, directory);
-  try {
-    await replyToPendingQuestion(server.url, directory, [['Approach A']], 2_000);
-    await commandPromise;
-    return true;
-  } catch {
-    await commandPromise.catch(() => {});
-    return false;
+
+  // Track command settlement via a promise that never rejects (the second
+  // `.then` arg swallows any rejection) and flip a flag the poll loop reads
+  // between its `await`s. `void` marks the floating promise intentional.
+  let commandDone = false;
+  void commandPromise.then(
+    () => {
+      commandDone = true;
+    },
+    () => {
+      commandDone = true;
+    },
+  );
+
+  const deadline = Date.now() + PROBE_QUESTION_WAIT_MS;
+  while (Date.now() < deadline) {
+    if (commandDone) {
+      // The command finished without presenting a question — the tool is
+      // unavailable (or the command errored before reaching it).
+      return false;
+    }
+    const res = await fetch(`${server.url}/question?directory=${encodeURIComponent(directory)}`);
+    const questions = (await res.json()) as Array<{ id: string }>;
+    if (questions.length > 0) {
+      // A question is pending — the tool is available. Answer it to
+      // unblock the command, then wait for it to run to completion.
+      await replyToQuestion(server.url, directory, questions[0].id, [['Approach A']]);
+      await commandPromise.catch(() => {});
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
+  // Timed out with neither a question nor command settlement: treat as
+  // unavailable so the HITL tests skip gracefully. Do NOT await the command
+  // here — it may still be blocked on a question we never answered, and
+  // awaiting would hang until the hook timeout.
+  return false;
 }

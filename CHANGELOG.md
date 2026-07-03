@@ -20,6 +20,24 @@ and this project adheres to
   gated behind a permission prompt. Spread-merged onto existing user
   permissions without loosening a global deny/ask posture.
 
+### Changed
+
+- E2E suite (`vitest.test-e2e.config.ts`): raised the per-test and per-hook
+  timeouts from 120s to 240s, and disabled file parallelism on Windows, so
+  cold opencode server starts on a loaded Windows CI runner no longer time
+  out the first command.
+
+### Fixed
+
+- E2E `beforeAll` no longer hangs for the `prd-auto-implement` suites. The
+  `question`-tool availability probe could deadlock on slow CI when the
+  orchestrator's first model turn took longer than the probe's 2s poll
+  window to register a pending question, leaving the run blocked on an
+  answer the probe had abandoned. The probe now terminates deterministically
+  by watching the command's completion alongside the `/question` endpoint
+  in one bounded poll loop, so it can never hang `beforeAll` regardless of
+  whether the tool is available.
+
 ## [v1.1.0] - 2026-06-24
 
 ### Added
