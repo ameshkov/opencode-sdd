@@ -242,6 +242,16 @@ After implementation:
 - **Verify continuously**: Don’t accumulate unverified changes
 - **Respect dependencies**: Don’t implement if blockers aren’t done
 - **Stay in scope**: Implement what the plan specifies, no more
+- **No spec-internal IDs in shipped code**: Specification artifacts under
+  `{SPECS_DIR}/` (PRD, issues, plans) are transient working files — typically
+  gitignored and never committed to the repository. They carry internal
+  identifiers such as success-criteria IDs (`SC-001`), user-story IDs
+  (`User Story 1` or `US1`), issue IDs (`1-AFK`, `1-HITL`), and
+  acceptance-criteria (`AC1`).
+  Do NOT embed these IDs into source code, comments, test names, identifiers,
+  or commit messages. Comments must describe what the code does, not reference
+  spec documents that may not exist in the repository. The plan's task structure
+  and `[x]` progress markers already track the spec-to-code mapping.
 - **DRY and YAGNI**: No speculative abstractions or duplicate logic
 - **Document blockers**: If stuck, explain clearly and stop
 - **Follow project conventions**: Adhere to `AGENTS.md` guidelines

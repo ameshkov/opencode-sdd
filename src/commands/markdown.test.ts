@@ -54,6 +54,9 @@ describe('sdd-implement command file', () => {
       expect(result.command.config.description).toBeTruthy();
       expect(template).toContain('$ARGUMENTS');
       expect(template).toContain('spec.md');
+      // Spec-internal identifiers live in gitignored spec artifacts and must
+      // not leak into shipped source code.
+      expect(template).toContain('No spec-internal IDs in shipped code');
     }
   });
 });
@@ -150,6 +153,11 @@ describe('prd-implement-issue command file', () => {
       expect(result.command.config.template).toContain('$ARGUMENTS');
       expect(result.command.config.template).toContain('plan.md');
       expect(result.command.config.template).toContain('Blocked by');
+      // Spec-internal IDs (success criteria, user stories, issue IDs) live in
+      // gitignored spec artifacts and must not leak into shipped source code.
+      expect(result.command.config.template).toContain('No spec-internal IDs in shipped code');
+      expect(result.command.config.template).toContain('SC-001');
+      expect(result.command.config.template).toContain('1-AFK');
     }
   });
 });

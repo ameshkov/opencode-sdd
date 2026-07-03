@@ -22,6 +22,11 @@ and this project adheres to
 
 ### Changed
 
+- `prd-implement-issue` and `sdd-implement` commands instruct the
+  implementer not to embed spec-internal IDs (success criteria, user stories,
+  issues, acceptance criteria, tasks) into shipped code, comments, or commit
+  messages; the gitignored spec artifacts' `[x]` markers already track the
+  spec-to-code mapping.
 - E2E suite (`vitest.test-e2e.config.ts`): raised the per-test and per-hook
   timeouts from 120s to 240s, and disabled file parallelism on Windows, so
   cold opencode server starts on a loaded Windows CI runner no longer time

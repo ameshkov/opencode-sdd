@@ -167,6 +167,15 @@ After completing all queued tasks:
   the actual codebase state requires it
 - **Follow existing patterns**: Match the style of surrounding code
 - **Minimal changes**: Implement only what the task requires
+- **No spec-internal IDs in shipped code**: Specification artifacts under
+  `{SPECS_DIR}/` (the spec) are transient working files — typically gitignored
+  and never committed to the repository. They carry internal identifiers such
+  as functional-requirement references, acceptance-scenario labels, and task IDs
+  (e.g., `Task 1.2`). Do NOT embed these IDs into source code, comments, test
+  names, identifiers, or commit messages. Comments must describe what the code
+  does, not reference spec documents that may not exist in the repository. The
+  spec's task structure and `[x]` progress markers already track the
+  spec-to-code mapping.
 - **No premature optimization**: Focus on correctness first
 - **DRY and YAGNI**: No speculative abstractions or duplicate logic
 
