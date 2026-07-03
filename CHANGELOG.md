@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v1.2.0] - 2026-07-03
+
 ### Added
 
 - `prd-auto-implement` command: orchestrates the full PRD implementation
@@ -31,17 +33,6 @@ and this project adheres to
   timeouts from 120s to 240s, and disabled file parallelism on Windows, so
   cold opencode server starts on a loaded Windows CI runner no longer time
   out the first command.
-
-### Fixed
-
-- E2E `beforeAll` no longer hangs for the `prd-auto-implement` suites. The
-  `question`-tool availability probe could deadlock on slow CI when the
-  orchestrator's first model turn took longer than the probe's 2s poll
-  window to register a pending question, leaving the run blocked on an
-  answer the probe had abandoned. The probe now terminates deterministically
-  by watching the command's completion alongside the `/question` endpoint
-  in one bounded poll loop, so it can never hang `beforeAll` regardless of
-  whether the tool is available.
 
 ## [v1.1.0] - 2026-06-24
 
@@ -104,7 +95,8 @@ and this project adheres to
   server.
 - Husky pre-commit hook running the full `pnpm check` gate.
 
-[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.1.0...HEAD
+[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.2.0...HEAD
+[v1.2.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.2.0
 [v1.1.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.1.0
 [v1.0.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.0.0
 [v0.2.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v0.2.0
