@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v1.2.1] - 2026-07-03
+
 ### Fixed
 
 - Plugin silently failed to load from npm: a leaked runtime `tool` import
@@ -111,7 +113,8 @@ and this project adheres to
   server.
 - Husky pre-commit hook running the full `pnpm check` gate.
 
-[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.2.0...HEAD
+[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.2.1...HEAD
+[v1.2.1]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.2.1
 [v1.2.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.2.0
 [v1.1.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.1.0
 [v1.0.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.0.0
