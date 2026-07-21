@@ -10,6 +10,9 @@
       "import": "./build/index.js"
     }
   },
+  "bin": {
+    "opencode-sdd": "build/cli/install.js"
+  },
   "files": [
     "build"
   ],
@@ -53,10 +56,15 @@
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "prepare": "husky || true"
   },
+  "dependencies": {
+    "@inquirer/prompts": "8.5.2",
+    "jsonc-parser": "3.3.1",
+    "diff": "9.0.0",
+    "@opencode-ai/sdk": "1.17.7"
+  },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@opencode-ai/plugin": "1.17.7",
-    "@opencode-ai/sdk": "1.17.7",
     "@types/node": "25.9.3",
     "eslint": "10.5.0",
     "husky": "9.1.7",

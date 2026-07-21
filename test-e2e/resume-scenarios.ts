@@ -1,6 +1,6 @@
 /**
  * Resume scenarios for the `prd-auto-implement` orchestrator's interruption
- * recovery behaviour (User Story 10). Each builder scripts the dispatch
+ * recovery behaviour. Each builder scripts the dispatch
  * turns a resuming orchestrator emits, mirroring how the mock-LLM e2e
  * suite expresses the other loops. Re-exported from
  * {@link './scenarios.js'} via `export *`.

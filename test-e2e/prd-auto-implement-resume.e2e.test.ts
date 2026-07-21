@@ -1,5 +1,5 @@
 /**
- * E2E: `prd-auto-implement` resume-after-interruption behaviour (User Story 10).
+ * E2E: `prd-auto-implement` resume-after-interruption behaviour.
  * Drives the command through a real opencode server against a local mock
  * LLM. These tests verify the resume plumbing — the dispatch sequence a
  * resuming orchestrator emits (skipping validated issues, resuming

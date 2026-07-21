@@ -23,6 +23,7 @@ clean, isolated session.
 - [The Problem](#the-problem)
 - [The Solution](#the-solution)
 - [Install](#install)
+    - [Manual install](#manual-install)
 - [The SDD Short Flow](#the-sdd-short-flow)
 - [The PRD Long Flow](#the-prd-long-flow)
     - [Auto-Implement](#auto-implement)
@@ -45,8 +46,42 @@ a pile of tokens.
 
 ## Install
 
-Add `opencode-sdd` to the `plugin` array in your project's `opencode.json`
-(or `opencode.jsonc`):
+The quickest way to set up `opencode-sdd` is the `install` wizard. It
+edits your `opencode.json` (or `opencode.jsonc`) to register the plugin
+and assign a model to each SDD subagent.
+
+Run:
+
+```sh
+opencode-sdd install
+```
+
+The wizard detects the `opencode` binary on PATH, discovers patchable
+configs (global, an `OPENCODE_CONFIG` override, or project-local), probes
+the models reachable from your configured providers, recommends a
+per-subagent model, shows a before/after diff, and writes the change with
+an idempotent, comment- and order-preserving patch. Re-running it with
+the same selection leaves the file byte-for-byte unchanged.
+
+Pass `-y` (or `--yes`) for a fully unattended install: it auto-selects
+the recommended model per subagent *and* skips the confirmation gate.
+
+```sh
+opencode-sdd install --yes
+```
+
+The wizard edits configuration only; opencode itself installs the plugin
+from the npm registry on the next restart. Restart opencode (or start a
+new session) to load it — the `/sdd-*`, `/prd-*`, and `/doc-*` commands
+become available immediately. Run `opencode-sdd --help` for the full flag
+list. This Install section is kept in sync with the wizard's flags as
+part of the feature's definition of done — if the flags or behaviour
+change, this section is updated.
+
+### Manual install
+
+If you prefer to edit config by hand, add `opencode-sdd` to the `plugin`
+array in your `opencode.json` (or `opencode.jsonc`):
 
 ```json
 {
@@ -55,9 +90,41 @@ Add `opencode-sdd` to the `plugin` array in your project's `opencode.json`
 }
 ```
 
-opencode installs the plugin from npm on startup. Restart opencode (or start
-a new session) to load it; the `/sdd-*`, `/prd-*` and `/doc-*` commands become
-available immediately.
+Then restart opencode as described above. The manual path registers the
+plugin but does not set per-subagent models — run `opencode-sdd install`
+afterwards to assign them, or set each `agent["<subagent>"].model` entry
+yourself.
+
+The seven SDD subagents are `sdd-build`, `sdd-planner`, `sdd-reviewer`,
+`sdd-coder`, `sdd-validator`, `sdd-plan-reviewer`, and `sdd-explore`.
+The value is a `provider/model` string from one of your configured
+providers. Add a top-level `agent` object mapping each subagent name to
+an object whose `model` field is that string — for example:
+
+```json
+{
+    "$schema": "https://opencode.ai/config.json",
+    "plugin": ["opencode-sdd"],
+    "agent": {
+        "sdd-build": { "model": "anthropic/claude-sonnet-4" },
+        "sdd-planner": { "model": "anthropic/claude-sonnet-4" },
+        "sdd-reviewer": { "model": "anthropic/claude-sonnet-4" },
+        "sdd-coder": { "model": "anthropic/claude-sonnet-4" },
+        "sdd-validator": { "model": "anthropic/claude-sonnet-4" },
+        "sdd-plan-reviewer": { "model": "openai/gpt-4o-mini" },
+        "sdd-explore": { "model": "openai/gpt-4o-mini" }
+    }
+}
+```
+
+Replace the example `provider/model` values with the IDs your providers
+expose (run `opencode-sdd install` to see them listed and recommended
+per subagent). The five heavyweight agents (`sdd-build`, `sdd-planner`,
+`sdd-reviewer`, `sdd-coder`, `sdd-validator`) benefit from a strong
+reasoning/coding model; the two read-only researchers (`sdd-plan-reviewer`
+and `sdd-explore`) can use a cheaper/faster one. The tier split is
+defined in `src/cli/recommend.ts` (`SUBAGENT_RECOMMENDATIONS`) — it is
+the source of truth the install wizard consults.
 
 ## The SDD Short Flow
 

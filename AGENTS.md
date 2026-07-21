@@ -55,136 +55,41 @@ commands.
 
 ## Project Structure
 
+The repository has two entry points — a plugin entry point loaded by
+opencode and a CLI entry point run as a bin — plus bundled asset data
+and the usual build/test scaffolding. Only the top-level modules are
+listed here; each module's barrel (`index.ts`) defines its public API
+and the files inside it are self-explanatory from their names.
+
 ```text
 opencode-sdd/
-├── README.md                     # User-facing project pitch
-├── DEVELOPMENT.md                # Build and debug guide for the plugin
-├── Dockerfile                    # Multi-stage CI image (lint, test, e2e)
-├── .dockerignore                 # Build-context exclusions for the Dockerfile
-├── docs/                         # Long-form developer documentation
-│   └── e2e.md                    # How the E2E test suite works and why
-├── src/                          # Plugin source code
-│   ├── index.ts                  # Plugin entry point; returns Hooks
-│   ├── index.test.ts             # Unit tests for the plugin entry point (commands, templates)
-│   ├── index-agents.test.ts      # Agent/tool registration unit tests (split from index.test.ts)
-│   ├── index-permission.test.ts  # external_directory templates-permission grant unit tests
-│   ├── agents/                   # Agent definitions (loader, parser, barrel)
-│   │   ├── index.ts              # Barrel exports (public API)
-│   │   ├── frontmatter-parser.ts # Markdown frontmatter parser for agent files
-│   │   ├── frontmatter-parser.test.ts # Unit tests for the agent parser
-│   │   ├── loader.ts             # Scans directory for *.md, parses, returns map
-│   │   ├── loader.test.ts        # Unit tests for the agent loader
-│   │   └── markdown.test.ts      # Wiring regression test for shipped agents
-│   ├── commands/                 # Command definitions CODE (loader, parser, rewriter)
-│   │   ├── index.ts              # Barrel exports (public API)
-│   │   ├── frontmatter-parser.ts # Markdown frontmatter parser for command files
-│   │   ├── frontmatter-parser.test.ts  # Unit tests for the frontmatter parser
-│   │   ├── loader.ts             # Scans directory for *.md, parses, returns map
-│   │   ├── loader.test.ts        # Unit tests for the command loader
-│   │   ├── markdown.test.ts      # Wiring regression test for shipped commands
-│   │   ├── template-rewriter.ts  # Rewrites @opencode-sdd-templates/ to abs path
-│   │   └── template-rewriter.test.ts # Unit tests for the template rewriter
-│   ├── assets/                   # Bundled agent and command/template data
-│   │   ├── agents/               # Bundled agent Markdown files
-│   │   │   ├── sdd-build.md          # sdd-build agent (general-purpose primary build agent)
-│   │   │   ├── sdd-explore.md        # sdd-explore agent (read-only researcher)
-│   │   │   ├── sdd-plan-reviewer.md  # sdd-plan-reviewer agent (read-only plan reviewer)
-│   │   │   ├── sdd-planner.md        # sdd-planner worker (plan stage)
-│   │   │   ├── sdd-reviewer.md       # sdd-reviewer worker (review stage)
-│   │   │   ├── sdd-coder.md          # sdd-coder worker (implement stage)
-│   │   │   └── sdd-validator.md      # sdd-validator worker (validate stage)
-│   │   └── commands/             # Command Markdown files + referenced templates
-│   │       ├── prd-write.md      # prd-write command (PRD writer)
-│   │       ├── prd-to-issues.md  # prd-to-issues command (PRD -> issues)
-│   │       ├── prd-issue-to-plan.md   # prd-issue-to-plan command (issue -> plan)
-│   │       ├── prd-review-plan.md      # prd-review-plan command (plan reviewer)
-│   │       ├── prd-implement-issue.md # prd-implement-issue command (run a plan)
-│   │       ├── prd-validate-issue.md  # prd-validate-issue command (per-issue validation)
-│   │       ├── prd-auto-implement.md # prd-auto-implement command (SDD orchestrator entry point)
-│   │       ├── prd-validate.md   # prd-validate command (cross-cutting validation)
-│   │       ├── sdd-implement.md  # sdd-implement command (spec + plan runner)
-│   │       ├── sdd-spec.md  # sdd-spec command (spec writer)
-│   │       ├── sdd-validate.md   # sdd-validate command (quick validation)
-│   │       ├── doc-agents.md        # doc-agents command (AGENTS.md actualizer)
-│   │       ├── doc-changelog.md     # doc-changelog command (CHANGELOG.md maintainer)
-│   │       ├── doc-deployment.md    # doc-deployment command (DEPLOYMENT.md actualizer)
-│   │       ├── doc-development.md   # doc-development command (DEVELOPMENT.md actualizer)
-│   │       ├── doc-readme.md        # doc-readme command (README.md actualizer)
-│   │       └── templates/           # Template assets referenced by commands
-│   │           ├── doc-agents/           # AGENTS.md templates
-│   │           │   ├── contribution-instructions-example.md
-│   │           │   ├── architecture-example.md
-│   │           │   ├── markdown-formatting-rules.md
-│   │           │   └── system-design-*.md
-│   │           ├── doc-readme/           # README templates
-│   │           │   └── readme-*.md
-│   │           ├── prd-issue-to-plan/    # Plan template
-│   │           │   └── plan-template.md
-│   │           ├── prd-review-plan/            # Plan review template
-│   │           │   └── review-report-template.md
-│   │           ├── prd-validate/         # Cross-cutting validation template
-│   │           │   └── validation-report-template.md
-│   │           ├── prd-validate-issue/   # Per-issue validation template
-│   │           │   └── validation-report-template.md
-│   │           ├── prd-write/            # PRD template
-│   │           │   └── prd-template.md
-│   │           ├── sdd-spec/        # Spec templates
-│   │           │   ├── plan-template.md
-│   │           │   └── task-structure-template.md
-│   │           └── sdd-validate/         # Validation template
-│   │               └── validation-report-template.md
-│   ├── sdd-command/               # sdd-command tool (allowlist, source loader, definition)
-│   │   ├── index.ts              # Barrel exports (public API): createSddCommandTool
-│   │   ├── allowlist.ts          # Hardcoded allowlist + formatCommandError
-│   │   ├── allowlist.test.ts     # Unit tests for the allowlist + error formatter
-│   │   ├── source-loader.ts      # Loads <commandsDir>/<name>.md, strips frontmatter
-│   │   ├── source-loader.test.ts # Unit tests for the source loader
-│   │   ├── definition.ts         # createSddCommandTool ToolDefinition factory
-│   │   └── definition.test.ts    # Unit tests for the tool execute pipeline
-│   └── utils/                    # Shared internal utilities (logger, frontmatter helpers)
-│       ├── index.ts              # Barrel exports (public API): Logger, createLogger, frontmatter
-│       ├── frontmatter.ts        # Generic Markdown frontmatter helpers (split/parse)
-│       ├── frontmatter.test.ts   # Unit tests for the generic frontmatter helpers
-│       ├── logger.ts             # Plugin logger (opencode client.app.log)
-│       └── logger.test.ts        # Unit tests for the logger
-├── scripts/                      # Build-time helper scripts
-│   ├── copy-assets.mjs           # Copies src/assets/ into build/assets/
-│   └── check-runtime-imports.mjs # Fails build if any @opencode-ai runtime import leaked
-├── test/                         # Shared test support code (not test cases)
-│   ├── __fixtures__/             # Loader test fixtures (ignored by markdownlint)
-│   ├── plugin-helpers.ts         # Shared plugin entry-point test helpers
-│   └── stub-client.ts            # Stub opencode SDK client for tests
-├── test-e2e/                     # Mock-LLM e2e suite (runs via pnpm test:e2e)
-│   ├── harness.ts                # Binary/build guards, server lifecycle, session helpers
-│   ├── harness.test.ts           # Unit tests for harness env isolation helpers
-│   ├── mock-server.ts            # node:http OpenAI-compatible SSE mock LLM
-│   ├── mock-server-chunks.ts     # SSE chunk builders for the mock
-│   ├── mock-server.test.ts       # Standalone unit test for the mock
-│   ├── scenarios.ts              # writeFileScenario / writeFilesScenario builders
-│   ├── cross-cutting-scenarios.ts # Cross-cutting prd-auto-implement loop scenario builders
-│   ├── resume-scenarios.ts       # Resume prd-auto-implement loop scenario builders
-│   ├── smoke.e2e.test.ts         # Commands register in a live opencode server
-│   ├── command.e2e.test.ts       # Mock-LLM-driven command -> file on disk
-│   ├── sdd-command.e2e.test.ts   # sdd-command tool global deny in live config
-│   ├── templates-permission.e2e.test.ts # Bundled templates external_directory grant in live config
-│   ├── agent-model.e2e.test.ts  # User agent model override survives plugin load
-│   ├── prd-auto-implement-helpers.ts  # Shared server lifecycle + helpers for prd-auto-implement e2e tests
-│   ├── prd-auto-implement.e2e.test.ts # prd-auto-implement dispatch/cap e2e plumbing
-│   ├── prd-auto-implement-resume.e2e.test.ts # prd-auto-implement resume-after-interruption e2e tests
-│   └── global-setup.ts           # Vitest globalSetup: binary + build guards
-├── .husky/
-│   └── pre-commit                # Runs pnpm check before every commit
-├── .github/
-│   └── workflows/
-│       └── ci.yml                # GitHub Actions: checks, cross-platform e2e, releases
-├── eslint.config.mjs             # ESLint flat config
-├── knip.config.ts                # Knip unused-export analysis config
-├── tsconfig.json                 # Shared TypeScript config (base; editor)
-├── tsconfig.build.json           # Production build config (excludes tests)
-├── tsconfig.test.json            # Test typecheck config (noEmit)
-├── vitest.config.ts              # Vitest configuration (excludes *.e2e.test.ts)
-├── vitest.test-e2e.config.ts     # Vitest configuration for the e2e suite
-└── package.json                  # Project dependencies and scripts
+├── src/
+│   ├── index.ts                # Plugin entry point (config + tool hooks)
+│   ├── agents/                 # Agent loader: scans *.md → AgentConfig map
+│   ├── commands/               # Command loader + template-rewriter
+│   │                           # (rewrites @opencode-sdd-templates/ → abs path)
+│   ├── sdd-command/            # The `sdd-command` custom tool (allowlist,
+│   │                           # source loader, ToolDefinition factory)
+│   ├── cli/                    # `opencode-sdd install` binary (second entry point)
+│   ├── utils/                  # Shared internals: logger, frontmatter helpers
+│   ├── assets/agents/          # Bundled agent Markdown (frontmatter + prompt)
+│   ├── assets/commands/        # Bundled command Markdown files
+│   └── assets/commands/templates/  # Prompt templates referenced by commands
+│                              # via the @opencode-sdd-templates/ token
+├── test/                       # Shared test support code (plugin-helpers,
+│                               # stub-client, fixtures) — NOT test cases
+├── test-e2e/                    # Mock-LLM end-to-end suite (real opencode
+│                               # server driven by a local SSE mock LLM)
+├── scripts/                    # Build-time helpers (copy-assets,
+│                               # check-runtime-imports)
+├── docs/                        # Long-form developer docs (e2e.md)
+├── README.md, DEVELOPMENT.md    # User-facing + build/debug guides
+├── Dockerfile                   # Multi-stage CI image (lint, test, e2e)
+├── eslint.config.mjs            # ESLint flat config
+├── knip.config.ts               # Unused-export analysis config
+├── tsconfig*.json               # Base / build / test TS config split
+├── vitest*.config.ts            # Test + e2e Vitest configs
+└── package.json                 # Dependencies and scripts
 ```
 
 ## Build and Test Commands
@@ -238,7 +143,12 @@ You MUST follow the following rules for EVERY task that you perform:
 - When the coding task is finished update `CHANGELOG.md` and explain
   changes in the Unreleased section. Add entries to the appropriate
   subsection (Added, Changed, or Fixed) if it already exists; do not
-  create duplicate subsections.
+  create duplicate subsections. Only document user-facing changes —
+  things a user or operator of the plugin/CLI would observe (new
+  commands, behaviour changes, bug fixes, public API shifts). Internal
+  refactors, dependency moves, test reorganisation, and doc-only
+  edits belong in code comments or PR descriptions, not the
+  changelog.
 
 ## Code Guidelines
 
@@ -325,6 +235,31 @@ Entry point (index.ts)
 Definitions (agents/, commands/)
       ↓
 Data (assets/agents/, assets/commands/, assets/commands/templates/)
+```
+
+The project has **two entry points**, each compiling independently and
+importing downward only:
+
+1. **Plugin entry** (`src/index.ts`) — loaded by opencode inside the
+   host process. Flow shown above.
+2. **CLI entry** (`src/cli/install.ts`) — the `opencode-sdd` binary
+   run by the user. Flow shown below.
+
+Neither entry imports the other; the plugin entry never imports from
+`src/cli/`, and the CLI never imports `src/index.ts`. This split keeps
+the compiled plugin output (`build/index.js`) free of any runtime
+`@opencode-ai/*` imports — such imports live only in the CLI graph
+(`build/cli/`), enforced by `scripts/check-runtime-imports.mjs` in
+`pnpm build`.
+
+```text
+CLI entry (src/cli/install.ts)
+      ↓
+CLI modules (src/cli/*.ts: argv, prerequisites, config-resolver,
+            target-select, model-probe, recommend, yes-selection,
+            interactive-selection, config-patcher, agent-model-*)
+      ↓
+User opencode config on disk (read + JSONC-safe patch + atomic write)
 ```
 
 Definitions MUST NOT import from the entry point. Sibling definition
@@ -516,13 +451,21 @@ The `test-e2e/` suite exercises the plugin against a real `opencode` server
 
 - **Pin all dependency versions explicitly**: Do not use `^` or `~` in
   `package.json`.
-- **Type-only dependencies are devDependencies**: The OpenCode Plugin and
-  SDK packages are imported only for types (erased at compile time), so
-  they live in `devDependencies`. The compiled output has no runtime
-  imports — enforced by `scripts/check-runtime-imports.mjs` in `pnpm
-  build`, which fails the build on any leaked `@opencode-ai/*` value
-  import (a surviving value import breaks the published plugin at
-  module-load time when the SDK is absent from the npm install).
+- **Type-only dependencies are devDependencies**: The OpenCode Plugin
+  package (`@opencode-ai/plugin`) is imported only for types (erased at
+  compile time), so it lives in `devDependencies`. The OpenCode SDK
+  package (`@opencode-ai/sdk`) is imported for types by the plugin entry
+  (`import type { ... }`, erased at compile) AND imported at runtime by
+  the CLI's model probe (`src/cli/model-probe.ts` — a value import of
+  `createOpencodeServer`/`createOpencodeClient`); runtime placement wins,
+  so the SDK lives in `dependencies`, pinned at the same version the
+  plugin entry references for types (so the CLI's runtime, the CLI's
+  type surface, and the plugin's type surface never skew). The compiled
+  plugin output (`build/index.js`) retains zero runtime imports — enforced
+  by `scripts/check-runtime-imports.mjs` in `pnpm build`, which fails the
+  build on any leaked `@opencode-ai/*` value import in the plugin entry
+  graph (excluding the top-level `build/cli/`); `import type { ... }` is
+  the only correct form for these packages in the plugin entry.
 
 External dependencies MUST be carefully evaluated before adoption:
 

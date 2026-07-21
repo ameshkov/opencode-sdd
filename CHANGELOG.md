@@ -8,6 +8,28 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `opencode-sdd` CLI binary with `install` subcommand and `--help`.
+- `opencode-sdd install` — interactive setup wizard. Discovers
+  patchable opencode config files, spawns a headless opencode server
+  to enumerate reachable models, recommends a model per SDD subagent
+  (cheap tier for read-only researchers, strong tier for writers),
+  shows a unified diff preview, and writes the patch atomically with
+  comment and key-order preservation for `.json` and `.jsonc`.
+- `opencode-sdd install --yes` (or `-y`) — non-interactive mode:
+  resolves the default target, auto-selects recommended models,
+  skips the confirmation gate, and prints the path + diff to stdout.
+  Exits non-zero when no resolvable target is found (never
+  auto-creates).
+- `opencode-sdd install` create-new fallback — offers to create
+  `<cwd>/opencode.json` when discovery finds no existing config in
+  the interactive flow; re-runs are idempotent.
+- `opencode-sdd install` graceful degradation — a probe failure
+  (server won't start, no models reachable) still registers the
+  plugin entry, writes no model values, emits a warning to stderr,
+  and exits 0 (success-with-warning).
+
 ## [v1.2.1] - 2026-07-03
 
 ### Fixed

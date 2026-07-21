@@ -1,6 +1,7 @@
 // Enforces the project's zero-runtime-imports invariant on the compiled
-// `build/` output: no compiled module may import (or re-export from) the
-// type-only SDK packages (`@opencode-ai/plugin`, `@opencode-ai/sdk`).
+// plugin entry graph: no compiled module (`build/index.js` and its transitive
+// imports) may import (or re-export from) the type-only SDK packages
+// (`@opencode-ai/plugin`, `@opencode-ai/sdk`).
 //
 // These packages are devDependencies used only for types and are erased by
 // `tsc` when imported via `import type`. A leaked *value* import surviving
@@ -10,15 +11,28 @@
 // hook ever runs, leaving no diagnostic in the log. See CHANGELOG and
 // AGENTS.md ("Dependency Management") for the full rationale.
 //
+// The top-level `build/cli/` directory (compiled from `src/cli/`) is
+// intentionally excluded from the scan. The CLI is a second entry
+// point that imports `@opencode-ai/sdk` at runtime (its model probe
+// spins up a headless opencode server via `createOpencodeServer`);
+// it is never imported by the plugin entry. Only the direct child
+// `cli/` of the scan root is skipped — a nested `cli/` directory at
+// any other depth stays covered by the invariant.
+//
+// An optional first CLI argument overrides the build directory so the script
+// can be driven against fixture trees in tests (avoids `process.exit(1)`
+// killing the test process).
+//
 // Wired into `pnpm build` after compilation + asset copy so a leak fails the
 // build immediately.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const root = join(here, '..');
-const buildDir = join(root, 'build');
+const override = process.argv[2];
+const buildDir = override ? resolve(override) : join(root, 'build');
 
 // Matches a runtime (non-erased) reference to any `@opencode-ai/*` package:
 //   - `import ... from '@opencode-ai/...'`
@@ -49,13 +63,22 @@ if (!statSync(buildDir, { throwIfNoEntry: false })?.isDirectory()) {
   process.exit(1);
 }
 
-/** Recursively collect every compiled `.js` file under `dir`. */
-function collectJs(dir) {
+/**
+ * Recursively collect every compiled `.js` file under `dir`, scoped to
+ * the scan `root` so the top-level `cli/` exclusion applies to the
+ * top-level `cli/` subdir only.
+ */
+function collectJs(dir, root = dir) {
   const out = [];
   for (const entry of readdirSync(dir)) {
+    // The CLI (build/cli/, compiled from src/cli/) imports the opencode
+    // SDK at runtime (its model probe spins up a headless server). Skip
+    // only the direct child `cli/` of the scan root so a future nested
+    // `cli/` directory stays covered by the zero-runtime invariant.
+    if (entry === 'cli' && dir === root) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
-      out.push(...collectJs(full));
+      out.push(...collectJs(full, root));
     } else if (entry.endsWith('.js')) {
       out.push(full);
     }

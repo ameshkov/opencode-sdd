@@ -16,7 +16,7 @@ const fixturesDir = join(
 );
 
 describe('loadCommands', () => {
-  it('parses every fixture into the expected command and skips malformed (AC9)', async () => {
+  it('parses every fixture into the expected command and skips malformed', async () => {
     const logger = createLogger(stubClient());
     const result = await loadCommands(fixturesDir, logger);
 
