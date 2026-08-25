@@ -83,6 +83,11 @@ opencode-sdd/
 ├── scripts/                    # Build-time helpers (copy-assets,
 │                               # check-runtime-imports)
 ├── docs/                        # Long-form developer docs (e2e.md)
+├── qa/                          # Manual QA suite: local LLM compose, the
+│                               # isolated workspace image (Dockerfile:
+│                               # opencode + toolchain, plugin baked in),
+│                               # helper scripts, and the test plan
+│                               # (qa/testplan/: README + plans/*.md)
 ├── README.md, DEVELOPMENT.md    # User-facing + build/debug guides
 ├── Dockerfile                   # Multi-stage CI image (lint, test, e2e)
 ├── eslint.config.mjs            # ESLint flat config
@@ -418,6 +423,13 @@ Every module MUST have test coverage:
 - **Test verification mandatory**: All changes MUST pass `pnpm test`
   before merge. Tests MUST NOT be deleted or weakened without explicit
   justification.
+- **Test cases stay consistent with code**: When a change alters
+  behavior, update the affected test cases — unit tests, the e2e
+  suite, and the manual QA plan (`qa/testplan/plans/`) — in the same
+  change. A case left asserting stale behavior, or written so it can
+  never pass as-is (wrong endpoint, mismatched id, unreachable
+  fixture), is a defect, not documentation: fix the case with the
+  code.
 - **Prefer real behavior over mocks**: The plugin entry is exercised by
   calling it and asserting on the `config` hook's effect on a `Config`
   object, not by mocking opencode internals.

@@ -1,0 +1,102 @@
+# QA stack for opencode-sdd: local LLM + isolated testing workspace.
+#
+# Two services:
+# - llama-server: llama.cpp + inclusionAI/Ling-3.0-tiny (7.9B / 1.3B active
+#   MoE, MIT) as an OpenAI-compatible provider. Local CPU only, no remote
+#   LLM tokens. Needs llama.cpp b10470+ (BailingMoE3 support, PR #26608,
+#   merged 2026-08-17); the `:server` tag tracks latest releases.
+# - qa: the workspace where ALL manual testing happens (opencode TUI,
+#   scratch project, CLI wizard). Built from qa/Dockerfile: it bakes the
+#   plugin source + build/ at /app, so the host needs nothing but docker.
+#   Scratch project state lives in the qa-work volume; opencode's own
+#   state (config, logs, history) in qa-home.
+#
+# Usage (prefer the scripts in qa/scripts/):
+#   qa/scripts/qa-up.sh       # build + start both services, wait for health
+#   qa/scripts/qa-shell.sh    # open a shell inside the workspace
+#   qa/scripts/llm-down.sh / llm-up.sh   # LLM only
+#
+# Plugin changes: rebuild the workspace image, then restart qa:
+#   docker compose -f qa/docker-compose.yml build qa
+#   docker compose -f qa/docker-compose.yml up -d qa
+#
+# Resets: `docker compose -f qa/docker-compose.yml down -v` removes the
+# volumes (model cache, scratch work, opencode state) and starts clean.
+#
+# Reachability note (macOS sandbox VM): published ports are bound on the
+# HOST. From inside the sandbox VM, host-side scripts/health checks must
+# use http://192.168.64.1:${LLM_PORT:-8080} instead of localhost. Inside
+# the workspace container the LLM is always http://llama-server:8080
+# (compose DNS), independent of the host.
+
+name: opencode-sdd-qa
+
+services:
+  llama-server:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    ports:
+      - '${LLM_PORT:-8080}:8080'
+    volumes:
+      - llama-cache:/models
+    environment:
+      # Where llama.cpp stores the model downloaded by -hf (defaults to
+      # ~/.cache/llama.cpp inside the container, which is lost on restart).
+      LLAMA_CACHE: /models
+    command:
+      # Download-on-first-use from Hugging Face: <repo>:<quant>.
+      - -hf
+      - bloomer010/Ling-3.0-tiny-GGUF:Q4_K_M
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      # 16K is enough for SDD prompts (system prompt + tools + template);
+      # raise to 32K or 131K if a long-context test needs it.
+      - -c
+      - '16384'
+      # The Bailing V3 chat template is a Jinja template; opencode needs the
+      # parsed tool calls it produces.
+      - --jinja
+      # Wait for queued requests (opencode fires title-generation requests
+      # in parallel with the real session prompt).
+      - --parallel
+      - '1'
+      # 'low' turns thinking OFF for this model (template maps minimal/low
+      # to no thinking) - faster and cheaper for mechanics tests. Omit the
+      # flag or use 'default'/'high' when testing reasoning quality.
+      - --reasoning-effort
+      - low
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:8080/health']
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+  qa:
+    build:
+      # Repo root is the build context (root .dockerignore applies: no
+      # build/, node_modules, .git). The Dockerfile compiles build/ itself.
+      context: ..
+      dockerfile: qa/Dockerfile
+    image: opencode-sdd-qa:workspace
+    environment:
+      # Inside the workspace the LLM is always reachable via compose DNS.
+      # Scripts (wire-opencode-config, llm-smoke) pick this up.
+      LLM_BASE_URL: http://llama-server:8080/v1
+      HOME: /home/qa
+    volumes:
+      # Scratch project, .sdd artifacts, wizard-patched configs.
+      - qa-work:/work
+      # opencode's own state: ~/.config/opencode, ~/.local/share/opencode
+      # (logs, history), cache. Keeps the host untouched.
+      - qa-home:/home/qa
+    depends_on:
+      llama-server:
+        condition: service_healthy
+    command: tail -f /dev/null
+
+volumes:
+  llama-cache:
+  qa-work:
+  qa-home:

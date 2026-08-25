@@ -14,7 +14,7 @@
  * `completedWriteTools`; keep scenarios fully scripted so runs stay
  * deterministic.
  */
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { OpencodeClient, Part, ToolPart } from '@opencode-ai/sdk';
@@ -52,6 +52,41 @@ function tempProjectDir(): string {
   const dir = mkdtempSync(join(tmpdir(), 'sdd-e2e-'));
   cleanup.push(() => rmSync(dir, { recursive: true, force: true }));
   return dir;
+}
+
+/**
+ * Space-free staging directory holding a copy of the bundled template assets,
+ * or `undefined` until {@link stageTemplatesDir} runs in `beforeAll`.
+ */
+let stagedTemplatesDir: string | undefined;
+
+/**
+ * Copy the bundled template assets into a space-free temp path and return it.
+ *
+ * opencode's `@mention` parser splits its target at whitespace, so from a
+ * checkout whose path contains a space (e.g. `/Volumes/My Shared Files/...`)
+ * the rewritten `@<templates>/sdd-spec/plan-template.md` mention is parsed as
+ * `@/Volumes/My` and the asset is never inlined — the inlining test below
+ * would fail even though the plugin rewrote the portable token correctly.
+ * CI checkouts are space-free, but the suite must pass from any checkout
+ * location, so the assets are staged at a space-free path and the plugin is
+ * pointed there via `SDD_TEMPLATES_DIR` (read on every `config`-hook call by
+ * `resolveTemplatesDir`, the same override the unit tests use). The override
+ * must be set before the server child is spawned: the server snapshots
+ * `process.env` at launch.
+ *
+ * The staged dir lives once per test file (not per test) and is removed in
+ * `afterAll` alongside the env override.
+ *
+ * @returns The staged templates directory (contains the same `sdd-spec/`
+ * subtree as `build/assets/commands/templates/`).
+ */
+function stageTemplatesDir(): string {
+  const staged = mkdtempSync(join(tmpdir(), 'sdd-e2e-templates-'));
+  cpSync(join(REPO_ROOT, 'build', 'assets', 'commands', 'templates'), staged, {
+    recursive: true,
+  });
+  return staged;
 }
 
 /**
@@ -136,10 +171,17 @@ describe('command e2e: mock-LLM-driven file writes', () => {
 
   beforeAll(async () => {
     mock = await createMockLlm([]);
+    stagedTemplatesDir = stageTemplatesDir();
+    process.env.SDD_TEMPLATES_DIR = stagedTemplatesDir;
     server = await startOpencodeServer(pluginConfig(mockProviderConfig(`${mock.url}/v1`)));
   });
 
   afterAll(() => {
+    delete process.env.SDD_TEMPLATES_DIR;
+    if (stagedTemplatesDir !== undefined) {
+      rmSync(stagedTemplatesDir, { recursive: true, force: true });
+      stagedTemplatesDir = undefined;
+    }
     server?.close();
     mock?.close();
   });
@@ -188,15 +230,11 @@ describe('command e2e: mock-LLM-driven file writes', () => {
   it('inlines template asset files into the prompt via absolute-path mentions', async () => {
     // A distinctive heading from the bundled sdd-spec plan template —
     // if the asset is inlined into the prompt, this text reaches the model.
-    const templatePath = join(
-      REPO_ROOT,
-      'build',
-      'assets',
-      'commands',
-      'templates',
-      'sdd-spec',
-      'plan-template.md',
-    );
+    // The server inlines from the staged (space-free) templates dir, so the
+    // fixture check reads that same copy.
+    const staged = stagedTemplatesDir;
+    expect(staged, 'beforeAll staging must have run').toBeTruthy();
+    const templatePath = join(staged as string, 'sdd-spec', 'plan-template.md');
     const snippet = '### Patterns to Follow';
     expect(
       readFileSync(templatePath, 'utf8'),
