@@ -10,9 +10,9 @@ import { detect, INSTALL_OPENCODE_HINT } from './prerequisites.js';
 describe('detect (with injected exec)', () => {
   it('returns ok + version when opencode --version succeeds', () => {
     const result = detect({
-      execVersion: () => 'opencode 1.17.7\n',
+      execVersion: () => 'opencode 1.18.23\n',
     });
-    expect(result).toEqual({ ok: true, version: 'opencode 1.17.7' });
+    expect(result).toEqual({ ok: true, version: 'opencode 1.18.23' });
   });
 
   it('returns { ok: false } when the binary is missing', () => {
@@ -32,9 +32,9 @@ describe('detect (with injected exec)', () => {
 
 describe('detect (default exec binding)', () => {
   it('probes opencode --version with the Windows shell option', () => {
-    vi.mocked(execFileSync).mockReturnValue('opencode 1.17.7\n');
+    vi.mocked(execFileSync).mockReturnValue('opencode 1.18.23\n');
     const result = detect();
-    expect(result).toEqual({ ok: true, version: 'opencode 1.17.7' });
+    expect(result).toEqual({ ok: true, version: 'opencode 1.18.23' });
     expect(vi.mocked(execFileSync)).toHaveBeenCalledWith(
       'opencode',
       ['--version'],

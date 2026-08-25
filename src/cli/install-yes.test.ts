@@ -7,7 +7,7 @@ import type { Candidate } from './config-resolver.js';
 import type { DetectResult } from './prerequisites.js';
 import type { YesSelectionResult } from './yes-selection.js';
 
-const ok = (): DetectResult => ({ ok: true, version: '1.17.7' });
+const ok = (): DetectResult => ({ ok: true, version: '1.18.23' });
 
 /** Build a canned YesSelectionResult for a recommended-model selection. */
 function yesRecommended(agent: string, model: string): YesSelectionResult {

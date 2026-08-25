@@ -168,7 +168,7 @@ the absolute path.
 
 > **Note:** the `file:` specifier is not documented in opencode's
 > official config schema, which only shows npm package names. It has
-> been verified to work against opencode 1.17.x; behavior may differ on
+> been verified to work against opencode 1.18.x; behavior may differ on
 > other versions. If it stops working, fall back to Method 2.
 
 **Method 2 — thin loader in the plugin directory.** Local plugins are
@@ -338,7 +338,7 @@ Notes:
 - BuildKit (`# syntax=docker/dockerfile:1`) is required for the pnpm
   cache mounts and for `--output type=local`.
 - The `opencode` binary version is pinned via the `OPENCODE_VERSION`
-  build arg (default `1.17.8`, matching the version the e2e suite targets
+  build arg (default `1.18.23`, matching the version the e2e suite targets
   in [docs/e2e.md](./docs/e2e.md)).
   Override with `--build-arg OPENCODE_VERSION=...`.
 - `.dockerignore` excludes `build/`, `node_modules/`, and tooling
@@ -383,7 +383,7 @@ Common issues and their fixes:
 
 - **`file://` plugin loading stops working.** The `file:` specifier for
   plugins is not in opencode's official config schema and has only been
-  verified against opencode 1.17.x. If it breaks on a newer opencode,
+  verified against opencode 1.18.x. If it breaks on a newer opencode,
   fall back to Method 2 (thin loader in `.opencode/plugins/`) described
   in [Load the plugin from a scratch project](#load-the-plugin-from-a-scratch-project).
 

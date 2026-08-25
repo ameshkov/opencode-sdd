@@ -7,7 +7,7 @@ import type { Candidate } from './config-resolver.js';
 import type { DetectResult } from './prerequisites.js';
 import type { InteractiveSelectionResult } from './interactive-selection.js';
 
-const ok = (): DetectResult => ({ ok: true, version: '1.17.7' });
+const ok = (): DetectResult => ({ ok: true, version: '1.18.23' });
 
 /** Build a canned InteractiveSelectionResult for a recommended-model selection. */
 function interactiveRecommended(agent: string, model: string): InteractiveSelectionResult {

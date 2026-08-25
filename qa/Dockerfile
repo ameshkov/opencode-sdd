@@ -28,7 +28,7 @@ RUN pnpm install --frozen-lockfile && pnpm build
 
 FROM node:24-bookworm-slim AS qa-workspace
 
-ARG OPENCODE_VERSION=1.17.8
+ARG OPENCODE_VERSION=1.18.23
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 

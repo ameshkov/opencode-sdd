@@ -130,7 +130,7 @@ baked into the workspace image:
 | Requirement | Where | Notes |
 | --- | --- | --- |
 | Docker engine | host | `docker info`; ~6 GB free for the 4.8 GB model + ~1 GB image |
-| opencode binary 1.17.8 | image | `qa/Dockerfile` `ARG OPENCODE_VERSION` |
+| opencode binary 1.18.23 | image | `qa/Dockerfile` `ARG OPENCODE_VERSION` |
 | Node 24, pnpm 10.14 | image | CLI wizard, scratch project |
 | git, python3, vim, curl | image | scratch project, config edits, smoke tests |
 | Plugin source + `build/` | image | compiled by `qa/Dockerfile` from the repo context |

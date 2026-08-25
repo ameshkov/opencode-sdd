@@ -76,7 +76,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # The version tested locally (see docs/e2e.md). Override with
 # --build-arg OPENCODE_VERSION=... to pin a different release.
-ARG OPENCODE_VERSION=1.17.8
+ARG OPENCODE_VERSION=1.18.23
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates \

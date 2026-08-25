@@ -30,6 +30,13 @@ and this project adheres to
   plugin entry, writes no model values, emits a warning to stderr,
   and exits 0 (success-with-warning).
 
+### Changed
+
+- Upgraded the pinned opencode versions to 1.18.23:
+  `@opencode-ai/sdk` and `@opencode-ai/plugin` (npm), and the
+  `opencode` binary in CI, the CI Dockerfile, and the QA workspace
+  image (`OPENCODE_VERSION` build arg).
+
 ## [v1.2.1] - 2026-07-03
 
 ### Fixed

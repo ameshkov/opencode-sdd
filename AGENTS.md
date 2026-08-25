@@ -478,6 +478,32 @@ The `test-e2e/` suite exercises the plugin against a real `opencode` server
   build on any leaked `@opencode-ai/*` value import in the plugin entry
   graph (excluding the top-level `build/cli/`); `import type { ... }` is
   the only correct form for these packages in the plugin entry.
+- **Keep the opencode version in sync.** The opencode release is
+  pinned in several places that MUST all be bumped together in a
+  single change:
+    - `package.json` pins `@opencode-ai/sdk` and `@opencode-ai/plugin`
+      (published in lockstep with the binary); refresh the lockfile
+      with `pnpm install`.
+    - The `opencode` binary: the `OPENCODE_VERSION` env var in
+      `.github/workflows/ci.yml` and the `OPENCODE_VERSION` build arg
+      in `Dockerfile` and `qa/Dockerfile`.
+    - Unit-test fixtures that encode the version:
+      `prerequisites.test.ts` (detected `opencode --version` string),
+      `install*.test.ts` (stubbed `DetectResult.version`), and
+      `manifest.test.ts` (asserts the `@opencode-ai/sdk` pin).
+    - Docs stating the version: `DEVELOPMENT.md` (verified-against
+      notes and the Docker section) and `qa/testplan/README.md`
+      (prerequisite table).
+- The npm packages and the binary MAY differ by a patch (e.g. SDK
+  `1.17.7` with binary `1.17.8`), but they MUST stay on the same
+  minor line — the plugin is only verified against one opencode
+  release at a time. After any bump, run `pnpm typecheck` (API
+  compatibility against the new SDK types), `pnpm test`, and
+  `pnpm test:e2e` (runtime behavior against the installed binary)
+  before merging.
+- Behavioral notes phrased "as of opencode 1.x.x" state what was
+  verified at the time; do NOT reword them to a newer version without
+  re-verifying the behavior against that release.
 
 External dependencies MUST be carefully evaluated before adoption:
 
