@@ -152,17 +152,28 @@ qa/scripts/llm-smoke.sh    # LLM only: model list, chat, tool call
 
 - The stack is two containers (compose file `qa/docker-compose.yml`):
   `llama-server` (the LLM) and `qa` (the workspace).
-- Port: `LLM_PORT` env var, default `8080` (published for host-side
-  smoke tests only).
-- Base URL on the host: `LLM_BASE_URL=http://localhost:8080` (or the
-  gateway URL in the sandbox VM, see below). Inside the workspace the
-  container environment already sets
-  `LLM_BASE_URL=http://llama-server:8080/v1`.
-- macOS sandbox VM: published ports bind on the host, so HOST-side
-  scripts and health checks must use `http://192.168.64.1:<port>`
-  instead of localhost. `qa-up.sh` and `llm-up.sh` probe both and
-  print the gateway URL for that case. Inside the workspace container
-  nothing changes (compose DNS).
+- Hermetic by default: the LLM publishes **no host port**, so the stack
+  can never collide with host ports or expose the LLM on the host
+  network. All test traffic uses compose DNS inside the workspace
+  (`LLM_BASE_URL=http://llama-server:8080/v1` is already set in the `qa`
+  environment).
+- Host-side access (host-side smoke tests only) is an opt-in override:
+  `QA_HOST_PORT=8080 qa/scripts/qa-up.sh` (or, as plain compose:
+  `docker compose -f qa/docker-compose.yml -f qa/docker-compose.ports.yml
+  up -d`). The published host port is `LLM_PORT` (default `8080`; set it
+  to another value when 8080 is taken) and the base URL is
+  `LLM_BASE_URL=http://localhost:$LLM_PORT` on a normal machine, or the
+  gateway URL in the sandbox VM (below). Running the scripts without
+  `QA_HOST_PORT` always restores the hermetic (no host port) state, so an
+  applied publish is never silently left behind.
+- macOS sandbox VM: even with the ports override, the published port
+  binds on the **host**, so host-side scripts and health checks must use
+  `http://192.168.64.1:<port>` instead of localhost — `localhost` in the
+  VM is occupied by unrelated services. `qa-up.sh` and `llm-up.sh` probe
+  health inside the llama-server container (no host port needed) and,
+  when a port is published, also probe the host-side URLs (localhost +
+  gateway fallback). Inside the workspace container nothing changes
+  (compose DNS).
 - Image requirement: llama.cpp b10470+ (BailingMoE3 support, merged
   2026-08-17). The `:server` tag tracks latest releases; if the server
   logs `unknown model architecture: 'bailingmoe3'`, pull a newer tag.
@@ -408,7 +419,8 @@ Filing conventions:
 | Model downloads on every start | `LLAMA_CACHE` must point into the mounted volume; check `docker compose -f qa/docker-compose.yml config` |
 | Tool calls missing | `--jinja` present? model flagged `"tool_call": true` in opencode config? retry (tiny models occasionally answer in text) |
 | Prompts truncated | raise `-c` in `qa/docker-compose.yml`, `docker compose up -d` |
-| opencode in sandbox VM can't reach LLM | host-side scripts only: use `http://192.168.64.1:<port>` as `LLM_BASE_URL`; inside the workspace nothing changes (compose DNS) |
+| opencode in sandbox VM can't reach LLM | host-side scripts only: publish a port with the `qa/docker-compose.ports.yml` override, then use `http://192.168.64.1:<port>` as `LLM_BASE_URL`; inside the workspace nothing changes (compose DNS) |
+| Port 8080 (or any port) already in use | the default stack publishes no host port, so there is nothing to collide; for the opt-in override pick another port: `LLM_PORT=8081 docker compose -f qa/docker-compose.yml -f qa/docker-compose.ports.yml up -d` |
 | Plugin changes not visible | `docker compose -f qa/docker-compose.yml build qa && docker compose -f qa/docker-compose.yml up -d qa` — the image compiles `build/` itself; no hot reload |
 | Wizard says no models | the local provider must be configured (3.4) and not listed in `disabled_providers`; the probe reads the config only — it never pings the provider, so a stopped LLM is NOT the cause |
 | Wizard lists unexpected models | opencode's built-in `opencode` provider is enabled; add `disabled_providers: ["opencode"]` (3.4) |

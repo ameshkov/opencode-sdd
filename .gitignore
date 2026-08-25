@@ -7,6 +7,9 @@ build/
 # CI output (extracted Docker build results)
 ci-output/
 
+# Manual QA run output (terminal captures, config snapshots, logs)
+qa/evidence/
+
 # OS files
 .DS_Store
 

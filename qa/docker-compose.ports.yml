@@ -1,0 +1,21 @@
+# Opt-in host port publishing for the QA LLM (host-side smoke tests only).
+#
+# By default the stack publishes NO host port: all test traffic runs inside
+# the compose network (qa -> llama-server:8080), so nothing can collide with
+# host ports. Add this override when you need host-side access:
+#
+#   docker compose -f qa/docker-compose.yml -f qa/docker-compose.ports.yml up -d
+#
+# The published host port is ${LLM_PORT:-8080} (set LLM_PORT to pick another
+# port when 8080 is taken, e.g. LLM_PORT=8081). Host-side smoke test:
+#   LLM_BASE_URL=http://localhost:8080 qa/scripts/llm-smoke.sh
+#
+# On a macOS sandbox VM the published port binds on the HOST and is
+# reachable from inside the VM via the NAT gateway
+# (http://192.168.64.1:${LLM_PORT:-8080}) — NOT via localhost, which in the
+# VM may be occupied by unrelated services. Inside the workspace container
+# nothing changes (compose DNS).
+services:
+  llama-server:
+    ports:
+      - '${LLM_PORT:-8080}:8080'

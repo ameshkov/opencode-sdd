@@ -16,6 +16,11 @@
 #   qa/scripts/qa-shell.sh    # open a shell inside the workspace
 #   qa/scripts/llm-down.sh / llm-up.sh   # LLM only
 #
+# HERMETIC BY DEFAULT: the LLM publishes NO host port, so the stack cannot
+# collide with anything on the host. All test traffic runs inside the compose
+# network (qa -> llama-server:8080). Host-side access (smoke tests only) is
+# opt-in via qa/docker-compose.ports.yml, see there.
+#
 # Plugin changes: rebuild the workspace image, then restart qa:
 #   docker compose -f qa/docker-compose.yml build qa
 #   docker compose -f qa/docker-compose.yml up -d qa
@@ -23,10 +28,10 @@
 # Resets: `docker compose -f qa/docker-compose.yml down -v` removes the
 # volumes (model cache, scratch work, opencode state) and starts clean.
 #
-# Reachability note (macOS sandbox VM): published ports are bound on the
-# HOST. From inside the sandbox VM, host-side scripts/health checks must
-# use http://192.168.64.1:${LLM_PORT:-8080} instead of localhost. Inside
-# the workspace container the LLM is always http://llama-server:8080
+# Reachability note (macOS sandbox VM): with the opt-in ports override the
+# published port is bound on the HOST, so host-side scripts/health checks
+# must use http://192.168.64.1:${LLM_PORT:-8080} instead of localhost.
+# Inside the workspace container the LLM is always http://llama-server:8080
 # (compose DNS), independent of the host.
 
 name: opencode-sdd-qa
@@ -34,8 +39,11 @@ name: opencode-sdd-qa
 services:
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server
-    ports:
-      - '${LLM_PORT:-8080}:8080'
+    # No host port by default (hermetic). `expose` documents the container
+    # port only; reachability inside the stack is compose DNS. Host-side
+    # access is opt-in via qa/docker-compose.ports.yml.
+    expose:
+      - '8080'
     volumes:
       - llama-cache:/models
     environment:
