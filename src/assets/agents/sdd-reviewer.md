@@ -2,9 +2,8 @@
 description: Critically reviews an implementation plan for gaps, risks, and ordering before it is executed.
 mode: subagent
 hidden: true
-tools:
-  sdd-command: true
 permission:
+  sdd-command: allow
   read: allow
   glob: allow
   grep: allow

@@ -77,8 +77,10 @@ real runtime.
 
 - **Objective**: Verify the global deny: the primary `sdd-build` agent may
   not invoke `sdd-command` directly.
-- **Verification**: `tools['sdd-command'] === false` effect on a direct
-  attempt.
+- **Verification**: the runtime effect of
+  `permission['sdd-command'] === 'deny'` on a direct attempt (the old
+  `tools['sdd-command'] === false` form is ignored by opencode for
+  plugin-registered tools and must not be asserted).
 - **Preconditions**: TC-REG-01.
 - **Steps**:
   1. In the TUI as `sdd-build`, ask it to use `sdd-command` directly.

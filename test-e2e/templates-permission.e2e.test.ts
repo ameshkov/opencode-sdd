@@ -5,7 +5,8 @@
  * `<templates-dir>/**` -> "allow" rule under `permission.external_directory`.
  * This proves the config-hook permission patch is accepted and retained by
  * opencode at runtime (not just in the plugin's own unit tests), mirroring the
- * `sdd-command` global-deny e2e assertion.
+ * `sdd-command` global-deny e2e assertion, which checks the sibling
+ * `permission['sdd-command']` rule the same hook writes.
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';

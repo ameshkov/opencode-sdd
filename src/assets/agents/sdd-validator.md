@@ -2,9 +2,8 @@
 description: Verifies an implementation against its plan — runs checks, confirms behavior, surfaces gaps.
 mode: subagent
 hidden: true
-tools:
-  sdd-command: true
 permission:
+  sdd-command: allow
   read: allow
   glob: allow
   grep: allow

@@ -2,9 +2,8 @@
 description: Implements a plan task-by-task — writes and edits code, runs checks, keeps changes focused.
 mode: subagent
 hidden: true
-tools:
-  sdd-command: true
 permission:
+  sdd-command: allow
   read: allow
   glob: allow
   grep: allow

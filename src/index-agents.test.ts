@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Config } from '@opencode-ai/plugin';
 import sddPlugin from './index.js';
-import { pluginInput, withCommandsDir } from '../test/plugin-helpers.js';
+import { permissionRecord, pluginInput, withCommandsDir } from '../test/plugin-helpers.js';
 
 /**
  * Create a temp agents directory with a single `sdd-explore` fixture, set
@@ -135,9 +135,8 @@ describe('sdd plugin agent registration', () => {
           'description: Planner',
           'mode: subagent',
           'hidden: true',
-          'tools:',
-          '  sdd-command: true',
           'permission:',
+          '  sdd-command: allow',
           '  task:',
           '    "*": deny',
           '    sdd-explore: allow',
@@ -157,14 +156,14 @@ describe('sdd plugin agent registration', () => {
         expect(planner).toBeDefined();
         expect(planner?.mode).toBe('subagent');
         expect(planner?.['hidden']).toBe(true);
-        expect(planner?.tools?.['sdd-command']).toBe(true);
         const plannerPerm = planner?.permission as Record<string, unknown> | undefined;
+        expect(plannerPerm?.['sdd-command']).toBe('allow');
         const task = plannerPerm?.task;
         expect(task).toEqual({
           '*': 'deny',
           'sdd-explore': 'allow',
         });
-        expect(config.tools?.['sdd-command']).toBe(false);
+        expect(permissionRecord(config)?.['sdd-command']).toBe('deny');
       });
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -186,8 +185,8 @@ describe('sdd plugin agent registration', () => {
       expect(build?.mode).toBe('primary');
       expect(build?.['hidden']).not.toBe(true);
       const buildPerm = build?.permission as Record<string, unknown> | undefined;
-      // sdd-build does not override the global sdd-command deny.
-      expect(build?.tools?.['sdd-command']).toBeUndefined();
+      // sdd-build reinforces the global sdd-command deny rather than allowing it.
+      expect(buildPerm?.['sdd-command']).toBe('deny');
       expect(build?.permission?.edit).toBe('ask');
       expect(buildPerm?.read).toBe('allow');
       expect(buildPerm?.glob).toBe('allow');
@@ -198,8 +197,8 @@ describe('sdd plugin agent registration', () => {
         '*': 'deny',
         'sdd-*': 'allow',
       });
-      // Global deny applies to sdd-build.
-      expect(config.tools?.['sdd-command']).toBe(false);
+      // Global deny is registered on the merged config as well.
+      expect(permissionRecord(config)?.['sdd-command']).toBe('deny');
     } finally {
       delete process.env['SDD_COMMANDS_DIR'];
     }
@@ -213,33 +212,16 @@ describe('sdd plugin tool registration', () => {
     expect(hooks.tool?.['sdd-command']?.description).toContain('prd-validate');
   });
 
-  it('sets config.tools["sdd-command"] to false after the config hook', async () => {
-    await withCommandsDir(async () => {
-      const hooks = await sddPlugin(pluginInput());
-      const config: Config = {};
-      await hooks.config?.(config);
-
-      expect(config.tools?.['sdd-command']).toBe(false);
-    });
-  });
-
-  it('preserves an existing user tools entry via spread-merge', async () => {
+  it('leaves the deprecated tools field untouched', async () => {
     await withCommandsDir(async () => {
       const hooks = await sddPlugin(pluginInput());
       const config: Config = { tools: { 'user-tool': true } };
       await hooks.config?.(config);
 
-      expect(config.tools?.['user-tool']).toBe(true);
-      expect(config.tools?.['sdd-command']).toBe(false);
-    });
-  });
-
-  it('does not throw when setting the global deny if config.tools is absent', async () => {
-    await withCommandsDir(async () => {
-      const hooks = await sddPlugin(pluginInput());
-      const config: Config = {};
-      await expect(hooks.config?.(config)).resolves.toBeUndefined();
-      expect(config.tools?.['sdd-command']).toBe(false);
+      // The deny is a `permission` rule; `tools` is not honoured for custom
+      // tool names, so the plugin never writes it (see index-tool-deny.test.ts).
+      expect(config.tools).toEqual({ 'user-tool': true });
+      expect(permissionRecord(config)?.['sdd-command']).toBe('deny');
     });
   });
 });

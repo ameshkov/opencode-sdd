@@ -1,9 +1,10 @@
 /**
- * E2E: a hidden SDD worker (`sdd-planner`) actually calls `sdd-command` at
- * runtime and receives the rewritten markdown (success path) or the
- * single-line error string (error path). This is the positive tool-result
- * e2e deferred from Issue 2, which could not be exercised before an agent
- * with `sdd-command` allowed existed.
+ * E2E: a hidden SDD worker actually calls `sdd-command` at runtime and
+ * receives the rewritten markdown (success path) or the single-line error
+ * string (error path). The session runs as the worker agent (`sdd-planner`)
+ * via the prompt's `agent` field, so the tool call executes under the
+ * worker's per-agent `permission: { sdd-command: allow }` — which overrides
+ * the global `permission['sdd-command'] = 'deny'` the plugin registers.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -87,7 +88,10 @@ describe('sdd-command worker e2e', () => {
     const session = await createSession(client, directory);
     await client.session.prompt({
       path: { id: session.id },
-      body: { parts: [{ type: 'text', text: 'load the validate stage' }] },
+      body: {
+        agent: 'sdd-planner',
+        parts: [{ type: 'text', text: 'load the validate stage' }],
+      },
       query: { directory },
     });
 
@@ -107,7 +111,10 @@ describe('sdd-command worker e2e', () => {
     const session = await createSession(client, directory);
     await client.session.prompt({
       path: { id: session.id },
-      body: { parts: [{ type: 'text', text: 'load the write stage' }] },
+      body: {
+        agent: 'sdd-planner',
+        parts: [{ type: 'text', text: 'load the write stage' }],
+      },
       query: { directory },
     });
 

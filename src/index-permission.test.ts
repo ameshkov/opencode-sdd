@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { Config, PluginInput } from '@opencode-ai/plugin';
 import sddPlugin from './index.js';
-import { pluginInput, withCommandsDir } from '../test/plugin-helpers.js';
+import { permissionRecord, pluginInput, withCommandsDir } from '../test/plugin-helpers.js';
 
 /**
  * Create a temp templates directory (with a single placeholder template),
@@ -25,11 +25,6 @@ async function withTemplatesDir(fn: (dir: string) => Promise<void>): Promise<voi
     delete process.env['SDD_TEMPLATES_DIR'];
     await rm(dir, { recursive: true, force: true });
   }
-}
-
-/** The `permission` object as a loose record for assertion convenience. */
-function permissionRecord(config: Config): Record<string, unknown> | undefined {
-  return config.permission as Record<string, unknown> | undefined;
 }
 
 /** The `external_directory` rule as a path-glob map, or `undefined`. */

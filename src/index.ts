@@ -159,27 +159,6 @@ async function registerAgents(config: Config, logger: Logger): Promise<void> {
   }
 }
 
-/**
- * Globally deny the `sdd-command` tool by setting
- * `config.tools['sdd-command'] = false` (spread-merged onto any existing
- * user tools). The SDD worker agents override this per-agent with
- * `tools['sdd-command'] = true`. The deprecated `tools` field is retained
- * here because, unlike `permission`, its per-agent override semantics are
- * honoured at runtime for custom tool names (opencode 1.17.x). Any error is
- * logged and swallowed so the hook never throws.
- */
-async function registerSddCommandGlobalDeny(config: Config, logger: Logger): Promise<void> {
-  try {
-    await logger.info('registering sdd-command global deny');
-    config.tools = { ...config.tools, 'sdd-command': false };
-    await logger.debug('registered sdd-command global deny');
-  } catch (error) {
-    await logger.error('failed to register sdd-command global deny', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
 /** An opencode permission action for a single rule. */
 type PermissionAction = 'ask' | 'allow' | 'deny';
 
@@ -189,6 +168,67 @@ type PermissionAction = 'ask' | 'allow' | 'deny';
  * key, or a map of path/glob keys to actions.
  */
 type ExternalDirectoryRule = PermissionAction | Record<string, PermissionAction>;
+
+/** The `permission` key that gates the custom `sdd-command` tool. */
+const SDD_COMMAND_PERMISSION = 'sdd-command';
+
+/**
+ * Globally deny the `sdd-command` tool by setting
+ * `config.permission['sdd-command'] = 'deny'` (spread-merged onto any existing
+ * user permission). The SDD worker agents override this per-agent with
+ * `permission: { sdd-command: allow }` in their frontmatter, which takes
+ * precedence over the global rule.
+ *
+ * `permission` — not the deprecated `tools` field — is the mechanism that
+ * actually gates a plugin-registered tool name at runtime: `tools['sdd-command']
+ * = false` is silently ignored for custom tools (verified against opencode
+ * 1.17.8 and 1.18.23), while a per-agent `permission` entry is honoured as of
+ * opencode 1.18.23.
+ *
+ * A global string posture is respected rather than rewritten: `"deny"` and
+ * `"ask"` already restrict the tool, and converting either into object form
+ * would silently change the action of every other tool. A global `"allow"`
+ * leaves the tool open to non-SDD agents, which is surfaced as a warning — the
+ * bundled agents still carry their own explicit rule either way. An
+ * `sdd-command` entry the user set themselves is left untouched. Any error is
+ * logged and swallowed so the hook never throws.
+ */
+async function registerSddCommandGlobalDeny(config: Config, logger: Logger): Promise<void> {
+  try {
+    await logger.info('registering sdd-command global deny');
+
+    if (typeof config.permission === 'string') {
+      if (config.permission === 'allow') {
+        await logger.warn('cannot deny sdd-command: permission is a global "allow"');
+      } else {
+        await logger.debug('permission is a global string; sdd-command already restricted', {
+          permission: config.permission,
+        });
+      }
+      return;
+    }
+
+    const existing = (config.permission as Record<string, unknown> | undefined)?.[
+      SDD_COMMAND_PERMISSION
+    ];
+    if (existing !== undefined) {
+      await logger.debug('sdd-command permission already set by user; left untouched', {
+        permission: String(existing),
+      });
+      return;
+    }
+
+    config.permission = {
+      ...config.permission,
+      [SDD_COMMAND_PERMISSION]: 'deny',
+    } as unknown as Config['permission'];
+    await logger.debug('registered sdd-command global deny');
+  } catch (error) {
+    await logger.error('failed to register sdd-command global deny', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 /**
  * Grant `external_directory` read access to the bundled template assets

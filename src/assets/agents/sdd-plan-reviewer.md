@@ -3,6 +3,7 @@ description: Read-only plan reviewer; cross-checks an implementation plan agains
 mode: subagent
 hidden: true
 permission:
+  sdd-command: deny
   read: allow
   glob: allow
   grep: allow

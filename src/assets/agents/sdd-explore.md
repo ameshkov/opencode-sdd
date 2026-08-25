@@ -3,6 +3,7 @@ description: Read-only codebase researcher; gathers findings as concise text foc
 mode: subagent
 hidden: true
 permission:
+  sdd-command: deny
   read: allow
   glob: allow
   grep: allow

@@ -145,15 +145,12 @@ You MUST follow the following rules for EVERY task that you perform:
 - After completing the task you MUST verify that the code you've written
   follows the Code Guidelines in this file.
 
-- When the coding task is finished update `CHANGELOG.md` and explain
-  changes in the Unreleased section. Add entries to the appropriate
-  subsection (Added, Changed, or Fixed) if it already exists; do not
-  create duplicate subsections. Only document user-facing changes —
-  things a user or operator of the plugin/CLI would observe (new
-  commands, behaviour changes, bug fixes, public API shifts). Internal
-  refactors, dependency moves, test reorganisation, and doc-only
-  edits belong in code comments or PR descriptions, not the
-  changelog.
+- When the coding task is finished update `CHANGELOG.md` in the
+  Unreleased section. Add short, user-facing entries to the appropriate
+  existing subsection (Added, Changed, or Fixed); do not create
+  duplicate subsections or narrate implementation history. Internal
+  refactors, dependency moves, test reorganisation, and doc-only edits
+  are omitted.
 
 ## Code Guidelines
 
@@ -325,14 +322,13 @@ This plugin talks to opencode exclusively through the `config` hook:
   built-in agents.
 - **Prefer `permission` over the deprecated `tools` field.** opencode
   marks `tools` as deprecated in favour of `permission` for finer-grained
-  control. All shipped agents use `permission` for tool-access control
-  (read, edit, bash, etc.). The sole exception is the `sdd-command` custom
-  tool: its global deny (`config.tools['sdd-command'] = false` in the
-  `config` hook) and per-worker override (`tools: { sdd-command: true }` in
-  the worker frontmatter) must use the `tools` field because, as of
-  opencode 1.17.x, per-agent `permission` overrides are not honoured at
-  runtime for custom (non-built-in) tool names. When a future opencode
-  release fixes this, the `tools` usage can be dropped entirely.
+  control, and opencode ignores `tools` for plugin-registered tools. All
+  shipped agents gate the `sdd-command` custom tool with `permission`:
+  the `config` hook denies it globally
+  (`config.permission['sdd-command'] = 'deny'`, spread-merged like the
+  templates grant), worker frontmatters allow it per-agent
+  (`permission: { sdd-command: allow }`), and non-worker agents carry an
+  explicit `permission: { sdd-command: deny }`.
 - **Type the surface against the SDK.** Import `AgentConfig` from
   `@opencode-ai/sdk` and derive command types from `Config` so the
   compiler catches shape mistakes early. opencode hard-fails on invalid

@@ -2,6 +2,7 @@
 description: General-purpose build agent; spawns sdd-* workers when running prd-auto-implement.
 mode: primary
 permission:
+  sdd-command: deny
   read: allow
   glob: allow
   grep: allow

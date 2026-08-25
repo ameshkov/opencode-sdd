@@ -37,6 +37,12 @@ and this project adheres to
   `opencode` binary in CI, the CI Dockerfile, and the QA workspace
   image (`OPENCODE_VERSION` build arg).
 
+### Fixed
+
+- The `sdd-command` tool is now actually gated at runtime: denied
+  globally via `permission`, allowed for SDD workers, and explicitly
+  denied for other agents (requires opencode 1.18.23+).
+
 ## [v1.2.1] - 2026-07-03
 
 ### Fixed

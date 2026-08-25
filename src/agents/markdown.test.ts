@@ -26,8 +26,8 @@ describe('sdd-explore agent asset', () => {
     expect(perm?.edit).toBe('deny');
     expect(perm?.bash).toBe('deny');
     expect(perm?.task).toBe('deny');
-    // sdd-command denied by the global tools deny, not overridden per-agent.
-    expect(perm?.['sdd-command']).toBeUndefined();
+    // sdd-command explicitly denied, reinforcing the global permission deny.
+    expect(perm?.['sdd-command']).toBe('deny');
     expect(config.description).toMatch(/researcher/i);
     expect(config.prompt).toBeTruthy();
     expect(config.prompt ?? '').toMatch(/specializ/i);
@@ -54,8 +54,8 @@ describe('sdd-plan-reviewer agent asset', () => {
     expect(perm?.edit).toBe('deny');
     expect(perm?.bash).toBe('deny');
     expect(perm?.task).toBe('deny');
-    // sdd-command denied by the global tools deny, not overridden per-agent.
-    expect(perm?.['sdd-command']).toBeUndefined();
+    // sdd-command explicitly denied, reinforcing the global permission deny.
+    expect(perm?.['sdd-command']).toBe('deny');
     expect(config.description).toMatch(/plan.*review|review.*plan/i);
     expect(config.prompt).toBeTruthy();
   });
@@ -95,8 +95,9 @@ describe.each(WORKERS)('%s worker asset', (name) => {
     expect(perm?.bash).toBe('allow');
     expect(perm?.websearch).toBe('allow');
     expect(perm?.webfetch).toBe('allow');
-    // sdd-command explicitly enabled via tools (overrides the global deny).
-    expect(config.tools?.['sdd-command']).toBe(true);
+    // sdd-command allowed per-agent, overriding the global permission deny.
+    expect(perm?.['sdd-command']).toBe('allow');
+    expect(config.tools).toBeUndefined();
     const task = perm?.task;
     expect(task).toEqual(WORKER_TASK_ALLOWLIST[name]);
   });
@@ -143,8 +144,8 @@ describe('sdd-build agent asset', () => {
     expect(perm?.websearch).toBe('allow');
     expect(perm?.webfetch).toBe('allow');
     expect(perm?.question).toBe('allow');
-    // sdd-command denied by the global tools deny, not overridden per-agent.
-    expect(perm?.['sdd-command']).toBeUndefined();
+    // sdd-command explicitly denied, reinforcing the global permission deny.
+    expect(perm?.['sdd-command']).toBe('deny');
     const task = perm?.task;
     expect(task).toEqual({
       '*': 'deny',

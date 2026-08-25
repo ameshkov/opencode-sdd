@@ -2,9 +2,8 @@
 description: Translates a single issue into a precise, step-by-step implementation plan.
 mode: subagent
 hidden: true
-tools:
-  sdd-command: true
 permission:
+  sdd-command: allow
   read: allow
   glob: allow
   grep: allow

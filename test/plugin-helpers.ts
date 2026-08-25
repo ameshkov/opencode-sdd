@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { PluginInput } from '@opencode-ai/plugin';
+import type { Config, PluginInput } from '@opencode-ai/plugin';
 import { stubClient } from './stub-client.js';
 
 /**
@@ -63,4 +63,17 @@ export async function withCommandsDir(fn: (dir: string) => Promise<void>): Promi
     delete process.env['SDD_AGENTS_DIR'];
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+/**
+ * The merged `permission` object as a loose record, for assertions on keys the
+ * SDK type does not model (custom tool names such as `sdd-command`, path-glob
+ * maps under `external_directory`).
+ *
+ * @param config - The config a `config` hook has run against.
+ * @returns The permission object as a record, or `undefined` when unset or a
+ *   global string posture.
+ */
+export function permissionRecord(config: Config): Record<string, unknown> | undefined {
+  return config.permission as Record<string, unknown> | undefined;
 }

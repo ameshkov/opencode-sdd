@@ -3,8 +3,9 @@
 ## TC-REG-01 — Fresh registration surface (P0)
 
 - **Objective**: Verify that a clean opencode startup registers the full
-  plugin surface: 16 commands, 7 agents, the `sdd-command` global deny,
-  the template permission grant — without any prompt or error.
+  plugin surface: 16 commands, 7 agents, the `sdd-command` global
+  permission deny, the template permission grant — without any prompt
+  or error.
 - **Verification**: Log markers from section 3.5, the TUI command list,
   and the agent selector.
 - **Preconditions**: scratch project wired per 3.3/3.4; the plugin is
@@ -113,8 +114,8 @@
   approval question in the TUI and a successful read.
 - **Preconditions**: TC-REG-01 passed.
 - **Steps**:
-  1. In the TUI, run `/prd-issue-to-plan` (an agent with
-     `sdd-command: true` and template reads).
+  1. In the TUI, run `/prd-issue-to-plan` (a worker agent with
+     `permission.sdd-command: allow` and template reads).
   2. Observe whether any permission question appears for reading
      `/app/build/assets/commands/templates/...`.
 - **Expected result**:

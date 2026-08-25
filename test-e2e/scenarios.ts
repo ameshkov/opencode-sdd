@@ -43,44 +43,25 @@ export function writeFilesScenario(files: Array<{ filePath: string; content: str
 }
 
 /**
- * Scenario: a primary agent dispatches `sdd-planner`, the worker calls
- * `sdd-command` with `commandName`, then both loops end.
+ * Scenario: the session's agent calls `sdd-command` with `commandName`
+ * directly, then replies `done`.
  *
- * @param commandName - The `command` argument the worker passes to
+ * The agent is chosen via the prompt's `agent` field
+ * (`sdd-planner`/`sdd-validator` for the worker success path, `sdd-build` for
+ * the deny path), so the call and its result stay in the session the test
+ * inspects.
+ *
+ * @param commandName - The `command` argument the agent passes to
  *   `sdd-command` (allowlisted for the success path, not allowlisted for the
  *   error path).
- * @returns Four turns: task-dispatch, sdd-command call, worker-done,
- *   primary-done.
+ * @returns Two turns: the sdd-command call, then the done text.
  */
 export function sddCommandScenario(commandName: string): Turn[] {
   return [
     {
       type: 'tool-call',
-      toolCalls: [
-        {
-          name: 'task',
-          arguments: {
-            // NOTE: deliberately uses the non-spawning `agent` key (rather
-            // than opencode's real `subagent_type`) so opencode does NOT
-            // spawn a real `sdd-planner` sub-agent. This keeps the scripted
-            // `sdd-command` call in the primary session, where this test
-            // inspects the tool result text. With `subagent_type` the
-            // sdd-command result would move to the sub-agent session and be
-            // invisible to the primary-session assertion (see the comment
-            // at prd-auto-implement.e2e.test.ts:87). Not changed for consistency
-            // because the spawning behaviour is load-bearing here.
-            agent: 'sdd-planner',
-            description: 'load stage instructions',
-            prompt: `load the ${commandName} stage instructions`,
-          },
-        },
-      ],
-    },
-    {
-      type: 'tool-call',
       toolCalls: [{ name: 'sdd-command', arguments: { command: commandName } }],
     },
-    { type: 'text', text: 'done' },
     { type: 'text', text: 'done' },
   ];
 }
