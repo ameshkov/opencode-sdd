@@ -19,12 +19,22 @@ real runtime.
   2. In the transcript, locate the `sdd-command` tool call for
      `prd-issue-to-plan`.
   3. Inspect the tool result text.
+  4. Ask the same worker to `read` the template path the result
+     references, and inspect what it gets back.
 - **Expected result**:
     - Assert the result starts with
-      `Loaded command "prd-issue-to-plan" from <abs path>.`
-    - Assert the body contains the plan template (`# Implementation Plan:`,
-      `## Tasks`) and no `@opencode-sdd-templates/` literal.
-- **Evidence**: transcript excerpt with the tool call + result.
+      `Loaded command "prd-issue-to-plan" from <abs path>.` followed by a
+      blank line.
+    - Assert the body references the plan template as a rewritten absolute
+      mention (`@<abs templates dir>/prd-issue-to-plan/plan-template.md`)
+      and contains no `@opencode-sdd-templates/` literal. The tool rewrites
+      the mention; it does NOT inline the template — opencode inlines
+      mentions only when building a command prompt.
+    - Assert the worker's `read` of that path completes without a
+      permission ask (the templates grant of TC-REG-05) and returns the
+      template, which carries `# Implementation Plan:` and `## Tasks`.
+- **Evidence**: transcript excerpt with the tool call + result, and the
+  follow-up `read` result.
 
 ## TC-TOOL-02 — Non-allowlisted name fails cleanly (P1)
 
@@ -35,7 +45,9 @@ real runtime.
 - **Preconditions**: TC-TOOL-01.
 - **Steps**:
   1. Ask the worker (in a follow-up message) to call `sdd-command` with
-     `prd-write`, then with `garbage`.
+     `prd-write`, then with `garbage`. State that the error path itself is
+     the point — a tiny model otherwise "helpfully" answers from memory
+     without ever calling the tool.
   2. Read the tool result for each.
 - **Expected result**:
     - Assert the result is exactly
@@ -50,10 +62,15 @@ real runtime.
 
 - **Objective**: Verify the fifth entry — the cross-cutting validator
   command — is loadable exactly like the others.
-- **Steps**: repeat TC-TOOL-01 with `prd-validate`.
+- **Steps**: repeat TC-TOOL-01 with `prd-validate`, ideally from a
+  different worker (for example `sdd-validator`) to cover a second agent.
 - **Expected result**:
-    - Assert `Loaded command "prd-validate" from ...` and the report
-      template (`# PRD Validation Report:`, `## Overall Assessment`).
+    - Assert `Loaded command "prd-validate" from <abs path>.` and that the
+      report template is referenced as a rewritten absolute mention
+      (`@<abs templates dir>/prd-validate/validation-report-template.md`),
+      with no `@opencode-sdd-templates/` literal.
+    - Assert the referenced template carries `# PRD Validation Report:`
+      and `## Overall Assessment`.
 - **Evidence**: transcript excerpt.
 
 ## TC-TOOL-03 — Orchestrator cannot call it (P2)
