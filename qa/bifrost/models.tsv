@@ -1,0 +1,29 @@
+# Canonical OpenRouter model allowlist for the manual QA stack.
+# Format: <openrouter-slug><TAB><display name>  (comment lines start with #)
+#
+# Semantics:
+# - bifrost-provision.sh seeds the gateway's `openrouter` provider key with
+#   exactly these slugs (so the key only ever authorizes QA models).
+# - wire-opencode-config.sh writes the opencode provider models map from
+#   this file: the opencode id is `openrouter/<slug>`, used as
+#   `bifrost/openrouter/<slug>` in config `model` values.
+# - ORDER MATTERS: this is the enumeration order the CLI wizard sees, so
+#   the keyword-priority ordering assertions of TC-CLI-02 read the same
+#   order as `SUBAGENT_RECOMMENDATIONS` (deepseek/qwen = strong tier,
+#   mimo/gemini = cheap tier). Keep the rows tier-mixed exactly like this.
+# - Keep the list <= 7 models: the wizard's per-agent prompt folds after
+#   seven entries.
+# - Before changing an id, confirm it still exists and still supports
+#   tool calling: curl -s https://openrouter.ai/api/v1/models
+#   (the suite's flows require tool calls; TC-LLM-02 proves it).
+#
+# Costs (per 1M tokens, prompt/completion, as of 2026-08-26): the deepseek
+# and qwen rows are a few cents; claude-sonnet-5 is the most expensive
+# entry and gpt-5.6-luna is mid-tier. The per-group model under test is
+# selected with BIFROST_MODEL, see qa/README.md.
+deepseek/deepseek-v4-flash	DeepSeek V4 Flash
+qwen/qwen3.5-plus-20260420	Qwen 3.5 Plus
+xiaomi/mimo-v2.5	MiMo V2.5
+google/gemini-3.1-flash-lite	Gemini 3.1 Flash Lite
+anthropic/claude-sonnet-5	Claude Sonnet 5
+openai/gpt-5.6-luna	GPT-5.6 Luna

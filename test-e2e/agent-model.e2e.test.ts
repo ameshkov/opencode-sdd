@@ -1,10 +1,11 @@
 /**
  * E2E: user-set agent `model` (e.g. from `opencode.json`'s `config.agent`)
- * survives plugin registration. Before the fix, `registerAgents` replaced
- * the entire per-agent entry with the plugin's parsed config (which carries
- * no `model`), silently clobbering any user model override. Here we boot a
- * real opencode server with an SDD agent pinned to a custom model and assert
- * the pin survives via `client.config.get()`.
+ * survives plugin registration. `registerAgents` merges the plugin's
+ * per-agent entry onto any existing user config instead of replacing it
+ * (the plugin's parsed config carries no `model`, so a plain replace
+ * would clobber a user override). Here we boot a real opencode server
+ * with an SDD agent pinned to a custom model and assert the pin survives
+ * via `client.config.get()`.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { pluginConfig, startOpencodeServer, type OpencodeServerHandle } from './harness.js';

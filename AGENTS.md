@@ -36,7 +36,7 @@ loaded by opencode and extends its merged configuration with:
 
 The plugin does not run as a standalone process. It is a module that exports a
 default function of type `Plugin` from `@opencode-ai/plugin`, which returns a
-`Hooks` object. Today the only hook is `config`, used to register agents and
+`Hooks` object. The only hook is `config`, used to register agents and
 commands.
 
 ## Technical Context
@@ -83,11 +83,22 @@ opencode-sdd/
 ├── scripts/                    # Build-time helpers (copy-assets,
 │                               # check-runtime-imports)
 ├── docs/                        # Long-form developer docs (e2e.md)
-├── qa/                          # Manual QA suite: local LLM compose, the
-│                               # isolated workspace image (Dockerfile:
-│                               # opencode + toolchain, plugin baked in),
-│                               # helper scripts, and the test plan
-│                               # (qa/testplan/: README + plans/*.md)
+├── qa/                          # Manual QA suite: the OpenRouter-backed
+│                               # bifrost gateway compose + model allowlist
+│                               # (qa/bifrost/), the isolated workspace
+│                               # image (Dockerfile: opencode + toolchain,
+│                               # plugin baked in), host-side lifecycle
+│                               # scripts (qa/scripts/setup/) and
+│                               # in-container payload scripts
+│                               # (qa/docker/), the gitignored key file
+│                               # (qa/.env, template qa/.env.example),
+│                               # Gherkin test plans (qa/features/), the
+│                               # manual test runner and ID check
+│                               # (qa/scripts/bdd/), and the run reports
+│                               # (qa/output/)
+├── .agents/skills/              # Manual QA skills: qa-test-planning
+│                               # (coverage matrix + case selection) and
+│                               # manual-test-run (execute + record)
 ├── README.md, DEVELOPMENT.md    # User-facing + build/debug guides
 ├── Dockerfile                   # Multi-stage CI image (lint, test, e2e)
 ├── eslint.config.mjs            # ESLint flat config
@@ -102,8 +113,9 @@ opencode-sdd/
 - `pnpm build` — compile TypeScript to `build/`
 - `pnpm typecheck` — check for TypeScript type errors in production
   and test code
-- `pnpm lint` — lint source files with ESLint and check for unused
-  exports with Knip
+- `pnpm lint` — lint source files with ESLint, check for unused
+  exports with Knip, and verify the Gherkin QA plans (`lint:gherkin`:
+  `@TC-*` ID convention + `gherkin-lint` over `qa/features/`)
 - `pnpm lint:fix` — lint and auto-fix issues
 - `pnpm knip` — run Knip unused-export analysis separately
 - `pnpm format:check` — check formatting with Prettier and Markdownlint
@@ -358,6 +370,21 @@ All code MUST meet documentation and style requirements before merge:
   base/build/test tsconfig split) are not "workarounds" and are allowed.
 - **Error handling strategy**: Prefer throwing errors over returning error
   values. Handle errors at top-level entry points where they can be logged.
+- **Secrets and API keys**: Never write credentials (API keys, tokens,
+  passwords) into the repository — not in source, scripts, config files,
+  fixture data, compose files, or shell-history-prone tooling. When a
+  script needs a secret, obtain it at runtime from the environment, a
+  file kept OUTSIDE the repo, or a hidden interactive prompt; export it
+  into the child process environment without ever echoing it, and never
+  pass it via command-line arguments. Make starts human-gated when the
+  secret unlocks a paid service: a non-interactive invocation without an
+  explicit secret must fail with clear instructions, so an automated
+  agent can never start the service on its own (see
+  `qa/scripts/setup/lib-openrouter-key.sh`). Exception for the manual QA
+  suite: the gitignored `qa/.env` (template `qa/.env.example`) may carry
+  the OpenRouter key — compose auto-loads it and the start scripts read
+  it — but no tracked file may contain it, and a non-interactive start
+  with no key source must still refuse.
 - **File naming**: Use kebab-case for all file names. TypeScript source
   files MUST use lower-case kebab-case. Do NOT use PascalCase or camelCase
   file names.
@@ -421,7 +448,7 @@ Every module MUST have test coverage:
   justification.
 - **Test cases stay consistent with code**: When a change alters
   behavior, update the affected test cases — unit tests, the e2e
-  suite, and the manual QA plan (`qa/testplan/plans/`) — in the same
+  suite, and the manual QA plan (`qa/features/`) — in the same
   change. A case left asserting stale behavior, or written so it can
   never pass as-is (wrong endpoint, mismatched id, unreachable
   fixture), is a defect, not documentation: fix the case with the
@@ -452,8 +479,7 @@ The `test-e2e/` suite exercises the plugin against a real `opencode` server
   `pnpm typecheck` covers it; it is never compiled into `build/`.
 - **How it works**: see [`docs/e2e.md`](docs/e2e.md) for how the suite
   operates — the mock LLM, server lifecycle, permission auto-approve, and
-  the runtime absolute-path template-rewriting mechanism (which replaced
-  the broken reference-registration approach).
+  the runtime absolute-path template-rewriting mechanism.
 
 ### Dependency Management
 
@@ -488,7 +514,7 @@ The `test-e2e/` suite exercises the plugin against a real `opencode` server
       `install*.test.ts` (stubbed `DetectResult.version`), and
       `manifest.test.ts` (asserts the `@opencode-ai/sdk` pin).
     - Docs stating the version: `DEVELOPMENT.md` (verified-against
-      notes and the Docker section) and `qa/testplan/README.md`
+      notes and the Docker section) and `qa/README.md`
       (prerequisite table).
 - The npm packages and the binary MAY differ by a patch (e.g. SDK
   `1.17.7` with binary `1.17.8`), but they MUST stay on the same

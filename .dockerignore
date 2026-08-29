@@ -17,7 +17,13 @@ node_modules/
 
 # Local environment & OS files
 .env
+.env.*
+*.key
 .DS_Store
+
+# Manual QA run output (never bake secrets/evidence into images)
+qa/evidence/
+qa/output/
 
 # Logs
 *.log

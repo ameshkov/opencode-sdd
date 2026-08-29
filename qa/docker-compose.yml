@@ -1,97 +1,117 @@
-# QA stack for opencode-sdd: local LLM + isolated testing workspace.
+# QA stack for opencode-sdd: OpenRouter gateway (bifrost) + isolated
+# testing workspace.
 #
 # Two services:
-# - llama-server: llama.cpp + inclusionAI/Ling-3.0-tiny (7.9B / 1.3B active
-#   MoE, MIT) as an OpenAI-compatible provider. Local CPU only, no remote
-#   LLM tokens. Needs llama.cpp b10470+ (BailingMoE3 support, PR #26608,
-#   merged 2026-08-17); the `:server` tag tracks latest releases.
+# - bifrost: the maximhq/bifrost AI gateway (v1.6.11), configured at
+#   runtime for the OpenRouter provider by qa/docker/bifrost-provision.sh
+#   (no config.json in the repo — the OpenRouter key is only ever an
+#   environment-variable reference inside the container). The flows run
+#   on real frontier models, so the QA suite tests PLAN QUALITY and
+#   prompt/model compatibility, not just mechanics. Costs real OpenRouter
+#   tokens — keep the default models cheap and set a budget (see the
+#   token guidance in qa/README.md).
 # - qa: the workspace where ALL manual testing happens (opencode TUI,
 #   scratch project, CLI wizard). Built from qa/Dockerfile: it bakes the
-#   plugin source + build/ at /app, so the host needs nothing but docker.
+#   plugin source + build/ at /app, so the host needs nothing but docker
+#   (plus an OpenRouter API key, handed to the gateway at start time —
+#   never committed; see qa/scripts/setup/lib-openrouter-key.sh).
 #   Scratch project state lives in the qa-work volume; opencode's own
-#   state (config, logs, history) in qa-home.
+#   state (config, logs, history) in qa-home; bifrost's config + request
+#   logs in bifrost-data.
 #
-# Usage (prefer the scripts in qa/scripts/):
-#   qa/scripts/qa-up.sh       # build + start both services, wait for health
-#   qa/scripts/qa-shell.sh    # open a shell inside the workspace
-#   qa/scripts/llm-down.sh / llm-up.sh   # LLM only
+# Usage (prefer the scripts in qa/scripts/setup/):
+#   qa/scripts/setup/qa-up.sh     # build + start both services, wait for health
+#   qa/scripts/setup/qa-shell.sh  # open a shell inside the workspace
+#   qa/scripts/setup/llm-down.sh / llm-up.sh  # gateway only (stop / start)
 #
-# HERMETIC BY DEFAULT: the LLM publishes NO host port, so the stack cannot
-# collide with anything on the host. All test traffic runs inside the compose
-# network (qa -> llama-server:8080). Host-side access (smoke tests only) is
-# opt-in via qa/docker-compose.ports.yml, see there.
+# HERMETIC BY DEFAULT: the gateway publishes NO host port, so the stack
+# cannot collide with anything on the host. All test traffic runs inside
+# the compose network (qa -> bifrost:8080). Host-side access (the bifrost
+# UI and host-side smoke tests) is opt-in via
+# qa/docker-compose.ports.yml, see there.
+#
+# API key: the gitignored qa/.env (copy qa/.env.example) is loaded by
+# compose automatically and forwarded to the gateway; the start scripts
+# read the same file. The value is never baked into the image, compose,
+# or a committed file — `docker compose up` alone also picks it up:
+#   cp qa/.env.example qa/.env   # fill in OPENROUTER_API_KEY=sk-or-...
 #
 # Plugin changes: rebuild the workspace image, then restart qa:
 #   docker compose -f qa/docker-compose.yml build qa
 #   docker compose -f qa/docker-compose.yml up -d qa
 #
 # Resets: `docker compose -f qa/docker-compose.yml down -v` removes the
-# volumes (model cache, scratch work, opencode state) and starts clean.
+# volumes (bifrost data, scratch work, opencode state) and starts clean;
+# `docker volume rm opencode-sdd-qa_bifrost-data` alone resets just the
+# gateway's persisted config + request logs (needed when
+# qa/bifrost/models.tsv changes, see qa/docker/bifrost-provision.sh).
 #
 # Reachability note (macOS sandbox VM): with the opt-in ports override the
 # published port is bound on the HOST, so host-side scripts/health checks
-# must use http://192.168.64.1:${LLM_PORT:-8080} instead of localhost.
-# Inside the workspace container the LLM is always http://llama-server:8080
+# must use http://192.168.64.1:${BIFROST_PORT:-8080} instead of localhost.
+# Inside the workspace container the gateway is always http://bifrost:8080
 # (compose DNS), independent of the host.
 
 name: opencode-sdd-qa
 
 services:
-  llama-server:
-    image: ghcr.io/ggml-org/llama.cpp:server
+  bifrost:
+    # Pinned OSS release (multi-arch tag). 315 MB image; the gateway is
+    # thin — there is no model download or local model storage.
+    image: maximhq/bifrost:v1.6.11
     # No host port by default (hermetic). `expose` documents the container
     # port only; reachability inside the stack is compose DNS. Host-side
     # access is opt-in via qa/docker-compose.ports.yml.
     expose:
       - '8080'
     volumes:
-      - llama-cache:/models
+      # Bifrost's app dir: config.db (provider/keys/logging settings) and
+      # logs.db (request traces for groups A/J). Persisted so the gateway
+      # survives restarts without re-provisioning.
+      - bifrost-data:/app/data
     environment:
-      # Where llama.cpp stores the model downloaded by -hf (defaults to
-      # ~/.cache/llama.cpp inside the container, which is lost on restart).
-      LLAMA_CACHE: /models
-    command:
-      # Download-on-first-use from Hugging Face: <repo>:<quant>.
-      - -hf
-      - bloomer010/Ling-3.0-tiny-GGUF:Q4_K_M
-      - --host
-      - 0.0.0.0
-      - --port
-      - '8080'
-      # 16K is enough for SDD prompts (system prompt + tools + template);
-      # raise to 32K or 131K if a long-context test needs it.
-      - -c
-      - '16384'
-      # The Bailing V3 chat template is a Jinja template; opencode needs the
-      # parsed tool calls it produces.
-      - --jinja
-      # Wait for queued requests (opencode fires title-generation requests
-      # in parallel with the real session prompt).
-      - --parallel
-      - '1'
-      # 'low' turns thinking OFF for this model (template maps minimal/low
-      # to no thinking) - faster and cheaper for mechanics tests. Omit the
-      # flag or use 'default'/'high' when testing reasoning quality.
-      - --reasoning-effort
-      - low
+      # The official entrypoint reads APP_HOST/APP_PORT/APP_DIR; the
+      # defaults already match, but set them explicitly for clarity.
+      APP_PORT: '8080'
+      APP_HOST: 0.0.0.0
+      LOG_LEVEL: info
+      # The OpenRouter key. Forwarded from the host environment (qa/.env
+      # or an exported var) at `docker compose up`; config.json (there is
+      # none — provisioning is API-driven) references it as
+      # `env.OPENROUTER_API_KEY`, so the value never lands in the repo.
+      # qa/scripts/setup/qa-up.sh and llm-up.sh resolve it from the
+      # gitignored qa/.env, the environment, an external key file, or an
+      # interactive hidden prompt; it is never echoed. Empty value = gateway boots but the
+      # provider stays inactive with invalid keys (smoke tests fail with a
+      # clear message).
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     healthcheck:
-      test: ['CMD', 'curl', '-sf', 'http://localhost:8080/health']
+      # The upstream image ships HEALTHCHECK using its own wget; a
+      # compose-level block re-uses the same mechanism with the suite's
+      # tighter probe cadence (the image default is 30s). NOTE: the port is
+      # hardcoded on purpose — compose interpolates ${APP_PORT} as a HOST
+      # env var, which would blank the URL and leave the container on
+      # "unhealthy" forever. This stack fixes the port at 8080 anyway.
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1']
       interval: 10s
       timeout: 5s
       retries: 60
-      start_period: 60s
+      start_period: 10s
 
   qa:
     build:
       # Repo root is the build context (root .dockerignore applies: no
-      # build/, node_modules, .git). The Dockerfile compiles build/ itself.
+      # build/, node_modules, .git, *.key). The Dockerfile compiles
+      # build/ itself.
       context: ..
       dockerfile: qa/Dockerfile
     image: opencode-sdd-qa:workspace
     environment:
-      # Inside the workspace the LLM is always reachable via compose DNS.
-      # Scripts (wire-opencode-config, llm-smoke) pick this up.
-      LLM_BASE_URL: http://llama-server:8080/v1
+      # Inside the workspace the gateway is always reachable via compose
+      # DNS. Scripts (wire-opencode-config, llm-smoke,
+      # bifrost-provision) pick this up. Root URL — scripts append /v1
+      # where the OpenAI-compatible API is called.
+      BIFROST_BASE_URL: http://bifrost:8080
       HOME: /home/qa
     volumes:
       # Scratch project, .sdd artifacts, wizard-patched configs.
@@ -100,11 +120,11 @@ services:
       # (logs, history), cache. Keeps the host untouched.
       - qa-home:/home/qa
     depends_on:
-      llama-server:
+      bifrost:
         condition: service_healthy
     command: tail -f /dev/null
 
 volumes:
-  llama-cache:
+  bifrost-data:
   qa-work:
   qa-home:

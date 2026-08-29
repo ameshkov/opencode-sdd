@@ -383,8 +383,8 @@ export async function main(argv: string[], deps: MainDeps = {}): Promise<number>
 // Bin entry: only run when invoked directly as the script, never on
 // import (so unit tests can call `main` without exiting the process).
 // `main` is async, so `.then` maps the resolved exit code to
-// `process.exit`; the previous synchronous `process.exit(main(...))`
-// would have coerced the Promise to NaN.
+// `process.exit`; `process.exit(main(...))` would coerce the Promise
+// to NaN.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   main(process.argv.slice(2)).then((code) => process.exit(code));
 }

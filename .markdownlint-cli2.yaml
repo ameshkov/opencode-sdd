@@ -24,6 +24,8 @@ ignores:
   - node_modules/**
   - build/**
   - .sdd/**
+  - qa/evidence/**
+  - qa/output/**
   - test/__fixtures__/**
   - src/assets/commands/templates/doc-agents/**
   - src/assets/commands/templates/doc-readme/**

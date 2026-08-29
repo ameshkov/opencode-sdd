@@ -3,11 +3,10 @@
  * two load-time invariants unit tests cannot — that every shipped command is
  * discoverable via `client.command.list()`, and that `client.config.get()`
  * stays reachable with the plugin loaded. The latter guards the runtime
- * absolute-path template-rewriting approach, which replaced the
- * reference-registration code that previously caused a hard HTTP 400 on
- * `config.get()` (references are a boot-populated state, not fed by the
- * `config` hook, and the registered object lacked the required `type:
- * "local"` discriminator).
+ * absolute-path template-rewriting approach: references are a
+ * boot-populated state, not fed by the `config` hook, and a registered
+ * object would lack the required `type: "local"` discriminator, so
+ * templates are rewritten to absolute paths instead.
  */
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -70,9 +69,8 @@ describe('smoke: plugin loads in a live opencode server', () => {
   });
 
   it('keeps client.config.get() reachable (no references 400)', async () => {
-    // Reference registration (which 400'd config.get()) was removed in favor
-    // of runtime absolute-path template rewriting. config.get() must now
-    // return 200 with the plugin loaded.
+    // Template assets are rewritten to absolute paths at registration
+    // time; config.get() must return 200 with the plugin loaded.
     const res = await server.client.config.get();
     expect(res.error, `config.get() errored: ${JSON.stringify(res.error)}`).toBeUndefined();
     expect(res.data).toBeDefined();

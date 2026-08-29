@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Creates the scratch project used by the manual QA suite.
-# Usage: qa/scripts/scratch-init.sh [target-dir]   (default: ~/sdd-manual)
+# Usage: qa/docker/scratch-init.sh [target-dir]   (default: ~/sdd-manual)
 set -euo pipefail
 
 SCRATCH="${1:-$HOME/sdd-manual}"
@@ -30,4 +30,4 @@ git add -A
 git commit -q -m "chore: scaffold scratch project" || true
 
 echo "Scratch project ready at: $SCRATCH"
-echo "Next: qa/scripts/wire-opencode-config.sh $SCRATCH"
+echo "Next: qa/docker/wire-opencode-config.sh $SCRATCH"

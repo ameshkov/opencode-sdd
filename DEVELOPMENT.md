@@ -12,6 +12,7 @@ opencode instance. For architecture and contribution rules, see
     - [Build Commands](#build-commands)
     - [Debugging with opencode](#debugging-with-opencode)
     - [Running Checks in Docker](#running-checks-in-docker)
+    - [Manual QA suite](#manual-qa-suite)
 - [Continuous Integration](#continuous-integration)
 - [Troubleshooting](#troubleshooting)
 - [Additional Resources](#additional-resources)
@@ -344,6 +345,31 @@ Notes:
 - `.dockerignore` excludes `build/`, `node_modules/`, and tooling
   directories so the image always starts from a clean source tree.
 - `ci-output/` is gitignored (see [`.gitignore`](./.gitignore)).
+
+### Manual QA suite
+
+The automated gates cannot judge plan/artifact quality or how prompts
+behave on different frontier models. For that, `qa/` ships an isolated
+manual suite: a docker-compose stack that runs the opencode TUI inside a
+workspace container, with inference going through a local bifrost
+gateway to a real OpenRouter provider (cheap frontier models by default,
+`BIFROST_MODEL` to switch). The test cases are Gherkin feature files
+(`qa/features/`) walked by an interactive runner
+(`pnpm qa:run`, reports to `qa/output/`); the `qa-test-planning` and
+`manual-test-run` skills (`.agents/skills/`) drive the coverage and
+execution workflow. See [`qa/README.md`](qa/README.md) for the full
+plan and the runner usage.
+
+- The OpenRouter API key is **not** tracked: the gitignored
+  `qa/.env` (copy `qa/.env.example`) is the default source — the start
+  scripts (`qa/scripts/setup/qa-up.sh`) and docker compose both read it,
+  falling back to an exported `OPENROUTER_API_KEY`, an external
+  `OPENROUTER_KEY_FILE`, or an interactive hidden prompt — see
+  `qa/scripts/setup/lib-openrouter-key.sh`. Non-interactive starts with
+  no key source refuse to run (paid inference is human-gated).
+- The suite is not part of `pnpm check`/CI. Host needs only docker (and
+  one key at start time); everything else is baked into the workspace
+  image.
 
 ## Continuous Integration
 

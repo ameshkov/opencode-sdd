@@ -1,4 +1,4 @@
-# QA workspace image. Runs the manual test plan (qa/testplan/README.md)
+# QA workspace image. Runs the manual test plan (qa/README.md)
 # fully inside a container so nothing touches the host environment:
 # opencode configs, scratch projects, caches, and installed globals all
 # live in the container or its named volumes.

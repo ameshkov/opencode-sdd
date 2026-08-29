@@ -29,6 +29,28 @@ and this project adheres to
   (server won't start, no models reachable) still registers the
   plugin entry, writes no model values, emits a warning to stderr,
   and exits 0 (success-with-warning).
+- Manual QA suite now runs the SDD/PRD flows on real frontier models:
+  the local llama.cpp LLM is replaced by a bifrost gateway with the
+  OpenRouter provider (pinned model allowlist plus request tracing), so
+  the plan tests artifact and prompt quality and can be re-run under a
+  different model (`BIFROST_MODEL`).
+- OpenRouter key handling for the QA stack is human-gated: the key is
+  resolved from the gitignored `qa/.env`, the environment, an external
+  key file, or an interactive hidden prompt and never committed or
+  logged (`qa/scripts/setup/lib-openrouter-key.sh`,
+  `qa/docker/bifrost-provision.sh`).
+- Bifrost request logging lets QA inspect exactly what requests hit the
+  model (prompts, responses, tokens, cost, latency) via `/api/logs` or
+  the gateway's Web UI.
+- Manual QA plans are now Gherkin feature files (`qa/features/`) with a
+  `@TC-<GROUP>-<case>` ID convention and priority tags, plus an
+  interactive runner (`pnpm qa:run`) that records pass/fail/skip
+  verdicts with notes into `qa/output/<run-id>/report.md` (and
+  `.json`). Plans are linted as code via `pnpm lint:gherkin` (ID check +
+  `gherkin-lint`), chained into `pnpm lint`.
+- `qa-test-planning` and `manual-test-run` skills (`.agents/skills/`)
+  drive the manual QA workflow: building a coverage matrix and a curated
+  A/B case list for a changeset, then executing and recording the run.
 
 ### Changed
 
@@ -36,6 +58,24 @@ and this project adheres to
   `@opencode-ai/sdk` and `@opencode-ai/plugin` (npm), and the
   `opencode` binary in CI, the CI Dockerfile, and the QA workspace
   image (`OPENCODE_VERSION` build arg).
+- The QA stack (`qa/docker-compose.yml`) no longer serves
+  inclusionAI/Ling-3.0-tiny via llama.cpp: `maximhq/bifrost:v1.6.11`
+  plus the `openrouter` provider (allowlist in `qa/bifrost/models.tsv`)
+  replaces it; the workspace now waits on the gateway's health instead
+  of a container-level healthcheck.
+- The manual QA plans moved from `qa/testplan/` (Markdown, manual
+  record sheets) to Gherkin feature files in `qa/features/`, with the
+  test plan's structure and running sections now in `qa/README.md`.
+- The QA suite's scripts are reorganized: host-side lifecycle wrappers
+  (stack/gateway start & stop, prerequisite check, key contract) live in
+  `qa/scripts/setup/` and the in-container scripts (bifrost
+  provisioning, scratch project, opencode config wiring, smoke test) in
+  `qa/docker/` — all baked into the workspace image at `/app/qa/docker/`.
+- The QA OpenRouter key now defaults to the gitignored `qa/.env` file
+  (template `qa/.env.example`), read by both docker compose and the
+  start scripts; the exported env var, an external key file, and the
+  interactive hidden prompt remain as alternatives (see
+  `qa/scripts/setup/lib-openrouter-key.sh`, `qa/docker/bifrost-provision.sh`).
 
 ### Fixed
 
