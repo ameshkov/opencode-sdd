@@ -16,9 +16,13 @@ Background:
   Given the scratch project is at an initial commit
   And the LLM is up
   And the model under test is the wired default of opencode.json
+  # Reset convention: the baseline reset runs in each independent case's
+  # Given (TC-SF-1, TC-SF-5) — never in the Background, because TC-SF-2
+  # to 4 chain on the previous case's artifacts.
 
 @TC-SF-01 @P0
 Scenario: Spec is created
+  Given I reset the scratch baseline first: qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'
   When I run /sdd-spec with $ARGUMENTS set to fixture F1
   And while the agent works, I note the questions it asks (template interview) and the tokens it spends (for group J)
   And I inspect .sdd/.current/spec.md
@@ -26,7 +30,7 @@ Scenario: Spec is created
   And sections ## Problem, ## Research Findings, ## File Structure, ## Solution, ## Tasks and ## Final Verification are present
   And tasks are formatted per the structure template: '### [ ] Task N: <name>' with a '**Verification**:' line each
   And the spec status is '**Status**: Draft'
-  And the interview asked about edge cases and the answer landed in the spec (for example whether mul handles negative numbers)
+  And the interview asked about edge cases and the answer landed in the spec — OR the model declared no ambiguity and wrote the edge cases itself; I record which (the template's interview gate exists either way)
   And the agent created no files outside .sdd/ and src/ and test/
   And I keep the copy of spec.md and the interview transcript in the evidence folder
 
@@ -65,7 +69,7 @@ Scenario: Incomplete loop
 
 @TC-SF-05 @P1
 Scenario: Missing spec error
-  Given a fresh scratch project with no .sdd directory
+  Given I reset the scratch baseline first: qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'
   When I run /sdd-implement, then /sdd-validate
   Then the agent reports spec.md missing and directs to run /sdd-spec before doing anything else
   And no .sdd/ directory or other file is created

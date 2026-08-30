@@ -90,7 +90,8 @@ opencode-sdd/
 │                               # plugin baked in), host-side lifecycle
 │                               # scripts (qa/scripts/setup/) and
 │                               # in-container payload scripts
-│                               # (qa/docker/), the gitignored key file
+│                               # (qa/docker/: pty-driver, serve-web),
+│                               # the gitignored key file
 │                               # (qa/.env, template qa/.env.example),
 │                               # Gherkin test plans (qa/features/), the
 │                               # manual test runner and ID check

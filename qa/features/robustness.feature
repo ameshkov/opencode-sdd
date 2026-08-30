@@ -7,10 +7,17 @@ Feature: Robustness and degradation
 @TC-ROB-01 @P1
 Scenario: Missing asset directories
   Given the stack is up (the workspace container is built)
-  When I start opencode with the asset dirs pointing nowhere: `qa exec 'SDD_COMMANDS_DIR=/nonexistent SDD_TEMPLATES_DIR=/nonexistent SDD_AGENTS_DIR=/nonexistent opencode --print-logs'`
+  When I start the web UI server with the asset dirs pointing nowhere: `docker exec -d -e SDD_COMMANDS_DIR=/nonexistent -e SDD_TEMPLATES_DIR=/nonexistent -e SDD_AGENTS_DIR=/nonexistent opencode-sdd-qa-qa-1 /app/qa/docker/serve-web.sh`
   Then opencode starts — no bootstrap failure, no red banner
-  And the log contains 'commands path is not a directory' (loader warning) and 'failed to register SDD commands', and the error is logged, not thrown
-  And I keep the opencode log (copied out of the container) and a screenshot of a working TUI in the evidence folder
+  And the log contains the ENOENT markers: WARN 'commands directory unreadable' and WARN 'agents directory unreadable' plus 'SDD commands registered' with count 0 — the error is logged, never thrown
+  And I keep the opencode log (copied out of the container) and a screenshot of a working session in the evidence folder
+  # Marker notes:
+  #   - /nonexistent (ENOENT) => WARN 'commands directory unreadable' +
+  #     'SDD commands registered count=0' (info, NOT the error level).
+  #   - A path that EXISTS but is a file => WARN 'commands path is not a
+  #     directory' (the other real loader warning).
+  #   - 'failed to register SDD commands' (logger.error) fires only when
+  #     the whole registration function throws, which the loader prevents.
 
 @TC-ROB-02 @P2
 Scenario: Wizard output loads in opencode

@@ -12,7 +12,8 @@ Background:
 
 @TC-DOC-01 @P2
 Scenario: CHANGELOG maintenance
-  Given the scratch repo has 2-3 commits since the initial one
+  Given I reset the scratch baseline first: qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'
+  And the scratch repo has 2-3 commits since the initial one
   And no CHANGELOG.md exists
   When I run /doc-changelog
   Then CHANGELOG.md is created with an '## Unreleased' section containing Added/Changed/Fixed subsections that map to the actual commits (git log is the source)

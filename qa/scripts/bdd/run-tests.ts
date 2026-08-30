@@ -19,8 +19,17 @@
  *   pnpm qa:run --feature cli
  *   pnpm qa:run --id @TC-CLI-1
  *   pnpm qa:run --auto-pass
+ *   pnpm qa:run --case-reset
+ *   pnpm qa:run --evidence
  *   pnpm qa:run --run-id <id>
+ *
+ * `--case-reset` runs qa/docker/reset-scratch.sh in the workspace before
+ * every case (use it for independent groups — never for the chained
+ * groups F/G, which build on the previous case's artifacts).
+ * `--evidence` copies each case's `.sdd` tree and raw opencode.log into
+ * qa/output/<run-id>/evidence/<case-id>/ right after the verdict.
  */
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -35,12 +44,73 @@ import { IdGenerator, SourceMediaType } from '@cucumber/messages';
 const FEATURES_DIR = join(fileURLToPath(new URL('../../features/', import.meta.url)));
 const OUTPUT_DIR = join(fileURLToPath(new URL('../../output/', import.meta.url)));
 
+const COMPOSE_FILE = join(fileURLToPath(new URL('../../docker-compose.yml', import.meta.url)));
+
+/**
+ * Runs a command inside the QA workspace container.
+ *
+ * @param command - Command to run (bash -lc body).
+ * @returns True when it exits 0, false on any failure.
+ */
+function runInWorkspace(command: string): boolean {
+  try {
+    execFileSync(
+      'docker',
+      ['compose', '-f', COMPOSE_FILE, 'exec', '-T', 'qa', 'bash', '-lc', command],
+      {
+        stdio: 'inherit',
+      },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resets the scratch project to its documented baseline: wipes `.sdd`,
+ * re-initialises the git repo and re-wires opencode.json. Called by
+ * `pnpm qa:run --case-reset` before each case.
+ *
+ * @param projectDir - Scratch project dir inside the container.
+ * @returns True when the reset succeeded.
+ */
+function resetScratch(projectDir = '/work/sdd-manual'): boolean {
+  return runInWorkspace(`/app/qa/docker/reset-scratch.sh ${projectDir}`);
+}
+
+/**
+ * Copies the case's artifacts (`.sdd` tree + the raw opencode log) into
+ * the run's evidence folder, so the first case of a chain keeps its
+ * evidence even though the next case resets the scratch state.
+ *
+ * @param caseId - Test case id (used as the evidence subdirectory).
+ * @param destDir - Destination directory (created when missing).
+ * @returns True when at least the `.sdd` tree or the log was copied.
+ */
+function collectCaseEvidence(caseId: string, destDir: string): boolean {
+  const mkAndCopy = (source: string): boolean => {
+    try {
+      execFileSync('mkdir', ['-p', destDir]);
+      execFileSync('docker', ['compose', '-f', COMPOSE_FILE, 'cp', `qa:${source}`, destDir]);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const copiedSdd = mkAndCopy('/work/sdd-manual/.sdd');
+  const copiedLog = mkAndCopy('/home/qa/.local/share/opencode/log/opencode.log');
+  return copiedSdd || copiedLog;
+}
+
 const { values } = parseArgs({
   options: {
     list: { type: 'boolean', default: false },
     feature: { type: 'string' },
     id: { type: 'string' },
     'auto-pass': { type: 'boolean', default: false },
+    'case-reset': { type: 'boolean', default: false },
+    evidence: { type: 'boolean', default: false },
     'run-id': { type: 'string' },
   },
 });
@@ -230,6 +300,12 @@ const statusFromVerdict = (verdict: string): 'pass' | 'fail' | 'skip' =>
   verdict === 'f' ? 'fail' : verdict === 's' ? 'skip' : 'pass';
 
 for (const testCase of cases) {
+  if (values['case-reset']) {
+    console.log('  [case-reset] baseline reset...');
+    if (!resetScratch()) {
+      console.warn('  WARN: case reset failed - continuing (fix the preconditions yourself).');
+    }
+  }
   console.log(`\n${'='.repeat(72)}`);
   console.log(`${testCase.id} — ${testCase.scenario}`);
   console.log(`File: ${testCase.file}`);
@@ -265,6 +341,14 @@ for (const testCase of cases) {
   };
   report.results.push(result);
   await writeReport(report);
+
+  if (values.evidence) {
+    const dest = join(REPORT_DIR, 'evidence', testCase.id.replace(/^@TC-/, ''));
+    console.log('  [evidence] copying artifacts...');
+    if (!collectCaseEvidence(testCase.id, dest)) {
+      console.warn(`  WARN: no evidence copied for ${testCase.id}`);
+    }
+  }
 }
 
 report.finishedAt = new Date().toISOString();

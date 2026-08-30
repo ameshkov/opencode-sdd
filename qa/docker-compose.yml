@@ -43,8 +43,9 @@
 # Resets: `docker compose -f qa/docker-compose.yml down -v` removes the
 # volumes (bifrost data, scratch work, opencode state) and starts clean;
 # `docker volume rm opencode-sdd-qa_bifrost-data` alone resets just the
-# gateway's persisted config + request logs (needed when
-# qa/bifrost/models.tsv changes, see qa/docker/bifrost-provision.sh).
+# gateway's persisted config + request logs (provider-level drift only —
+# allowlist changes are reconciled on the next qa-up.sh, see
+# qa/docker/bifrost-provision.sh).
 #
 # Reachability note (macOS sandbox VM): with the opt-in ports override the
 # published port is bound on the HOST, so host-side scripts/health checks
@@ -105,6 +106,11 @@ services:
       # build/ itself.
       context: ..
       dockerfile: qa/Dockerfile
+      # Baked into the image as a LABEL; qa-up.sh compares it against the
+      # repo hash and refuses to start a stale workspace image. Always
+      # export QA_SRC_HASH before a manual `docker compose build qa`.
+      args:
+        SRC_HASH: ${QA_SRC_HASH:-unknown}
     image: opencode-sdd-qa:workspace
     environment:
       # Inside the workspace the gateway is always reachable via compose

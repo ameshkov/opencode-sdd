@@ -34,11 +34,12 @@ else
   fail=1
 fi
 
-# The stack needs egress to api.openrouter.ai:443 (the gateway forwards
-# all inference there). Check it once, without touching any key.
+# The stack needs egress to https://openrouter.ai/api/v1 (the gateway
+# forwards all inference there; the API host is `openrouter.ai`, NOT
+# `api.openrouter.ai`). Check it once, without touching any key.
 if docker run --rm busybox:1.36.1 \
-  wget -qO- --spider https://api.openrouter.ai/v1/models >/dev/null 2>&1; then
-  note PASS "OpenRouter reachable (https://api.openrouter.ai)"
+  wget -qO- --spider https://openrouter.ai/api/v1/models >/dev/null 2>&1; then
+  note PASS "OpenRouter reachable (https://openrouter.ai/api/v1)"
 else
   note FAIL "OpenRouter NOT reachable - the QA stack needs outbound HTTPS"
   fail=1

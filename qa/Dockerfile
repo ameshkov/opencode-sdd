@@ -30,6 +30,17 @@ FROM node:24-bookworm-slim AS qa-workspace
 
 ARG OPENCODE_VERSION=1.18.23
 
+# Baked at build time by qa/scripts/setup/qa-up.sh (which computes the
+# repo hash and passes it via `docker compose build --build-arg`).
+# qa-up.sh compares this label against the current repo hash and REFUSES
+# to start the stack on a stale image: the image bakes the repo, so a
+# stale image silently loses the qa/docker/ payload, qa/scripts/,
+# qa/features/ and the plugin build. A manual `docker compose build qa`
+# without the build-arg records `unknown`, which qa-up.sh treats as
+# stale — build through qa-up.sh (or export QA_SRC_HASH) instead.
+ARG SRC_HASH=unknown
+LABEL org.opencode-sdd.qa.src-hash=${SRC_HASH}
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update \

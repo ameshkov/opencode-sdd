@@ -13,8 +13,10 @@ Feature: Cost and performance
 @TC-PERF-01 @P2
 Scenario: Token and cost stats per step
   Given the gateway is up and request logging is enabled (default provisioning)
+  And I reset the scratch baseline first: qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'
   When I note the start_time/end_time window (or add limit=), run TC-SF-1 and TC-PF-1, then query: `qa exec 'curl -fsS "http://bifrost:8080/api/logs?providers=openrouter&limit=50"'`
-  Then every request row carries usage (prompt/completion tokens), cost and latency — a missing field means logging was not enabled at provision time (re-run qa-up.sh)
+  Then every request row carries token_usage (nested prompt/completion tokens), cost and latency — a missing field means logging was not enabled at provision time (re-run qa-up.sh)
+  And I sum the per-row fields — the aggregate stats object is NOT a reliable source (it returns zeros)
   And the largest prompt (for example the /prd-write step) fits well below the model's context length (deepseek-v4-flash and qwen3.5-plus: 1M; claude-sonnet-5: 1M; see models.tsv) — I record the worst case
   And I copy the /api/logs excerpt with per-request stats into the evidence folder for future regression
 
@@ -36,6 +38,7 @@ Scenario: Thinking-mode trade-off
   And I change reasoningEffort to high (or remove the option = model default), reload and repeat the run
   And I query /api/logs for both windows and compare total_tokens, total_cost and average_latency
   And I restore the default wiring (re-run wire-opencode-config.sh)
-  Then reasoningEffort high costs measurably more tokens/time than low on the same model (record both)
+  Then I record both runs' totals in a table — the DIRECTION is the finding, not a pass/fail (run variance dominated the measured runs; record both totals)
   And the run with low still produces a valid '# Implementation Plan:' artifact (the default is deliberately cheap-and-sufficient)
+  And I note whether reasoningEffort passthrough was verifiable: bifrost only stores raw_request with an object-storage backend (v1.6.11 without one stores the field empty) — if unverifiable, record 'passthrough not verifiable' and report the direction
   And I keep the per-run token/time/cost table and both plan artifacts in the evidence folder

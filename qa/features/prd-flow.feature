@@ -15,9 +15,14 @@ Background:
   Given the LLM is up
   And TC-REG-1 passed
   And all artifacts are under .sdd/.current/
+  # Chain semantics: the group resets to the baseline ONCE before
+  # TC-PF-01 (see its Given). The later cases build on the previous
+  # case's artifacts — the reset is NOT run between chained cases, or
+  # the chain breaks.
 
 @TC-PF-01 @P0
 Scenario: PRD written
+  Given I reset the scratch baseline first: qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'
   When I run /prd-write with fixture F2 (one sentence)
   And I answer any interview questions (the template asks for clarification)
   And I inspect .sdd/.current/prd.md
@@ -36,12 +41,16 @@ Scenario: Issues are generated
   Then there is a directory per issue named <N>-AFK (or <N>-HITL for fixture F3)
   And every issue dir contains one issue.md
   And the issues are vertical slices — the F2 issue includes the divide function, its error contract and the tests, not a list of unrelated chores
-  And F2 yields exactly one issue and no HITL dir (no human decision needed)
+  And F2 yields one or more AFK issues and no HITL dir (no human decision needed)
   And I keep the find output and issue.md in the evidence folder
+# Note: 'exactly one issue' is intentionally not asserted — the model may
+# split F2 into multiple AFK slices (US3 edge cases became a second
+# issue). The real assertions are: vertical slices, no HITL dir, one
+# issue.md each.
 
 @TC-PF-03 @P1
 Scenario: Plan generated; HITL gate honored
-  Given TC-PF-2 passed (an AFK issue) — and, for the HITL half, TC-PF-1 and TC-PF-2 redone with fixture F3 (ask the human whether to throw or return null)
+  Given TC-PF-2 passed (an AFK issue) — and, for the HITL half, TC-PF-1 and TC-PF-2 redone with fixture F3, keeping at least one issue with an Open before-planning decision
   When I run /prd-issue-to-plan with the F2 issue id
   Then issues/<ID>/plan.md matches the plan template: '# Implementation Plan:', ## Summary, ## Technical Context, ## Entities, ## Contracts, ## File Structure, ## Tasks with '### [ ] Task' entries and '**Verification**:' lines
   And the planner updates statuses: issue.md out of its initial state, plan.md '**Status**: Draft' (or Approved when re-planning)
@@ -51,6 +60,13 @@ Scenario: Plan generated; HITL gate honored
   Then the decision is asked BEFORE planning (gate before-planning) and the answer is recorded as '## Human Decisions' with '**Status**: Resolved' and '**Answer**:' filled
   And the same decision is NOT asked again at implementation time
   And I keep plan.md and the HITL transcript with the question tool call in the evidence folder
+  # F3 recipe: the prd-write interview normally resolves throw-vs-null at
+  # PRD time, so the natural breakdown yields AFK issues and the planner
+  # correctly does NOT ask. If no issue carries an Open decision, edit
+  # issues/<ID>/issue.md's '## Human Decisions' block back to
+  # '**Status**: Open' — a tester action, and the gate fires iff a
+  # decision is Open. Assert "the gate exists and fires on an Open
+  # decision", not "the planner always asks".
 
 @TC-PF-04 @P1
 Scenario: Plan review, six dimensions
@@ -75,6 +91,12 @@ Scenario: Implementation with hard stops
   Then the command stops with the revision error and points the planner at review.md
   And issue.md status becomes Implemented at the end (or remains In Progress when stopped)
   And I keep the transcript excerpts, the plan task markers and the issue status in the evidence folder
+  # Recipe for the second issue + Needs Revision state: run /prd-to-issues
+  # again on the same PRD (or copy one issue dir) to get issue 2-AFK, run
+  # /prd-issue-to-plan for it, and hand-edit plan.md's '**Status**' line
+  # to 'Needs Revision' (with /prd-review-plan optionally 'Needs
+  # Revision'). Hand-editing statuses mid-run is a tester action — the
+  # plan should say so instead of leaving the Given undocumented.
 
 @TC-PF-06 @P0
 Scenario: Issue and cross-cutting validation

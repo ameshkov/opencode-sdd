@@ -23,7 +23,8 @@ Scenario: Usage and argument handling
 
 @TC-CLI-02 @P0
 Scenario: Interactive install picks the project config
-  Given opencode.json has the plugin array REMOVED and no agent entries (the provider and model stay)
+  Given I reset the scratch baseline first (wired config + fresh git): qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'
+  And opencode.json has the plugin array REMOVED and no agent entries (the provider and model stay)
   And the wiring registers the six-model allowlist including the wizard keyword families deepseek and qwen (strong tier) and mimo and gemini (cheap tier)
   When I run the wizard: `qa exec 'node /app/build/cli/install.js install'`
   And I answer the target prompt — pick the project config

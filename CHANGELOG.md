@@ -51,6 +51,27 @@ and this project adheres to
 - `qa-test-planning` and `manual-test-run` skills (`.agents/skills/`)
   drive the manual QA workflow: building a coverage matrix and a curated
   A/B case list for a changeset, then executing and recording the run.
+- QA stack hardening: `qa-up.sh` now fails loudly after
+  provisioning (`qa/docker/verify-provision.sh` — provider, keys, model
+  list, one smoke call; Group A checks folded in), refuses stale
+  workspace images (baked `src-hash` label), and the runner gained
+  `--case-reset` and `--evidence`. New in-container tools:
+  `qa/docker/reset-scratch.sh` (one-command baseline reset) and
+  `qa/docker/pty-driver.py` (scriptable TTY driver: staged input,
+  screen capture, prompt auto-answer).
+- Manual QA opencode sessions can now be driven through the web UI
+  instead of the TUI: `qa/docker/serve-web.sh` launches `opencode serve`
+  (serving opencode's web client, with `OPENCODE_ENABLE_QUESTION_TOOL=1`
+  so the SDD interview/approval gates fire), and the opt-in ports
+  override publishes it for the host browser (`QA_WEB_PORT`, default
+  4097). Browser-driven runs get DOM locators and screenshots instead of
+  ANSI/PTY scraping (qa/README.md section 3.6).
+- The manual QA plans were corrected against the observed run
+  (REG-01/REG-03, PF-02/PF-03/PF-05, ROB-01 markers, TOOL-01..02b
+  e2e-proven, PERF-01 `token_usage`, PERF-03 informational, SF-01
+  nondeterministic interview), and the replay/automation paths
+  (headless `opencode run -s`, sandbox-VM exec note, reset, time/cost
+  expectations) documented in `qa/README.md`.
 
 ### Changed
 
@@ -79,6 +100,17 @@ and this project adheres to
 
 ### Fixed
 
+- Manual QA prerequisite check (`qa/scripts/setup/check-deps.sh`) probed
+  `https://api.openrouter.ai/v1/models`, a host that does not exist on
+  the public internet (the OpenRouter API base is
+  `https://openrouter.ai/api/v1`), so the preflight always failed.
+- The manual QA gateway provisioning
+  (`qa/docker/bifrost-provision.sh`) seeded keys inline in
+  `POST /api/providers` — silently ignored by bifrost 1.6.x (keys are a
+  separate sub-resource), so the gateway served zero models. The script
+  now creates/reconciles the key via
+  `POST/PUT /api/providers/{provider}/keys`, which also makes
+  `models.tsv` changes apply on a simple `qa-up.sh` re-run.
 - The `sdd-command` tool is now actually gated at runtime: denied
   globally via `permission`, allowed for SDD workers, and explicitly
   denied for other agents (requires opencode 1.18.23+).

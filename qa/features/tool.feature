@@ -1,33 +1,42 @@
 @tool
 Feature: sdd-command custom tool
-  These cases re-check on a real model what the mock-LLM e2e proves
-  deterministically; they are the only place the tool is seen through
-  the real runtime. The tool is denied globally via `permission` and
-  allowed per-agent for SDD workers (see qa/README.md).
+  These cases are e2e-proven (mock-LLM test-e2e proves the byte-exact
+  tool results); the manual run re-checks them through the real runtime
+  by observing the planner's transcript. The tool is denied globally via
+  `permission` and allowed per-agent for SDD workers (see qa/README.md).
 
 @TC-TOOL-01 @P1
 Scenario: Worker loads an allowlisted command
   Given TC-REG-1 passed and the LLM is running
-  And an orchestrator run is the easiest trigger, or I run /prd-issue-to-plan as a subagent task and read its transcript
+  And an orchestrator run is the easiest trigger, or I run /prd-auto-implement with the F2 PRD and watch its planner turn
   When I run /prd-auto-implement on the F2 PRD (or delegate the planner manually)
-  And I locate the sdd-command tool call for prd-issue-to-plan in the transcript
-  And I inspect the tool result text
-  And I ask the same worker to read the template path the result references
-  Then the result starts with Loaded command "prd-issue-to-plan" from <abs path>. followed by a blank line
-  And the body references the plan template as a rewritten absolute mention (@<abs templates dir>/prd-issue-to-plan/plan-template.md) and contains no @opencode-sdd-templates/ literal
-  And the worker's read of that path completes without a permission ask (the TC-REG-5 templates grant) and returns the template carrying # Implementation Plan: and ## Tasks
-  And I keep the transcript excerpt with the tool call plus result, and the follow-up read result, in the evidence folder
+  Then the planner's sdd-command call for prd-issue-to-plan is the pipeline driver: the transcript shows the call (the sdd-command tool step in the sdd-planner session) followed by the task or write steps it unblocked
+  And the template read referenced by the rewritten absolute mention (@<abs templates dir>/prd-issue-to-plan/plan-template.md) completes without a permission ask (the TC-REG-5 grant) and feeds the '# Implementation Plan:' the planner wrote
+  And the log contains zero @opencode-sdd-templates/ literals
+  And I keep the transcript excerpt with the tool call plus the follow-up template read, and the grep result, in the evidence folder
+  # Where to look: the planner's session parts in the raw opencode log /
+  # saved transcript — the /orchestrator runs print the delegation chain;
+  # search for `sdd-command` next to `prd-issue-to-plan`. The exact
+  # 'Loaded command ...' result string is proven byte-exact by the
+  # mock-LLM e2e only — the session transcript shows the call and its
+  # effects, not the raw tool result text.
+  # Deterministic alternative (no model whims): drive a worker session
+  # headlessly via the opencode server API — `opencode serve` in the
+  # container, then POST /session/{id}/message with agent=sdd-planner,
+  # and read the parts JSON. The same API route is how a worker's session
+  # is continued headlessly (`opencode run -s <session-id>`).
 
 @TC-TOOL-02 @P1
 Scenario: Non-allowlisted name fails cleanly
   Given TC-TOOL-1 passed
-  When I ask the worker (in a follow-up message) to call sdd-command with prd-write, then with garbage
-  And I state that the error path itself is the point — a tiny model otherwise 'helpfully' answers from memory without ever calling the tool
+  When I follow up with the same worker — open its session in the web UI and send a message (or headlessly: `opencode run -s <session-id>` / POST /session/{id}/message) — and ask it to call sdd-command with prd-write, then with garbage
   And I read the tool result for each
-  Then the prd-write result is exactly Error: "prd-write" is not a loadable command. Available commands: prd-issue-to-plan, prd-review-plan, prd-implement-issue, prd-validate-issue, prd-validate.
-  And the unknown name has the same shape with the name quoted
+  Then the error shape is Error: "<name>" is not a loadable command. Available commands: prd-issue-to-plan, prd-review-plan, prd-implement-issue, prd-validate-issue, prd-validate. — the exact string is proven byte-exact by the mock-LLM e2e
   And the session continues — no red banner, no crash
   And I keep the transcript excerpts and confirm the session stays responsive in the evidence folder
+  # Worker follow-ups: after the worker's turn its session stays live — a
+  # follow-up is a message in that session (the web UI path) or the
+  # headless continuation (`opencode run -s <session-id>`).
 
 @TC-TOOL-02b @P1
 Scenario: prd-validate is in the allowlist
@@ -37,11 +46,14 @@ Scenario: prd-validate is in the allowlist
   And the report template is referenced as a rewritten absolute mention (@<abs templates dir>/prd-validate/validation-report-template.md), with no @opencode-sdd-templates/ literal
   And the referenced template carries # PRD Validation Report: and ## Overall Assessment
   And I keep the transcript excerpt in the evidence folder
+  # Byte-exact 'Loaded command "prd-validate"' + the mention are proven by
+  # the mock-LLM e2e (the /validation command runs it end to end too);
+  # the manual half is witness+record, not first-time proof.
 
 @TC-TOOL-03 @P2
 Scenario: Orchestrator cannot call it
   Given TC-REG-1 passed
-  When I ask sdd-build in the TUI to use sdd-command directly
+  When I ask sdd-build in a session to use sdd-command directly
   And I read the denied-tool message
   Then the tool is not available to sdd-build — a denial or unknown-tool response
   And the agent instead delegates to a worker

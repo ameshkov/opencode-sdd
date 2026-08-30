@@ -1,5 +1,5 @@
-# Opt-in host port publishing for the QA gateway (bifrost UI + host-side
-# smoke tests only).
+# Opt-in host port publishing: the bifrost gateway (UI + host-side smoke
+# tests) and the opencode web UI (browser-driven QA runs).
 #
 # By default the stack publishes NO host port: all test traffic runs inside
 # the compose network (qa -> bifrost:8080), so nothing can collide with
@@ -7,21 +7,30 @@
 #
 #   docker compose -f qa/docker-compose.yml -f qa/docker-compose.ports.yml up -d
 #
-# The published host port is ${BIFROST_PORT:-8080} (set BIFROST_PORT to
-# pick another port when 8080 is taken, e.g. BIFROST_PORT=8081). Prefer
-# QA_HOST_PORT in qa/.env (see qa/.env.example) or on the script command
-# line — the start scripts merge this file and set BIFROST_PORT for you.
-# Host-side smoke test:
-#   BIFROST_BASE_URL=http://localhost:8080 qa/docker/llm-smoke.sh
-# Bifrost's Web UI (request logs, usage analytics):
-#   http://localhost:8080
+# The override publishes two ports:
+#   - ${BIFROST_PORT:-8080} -> the gateway (set BIFROST_PORT to pick
+#     another port when 8080 is taken, e.g. BIFROST_PORT=8081). Prefer
+#     QA_HOST_PORT in qa/.env (see qa/.env.example) or on the script
+#     command line — qa-up.sh merges this file and sets BIFROST_PORT for
+#     you. Host-side smoke test:
+#       BIFROST_BASE_URL=http://localhost:8080 qa/docker/llm-smoke.sh
+#     Bifrost's Web UI (request logs, usage analytics):
+#       http://localhost:8080
+#   - ${QA_WEB_PORT:-4097} -> 4096, the opencode web UI served by
+#     qa/docker/serve-web.sh (pick another value when 4097 is taken).
+#     From the host (browser / Playwright):
+#       http://localhost:4097
 #
-# On a macOS sandbox VM the published port binds on the HOST and is
-# reachable from inside the VM via the NAT gateway
-# (http://192.168.64.1:${BIFROST_PORT:-8080}) — NOT via localhost, which in
+# On a macOS sandbox VM the published ports bind on the HOST and are
+# reachable from inside the VM via the NAT gateway (e.g.
+# http://192.168.64.1:${BIFROST_PORT:-8080} and
+# http://192.168.64.1:${QA_WEB_PORT:-4097}) — NOT via localhost, which in
 # the VM may be occupied by unrelated services. Inside the workspace
 # container nothing changes (compose DNS).
 services:
   bifrost:
     ports:
       - '${BIFROST_PORT:-8080}:8080'
+  qa:
+    ports:
+      - '${QA_WEB_PORT:-4097}:4096'
