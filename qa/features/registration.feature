@@ -48,19 +48,21 @@ Scenario: User agent settings survive registration
   When I restart opencode and grep the log for agent name collision, merging onto existing config
   And I kick off a run that reaches sdd-explore, for example the doc-development research step or a review dimension that explores
   And I read the gateway log: `qa exec 'curl -fsS "http://bifrost:8080/api/logs?models=qwen3.5-plus-20260420&limit=5"'`
-  Then the merge warning appears exactly once for sdd-explore
-  And sdd-explore keeps its plugin description, prompt and permission while using the configured model
+  Then the merge warning appears for sdd-explore on every config-hook evaluation of that boot (the opencode server evaluates the hook several times per boot — multi-project + client/server contexts — so a per-evaluation occurrence is expected; record the count and the boot run id, never assert an exact global count)
+  And the agent selector still shows a single sdd-build (no duplicate registration) and sdd-explore keeps its plugin description, prompt and permission while using the configured model
   And the gateway log shows requests for qwen3.5-plus-20260420 and none for the default deepseek-v4-flash in that delegation (record the request window)
   And no other user agent keys are touched
   And I keep the log excerpt, the /api/logs excerpt and opencode.json before and after in the evidence folder
-  # Notes: the gateway-log half depends on the model under test actually
-  # delegating to sdd-explore — on the cheap default the planner may skip
-  # the explore step entirely (all requests deepseek; the
-  # doc-development / doc-readme research steps DO delegate and the qwen
-  # requests happen there). If no explore delegation ran,
-  # record that and assert the mechanism (merge + preservation) only —
-  # the delegation trigger is model-whim dependent, the merge is the
-  # product behavior.
+  # Notes: the config hook is evaluated several times per boot, so the
+  # merge warning fires once per evaluation — assert the occurrence and
+  # the post-merge surface, not a log-line cardinality. The gateway-log
+  # half depends on the model under test actually delegating to
+  # sdd-explore — on the cheap default the planner may skip the explore
+  # step entirely (all requests deepseek; the doc-development /
+  # doc-readme research steps DO delegate and the qwen requests happen
+  # there). If no explore delegation ran, record that and assert the
+  # mechanism (merge + preservation) only — the delegation trigger is
+  # model-whim dependent, the merge is the product behavior.
 
 @TC-REG-04 @P1
 Scenario: Command collision is replaced with a warning

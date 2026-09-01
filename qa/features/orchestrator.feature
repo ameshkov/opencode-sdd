@@ -13,16 +13,19 @@ Scenario: Happy path, single issue
   And I watch the delegation pattern in the transcript
   Then the run begins with the resume pre-check (re-reading prd.md and issues) and then delegates to sdd-planner via task
   And sdd-coder and sdd-validator are spawned afterwards; the orchestrator itself never uses sdd-command
-  And counters ('**Plan attempt**', '**Validation attempt**') appear and stay within MAX_ATTEMPTS (default 3)
+  And the attempt counters of the capped loops appear and stay within MAX_ATTEMPTS (default 3): '**Review attempt**' in review.md, '**Validation attempt**' in issues/<ID>/validation.md, '**Cross-cutting attempt**' in validation.md
   And plan.md, code changes and issues/<ID>/validation.md exist at the end and a final summary is printed
   And I keep the transcript and the artifact tree in the evidence folder
+  # Planning is a single delegation (step 1 of the orchestrator) and has no
+  # attempt counter — the capped loops (review, validation, cross-cutting)
+  # each carry their attempt counter in their report file.
 
 @TC-ORCH-02 @P1
 Scenario: Interruption and resume
   Given a run in progress (TC-ORCH-1 on fixture F2 — the long render of plan plus code gives time to interrupt)
   When I start /prd-auto-implement and interrupt it after plan.md exists but before completion (Ctrl-C in the TUI, Stop in the web UI)
   And I re-run /prd-auto-implement (the same command — resume is a pre-check)
-  Then the re-run detects the existing plan.md and statuses instead of replanning from scratch (no second '**Plan attempt**' reset)
+  Then the re-run detects the existing plan.md and statuses instead of replanning from scratch (no replanning — plan.md is reused; the persisted '**Review attempt**', '**Validation attempt**' and '**Cross-cutting attempt**' counters are preserved, not reset)
   And the planner's '# Implementation Plan:' is not regenerated (same file, same task [x] markers) and the run proceeds to coder
   And I keep the transcript of both runs and the plan.md mtime across runs in the evidence folder
 

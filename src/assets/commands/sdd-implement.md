@@ -118,8 +118,15 @@ For each task in the queue:
    - **NEEDS INPUT**: Requires user decision
 
 5. **Update spec progress**
-   - Mark completed tasks in the `spec.md` file with `[x]`
-   - Mark completed steps within each task with `[x]`
+   - For every task completed in this run, flip its heading marker:
+     `### [ ] Task N: <name>` → `### [x] Task N: <name>` (change the `[ ]`
+     inside the `###` heading — this is the progress marker the next run and
+     the validator read; an unchecked heading makes a completed task look
+     unfinished)
+   - Flip every completed step bullet the same way:
+     `- [ ] **Step N: ...**` → `- [x] **Step N: ...**`
+   - A task is fully marked only when BOTH its heading and its step bullets
+     are checked; never skip the heading flip when the task is done.
    - Add implementation notes if helpful
 
 ### Phase 4: Integration Check
@@ -151,7 +158,13 @@ After completing all queued tasks:
        the spec header metadata
      - Add implementation notes if helpful
 
-5. **Mark resolved validation issues (when revising)** If this run was a
+5. **Verify progress markers**
+   - Re-read `{SPECS_DIR}/spec.md` and confirm every task completed this run
+     has `### [x]`; if any completed task is still `### [ ]`, fix its markers
+     before finishing.
+   - Report how many tasks were marked complete.
+
+6. **Mark resolved validation issues (when revising)** If this run was a
    revision after an incomplete validation (`validation.md` existed with an
    `Overall Status` other than Complete):
    - For every issue recorded under `## Issues Found` in `validation.md`, fill
@@ -197,7 +210,9 @@ After completing all queued tasks:
 ### Progress Tracking
 
 - **One task at a time**: Complete and verify before moving on
-- **Update spec file**: Mark tasks and steps as complete with `[x]`
+- **Update spec file**: Flip the `### [ ] Task N:` heading markers to
+  `### [x] Task N:` AND the `- [ ]` step bullets to `- [x]` for every
+  completed task — never leave the heading unchecked when the task is done
 - **Note deviations**: Document any changes from the plan
 
 ## Output

@@ -172,8 +172,15 @@ For each task in the queue:
    - **NEEDS INPUT**: Requires user decision
 
 5. **Update plan progress**
-   - Mark completed tasks in the plan with `[x]`
-   - Mark completed steps within each task with `[x]`
+   - For every task completed in this run, flip its heading marker:
+     `### [ ] Task N: <name>` → `### [x] Task N: <name>` (change the `[ ]`
+     inside the `###` heading — this is the progress marker the next run and
+     the validator read; an unchecked heading makes a completed task look
+     unfinished)
+   - Flip every completed step bullet the same way:
+     `- [ ] **Step N: ...**` → `- [x] **Step N: ...**`
+   - A task is fully marked only when BOTH its heading and its step bullets
+     are checked; never skip the heading flip when the task is done.
 
 ### Phase 5: Integration Check
 
@@ -200,7 +207,13 @@ After completing all queued tasks:
      `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` from “Draft”, “Approved”,
      “Implemented”, or “Validated” to “Implemented”
 
-5. **Mark resolved validation issues (when revising)** If this run was a
+5. **Verify progress markers**
+   - Re-read `{SPECS_DIR}/issues/{ISSUE_ID}/plan.md` and confirm every task
+     completed this run has `### [x]`; if any completed task is still
+     `### [ ]`, fix its markers before finishing.
+   - Report how many tasks were marked complete.
+
+6. **Mark resolved validation issues (when revising)** If this run was a
    revision after an incomplete validation (`validation.md` existed with an
    overall status other than Complete):
    - For every issue recorded under `## Issues Found` in `validation.md`, fill
@@ -209,7 +222,7 @@ After completing all queued tasks:
      to signal the implementation has been revised and is awaiting
      re-validation.
 
-6. **Report completion status**
+7. **Report completion status**
    - List completed tasks
    - List remaining tasks (if any)
    - Note issues encountered

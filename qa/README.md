@@ -493,6 +493,13 @@ server API is available without the browser — `opencode run -s
 is the same route the web UI uses; see TC-TOOL-01's deterministic
 alternative.
 
+**Limitation (verified against opencode 1.18.x):** `opencode run -s`
+cannot continue a **subagent** session as that subagent — the CLI omits
+the agent on resume (the server then dispatches the default primary
+agent) and rejects subagents passed via `--agent`. For worker follow-ups
+(subagent sessions) use the web UI or `POST /session/{id}/message` with
+the worker's agent explicitly; see TC-TOOL-02.
+
 **Per-case reset**: run `reset-scratch.sh` (see 3.3) before each
 independent case, or `pnpm qa:run --case-reset` to have the runner do
 it. Time budget per LLM-heavy case is in section 10.

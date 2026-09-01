@@ -75,6 +75,13 @@ and this project adheres to
 
 ### Changed
 
+- The `prd-implement-issue` and `sdd-implement` commands now require
+  flipping the `### [ ] Task N:` heading markers (not only the step
+  bullets) for every completed task and verify the markers before
+  finishing, so completed tasks stay visibly checked.
+- The `doc-changelog` command now treats the initial scaffold commit as
+  the baseline and omits R&D-only changes (test-only, internal
+  tooling/chores), so the Unreleased section tracks user-facing changes.
 - Upgraded the pinned opencode versions to 1.18.23:
   `@opencode-ai/sdk` and `@opencode-ai/plugin` (npm), and the
   `opencode` binary in CI, the CI Dockerfile, and the QA workspace

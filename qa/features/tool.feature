@@ -29,14 +29,18 @@ Scenario: Worker loads an allowlisted command
 @TC-TOOL-02 @P1
 Scenario: Non-allowlisted name fails cleanly
   Given TC-TOOL-1 passed
-  When I follow up with the same worker — open its session in the web UI and send a message (or headlessly: `opencode run -s <session-id>` / POST /session/{id}/message) — and ask it to call sdd-command with prd-write, then with garbage
+  When I follow up with the same worker — open its session in the web UI and send a message (or headlessly: POST /session/{id}/message with agent=sdd-planner) — and ask it to call sdd-command with prd-write, then with garbage
   And I read the tool result for each
   Then the error shape is Error: "<name>" is not a loadable command. Available commands: prd-issue-to-plan, prd-review-plan, prd-implement-issue, prd-validate-issue, prd-validate. — the exact string is proven byte-exact by the mock-LLM e2e
   And the session continues — no red banner, no crash
   And I keep the transcript excerpts and confirm the session stays responsive in the evidence folder
   # Worker follow-ups: after the worker's turn its session stays live — a
-  # follow-up is a message in that session (the web UI path) or the
-  # headless continuation (`opencode run -s <session-id>`).
+  # follow-up is a message in that session. Use the web UI path or
+  # POST /session/{id}/message with the worker's agent. Do NOT use
+  # `opencode run -s <session-id>` for a subagent session: as of opencode
+  # 1.18.x the CLI omits the agent, so the server dispatches the default
+  # primary agent (build) whose tool set does not include sdd-command —
+  # the worker's permission never applies.
 
 @TC-TOOL-02b @P1
 Scenario: prd-validate is in the allowlist
@@ -53,9 +57,16 @@ Scenario: prd-validate is in the allowlist
 @TC-TOOL-03 @P2
 Scenario: Orchestrator cannot call it
   Given TC-REG-1 passed
+  And no leftover plugin entry exists in the global config (the wizard runs in group C may patch ~/.config/opencode/opencode.jsonc with "plugin": ["opencode-sdd"] — restore it; the case must resolve the baked file:///app instance, exactly one plugin registration)
   When I ask sdd-build in a session to use sdd-command directly
   And I read the denied-tool message
   Then the tool is not available to sdd-build — a denial or unknown-tool response
   And the agent instead delegates to a worker
   # Note: the tools['sdd-command'] === false form is ignored by opencode for plugin-registered tools and must not be asserted; only the permission deny takes effect.
+  # If the call succeeds anyway, read the loaded source path: a path under
+  # ~/.cache/opencode/packages/opencode-sdd@latest/ (instead of
+  # /app/build/assets/commands/) means a second registry-cached plugin
+  # instance resolved — record it as a DEVIATION of the test state, not a
+  # product pass (two instances registering the tool = undefined which one
+  # wins).
   And I keep the transcript excerpt in the evidence folder

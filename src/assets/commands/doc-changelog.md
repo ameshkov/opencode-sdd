@@ -42,12 +42,21 @@ If `AGENTS.md` is missing, ask the user whether to proceed without it.
      `[unreleased]: <repo-url>/compare/<latest-tag>...HEAD`
    - If no remote is found, skip the link reference
 
+3. **Establish the baseline**
+   - The initial commit, and any change that predates the first release tag,
+     are the changelog baseline — NOT entries. Do not list the initial
+     scaffold commit (or similar work-in-progress that created the project)
+     under `## [Unreleased]`.
+
 ### Phase 2: Update from Uncommitted Changes
 
 1. **Check for uncommitted changes**
    - Run `git diff` and `git diff --cached` to inspect unstaged and staged
-     changes
-   - If there are no uncommitted changes, skip to Phase 3
+     changes; uncommitted changes are the change source for this run
+   - If there are no uncommitted changes, use `git log` since the last
+     release tag as the change source (`git describe --tags`; on a repo with
+     no tags, commits after the initial baseline commit — see Phase 1)
+   - If there are no changes since the baseline, skip to Phase 3
 
 2. **Analyze the diffs**
    - Review the diffs to understand what changed
@@ -56,6 +65,15 @@ If `AGENTS.md` is missing, ask the user whether to proceed without it.
      - Modified behavior, refactored logic, updated dependencies → `### Changed`
      - Bug fixes (identified by context, naming, or intent) → `### Fixed`
      - Deleted files, removed features or exports → `### Removed`
+   - **Distinguish user-facing changes from R&D-only changes.** A change
+     with no user-visible effect — test-only refactors, test helpers,
+     internal build/dev script flags and chores, CI wiring, scaffolding, or
+     internal utilities no consumer reaches — is NOT a changelog entry.
+     Omit it (or fold it into a related user-facing entry as a
+     parenthetical, which does not count as an entry of its own). The
+     changelog documents user-visible behavior, not repository maintenance
+     history. Examples to omit: “bump internal dev script flags”, “add a
+     test helper”, “initial scaffold commit”.
 
 3. **Read the existing Unreleased section**
    - Identify all current entries under `## [Unreleased]`
@@ -127,6 +145,9 @@ If `AGENTS.md` is missing, ask the user whether to proceed without it.
    - [ ] Has at most one of each subsection under `## [Unreleased]`
    - [ ] No duplicate or obsolete entries remain
    - [ ] New entries accurately describe the uncommitted changes
+   - [ ] No R&D-only entries remain (test-only changes, internal
+         tooling/chores, scaffolding); every entry describes a user-facing
+         change
    - [ ] Existing released sections are untouched
 
 2. **Run lint**
