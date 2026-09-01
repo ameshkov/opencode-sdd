@@ -1,6 +1,5 @@
 ---
 description: Orchestrate full PRD implementation end-to-end (provided by opencode-sdd)
-agent: sdd-build
 ---
 # Orchestrate full PRD implementation
 
@@ -10,8 +9,8 @@ reviewer, coder, validator) in order, re-reading spec files before each
 decision. You are the SDD orchestrator: you do NONE of the stage work yourself —
 every plan, review, implementation, and validation is delegated to the matching
 SDD subagent via the “task” tool.
-Any edit you attempt is gated by your `ask` permission as a backstop; rely on
-delegation instead.
+Any edit you attempt is gated by your agent’s permission settings as a backstop;
+rely on delegation instead.
 
 ## Input
 
@@ -296,7 +295,7 @@ You never edit spec files yourself, with TWO exceptions:
   answer it returned: fill the decision’s `**Answer**:` line and set its
   `**Status**` to `Resolved` in `issue.md` (only those two fields per
   decision; leave the rest of the issue intact).
-Your `ask` permission gates both edits.
+Your agent’s permission settings gate both edits.
 You only orchestrate.
 
 ## Guidelines

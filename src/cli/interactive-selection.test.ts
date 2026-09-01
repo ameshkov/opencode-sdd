@@ -48,7 +48,7 @@ describe('buildInteractiveSelection', () => {
   it('probes + per-agent prompt returns the chosen model formatted as provider/model', async () => {
     const deepseek = modelStub({ id: 'deepseek-chat', providerID: 'deepseek' });
     const selectAgentModel = vi.fn().mockResolvedValue(deepseek);
-    // Return the same model for every agent call — all 7 agents get prompted
+    // Return the same model for every agent call — all 6 agents get prompted
     // (recommended models sorted first, but all models are selectable).
     const result = await buildInteractiveSelection(
       {
@@ -58,9 +58,9 @@ describe('buildInteractiveSelection', () => {
       { selectAgentModel },
     );
     expect(result.degraded).toBe(false);
-    expect(result.warnings).toHaveLength(0); // all 7 agents got a model
-    expect(selectAgentModel).toHaveBeenCalledTimes(7); // all seven agents prompted
-    expect(result.selection.models?.get('sdd-build')).toBe('deepseek/deepseek-chat');
+    expect(result.warnings).toHaveLength(0); // all 6 agents got a model
+    expect(selectAgentModel).toHaveBeenCalledTimes(6); // all six agents prompted
+    expect(result.selection.models?.get('sdd-planner')).toBe('deepseek/deepseek-chat');
     expect(result.selection.models?.get('sdd-coder')).toBe('deepseek/deepseek-chat');
     expect(result.selection.models?.get('sdd-explore')).toBe('deepseek/deepseek-chat');
   });
@@ -80,7 +80,7 @@ describe('buildInteractiveSelection', () => {
       },
       { selectAgentModel },
     );
-    // First prompt call is for sdd-build (keywords ['deepseek','qwen'], strong).
+    // First prompt call is for sdd-planner (keywords ['deepseek','qwen'], strong).
     const config = selectAgentModel.mock.calls[0]?.[0] as {
       choices: Array<{ value: Model; recommended: boolean; name: string }>;
     };
@@ -93,7 +93,7 @@ describe('buildInteractiveSelection', () => {
 
   it('per-agent cancel (Ctrl-C -> null) emits an AGENT_UNSET_WARNING and skips that agent', async () => {
     const deepseek = modelStub({ id: 'deepseek-chat', providerID: 'deepseek' });
-    // First agent (sdd-build) -> cancelled; subsequent agents -> deepseek.
+    // First agent (sdd-planner) -> cancelled; subsequent agents -> deepseek.
     // All agents get prompted (recommended sorted first); the user can
     // pick any model for any agent. The cheap agents CAN select deepseek
     // even though it's not recommended for them.
@@ -105,9 +105,9 @@ describe('buildInteractiveSelection', () => {
       },
       { selectAgentModel },
     );
-    expect(result.selection.models?.has('sdd-build')).toBe(false);
-    expect(result.warnings.some((w) => w.includes('sdd-build'))).toBe(true);
-    // Only the cancelled agent (sdd-build) is unset.
+    expect(result.selection.models?.has('sdd-planner')).toBe(false);
+    expect(result.warnings.some((w) => w.includes('sdd-planner'))).toBe(true);
+    // Only the cancelled agent (sdd-planner) is unset.
     expect(result.warnings).toHaveLength(1);
   });
 
@@ -136,8 +136,8 @@ describe('buildInteractiveSelection', () => {
       // but a prompt IS shown per agent (ranked.length === models.length > 0).
       { selectAgentModel: vi.fn().mockResolvedValue(claude) },
     );
-    // All 7 agents get the claude model (recommended=false, but selectable).
-    expect(result.selection.models?.size).toBe(7);
+    // All 6 agents get the claude model (recommended=false, but selectable).
+    expect(result.selection.models?.size).toBe(6);
     expect(result.warnings).toHaveLength(0);
   });
 });

@@ -124,46 +124,10 @@ describe.each(WORKERS)('%s worker asset', (name) => {
   });
 });
 
-describe('sdd-build agent asset', () => {
-  it('parses to a primary, non-hidden build agent with edit:ask and an sdd-* task allowlist', async () => {
-    const raw = await readFile(join(assetsDir, 'sdd-build.md'), 'utf8');
-    const result = parseAgentFile('sdd-build', raw);
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const config = result.agent.config;
-    expect(config.description).toBeTruthy();
-    expect(config.mode).toBe('primary');
-    expect(config['hidden']).not.toBe(true);
-    const perm = config.permission as Record<string, unknown> | undefined;
-    expect(perm?.read).toBe('allow');
-    expect(perm?.glob).toBe('allow');
-    expect(perm?.grep).toBe('allow');
-    expect(perm?.edit).toBe('ask');
-    expect(perm?.bash).toBe('allow');
-    expect(perm?.websearch).toBe('allow');
-    expect(perm?.webfetch).toBe('allow');
-    expect(perm?.question).toBe('allow');
-    // sdd-command explicitly denied, reinforcing the global permission deny.
-    expect(perm?.['sdd-command']).toBe('deny');
-    const task = perm?.task;
-    expect(task).toEqual({
-      '*': 'deny',
-      'sdd-*': 'allow',
+describe('sdd-build agent asset is not shipped', () => {
+  it('does not define the removed orchestrator agent', async () => {
+    await expect(readFile(join(assetsDir, 'sdd-build.md'), 'utf8')).rejects.toMatchObject({
+      code: 'ENOENT',
     });
-  });
-
-  it('has a general-purpose build prompt focused on agent tasks', async () => {
-    const raw = await readFile(join(assetsDir, 'sdd-build.md'), 'utf8');
-    const result = parseAgentFile('sdd-build', raw);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const prompt = result.agent.config.prompt ?? '';
-    expect(prompt).toMatch(/build/i);
-    expect(prompt).toMatch(/conventions|patterns/i);
-    expect(prompt).not.toMatch(/AGENTS\.md/);
-    expect(prompt).toMatch(/orchestrat|delegate/i);
-    expect(prompt).toMatch(/sdd-explore/);
-    expect(prompt).not.toMatch(/sdd-command|prd-auto-implement|plan-review|implement-validate/i);
   });
 });

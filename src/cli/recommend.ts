@@ -47,7 +47,7 @@ export type Tier = 'cheap' | 'strong';
  * - `tier` drives the fallback in {@link autoSelect}.
  */
 export interface AgentRecommendation {
-  /** The shipped SDD subagent name (e.g. `sdd-build`). */
+  /** The shipped SDD subagent name (e.g. `sdd-planner`). */
   readonly agent: string;
   /**
    * Ordered keyword list. Declaration order IS the priority (earlier =
@@ -68,9 +68,9 @@ export interface AgentRecommendation {
  *
  * Tier split: the two read-only researchers (`sdd-explore`,
  * `sdd-plan-reviewer`) are `cheap` (fall back to the user's `small_model`
- * then `model`); the five heavyweight agents (`sdd-build`, `sdd-planner`,
+ * then `model`); the four heavyweight agents (`sdd-planner`,
  * `sdd-reviewer`, `sdd-coder`, `sdd-validator`) are `strong` (fall back to
- * `model`). Exactly two are `cheap` and five are `strong`, per the
+ * `model`). Exactly two are `cheap` and four are `strong`, per the
  * fallback rule.
  *
  * Keywords are model-family substrings matched case-insensitively against
@@ -85,7 +85,6 @@ export interface AgentRecommendation {
  */
 export const SUBAGENT_RECOMMENDATIONS: readonly AgentRecommendation[] = [
   // STRONG (fallback: `model`) — the heavyweight agents.
-  { agent: 'sdd-build', keywords: ['deepseek', 'qwen'], tier: 'strong' },
   { agent: 'sdd-planner', keywords: ['deepseek', 'qwen'], tier: 'strong' },
   { agent: 'sdd-reviewer', keywords: ['deepseek', 'qwen'], tier: 'strong' },
   { agent: 'sdd-coder', keywords: ['deepseek', 'qwen'], tier: 'strong' },

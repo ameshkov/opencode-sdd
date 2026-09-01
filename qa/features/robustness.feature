@@ -36,7 +36,7 @@ Scenario: Command with no arguments
 Scenario: Deterministic reload
   Given TC-REG-1 was done once in this session
   When I restart opencode and repeat TC-REG-1's command/agent inspection
-  Then the counts are identical (16 commands, 7 agents)
+  Then the counts are identical (16 commands, 6 agents)
   And the log does not show extra registrations or double-counted entries
   And I keep both logs side by side in the evidence folder
 

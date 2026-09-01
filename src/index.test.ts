@@ -264,11 +264,10 @@ describe('sdd plugin', () => {
 });
 
 describe('sdd plugin prd-auto-implement command registration', () => {
-  it('registers prd-auto-implement bound to sdd-build with no subtask flag', async () => {
+  it('registers prd-auto-implement with no agent binding and no subtask flag', async () => {
     // Load the real bundled commands (where prd-auto-implement.md lives) and
-    // neutralise agent loading for determinism, mirroring the sdd-build
-    // agent test's env-isolation pattern (inverted: commands real, agents
-    // missing).
+    // neutralise agent loading for determinism, mirroring the bundled-agent
+    // test's env-isolation pattern (inverted: commands real, agents missing).
     delete process.env['SDD_COMMANDS_DIR'];
     process.env['SDD_AGENTS_DIR'] = join(tmpdir(), 'definitely-missing-agents');
     try {
@@ -278,11 +277,12 @@ describe('sdd plugin prd-auto-implement command registration', () => {
 
       const command = config.command?.['prd-auto-implement'];
       expect(command).toBeDefined();
-      expect(command?.agent).toBe('sdd-build');
+      // No agent binding: the orchestrator role is played by whatever agent
+      // runs the command, rather than a dedicated `sdd-build` agent.
+      expect(command?.agent).toBeUndefined();
       expect(command?.subtask).toBeUndefined();
-      // The template is the orchestrator prompt (the `sdd-build` binding is
-      // verified above via `agent`; the body identifies the orchestrator
-      // role rather than naming the agent).
+      // The template is the orchestrator prompt; the body identifies the
+      // orchestrator role rather than naming an agent.
       expect(command?.template).toContain('orchestrator');
       expect(command?.template).toContain('sdd-planner');
       // No portable template token to rewrite; the rewriter is a no-op and

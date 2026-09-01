@@ -351,7 +351,7 @@ describe('doc-agents command file', () => {
 });
 
 describe('prd-auto-implement command file', () => {
-  it('parses bound to sdd-build with no subtask flag and the orchestrator prompt', async () => {
+  it('parses with no agent binding and no subtask flag when given the orchestrator prompt', async () => {
     const raw = await readFile(join(markdownDir, 'prd-auto-implement.md'), 'utf8');
     const result = parseCommandFile('prd-auto-implement', raw);
 
@@ -359,7 +359,8 @@ describe('prd-auto-implement command file', () => {
     if (result.ok) {
       const { config } = result.command;
       expect(config.description).toBeTruthy();
-      expect(config.agent).toBe('sdd-build');
+      // No agent binding: the command runs under whatever agent invokes it.
+      expect(config.agent).toBeUndefined();
       expect(config.subtask).toBeUndefined();
       const template = config.template;
       expect(template).toContain('$ARGUMENTS');

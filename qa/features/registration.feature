@@ -1,7 +1,7 @@
 @registration
 Feature: Plugin registration and config merging
   A clean opencode startup registers the full plugin surface: 16
-  commands, 7 agents, the `sdd-command` global permission deny and the
+  commands, 6 agents, the `sdd-command` global permission deny and the
   template permission grant — without prompting or erroring. These
   cases re-check on the real runtime what the deterministic mock-LLM
   e2e suite also proves; see qa/README.md for the log markers and the
@@ -22,10 +22,10 @@ Scenario: Fresh registration surface
   When I start opencode via the web UI (qa/README.md 3.6): qa/docker/serve-web.sh
   And I type / in the web UI prompt and list the prd-*, sdd-* and doc-* entries
   And I open the agent selector (Choose agent) and inspect it
-  Then the log contains plugin loading, SDD commands registered with count 16 and SDD agents registered with count 7
+  Then the log contains plugin loading, SDD commands registered with count 16 and SDD agents registered with count 6
   And the log contains no failed to register SDD commands line
   And the / list shows exactly sdd-spec, sdd-implement, sdd-validate, prd-write, prd-to-issues, prd-issue-to-plan, prd-review-plan, prd-implement-issue, prd-validate-issue, prd-validate, prd-auto-implement, doc-readme, doc-development, doc-deployment, doc-agents and doc-changelog
-  And the agent selector shows sdd-build and not the six hidden subagents sdd-explore, sdd-planner, sdd-plan-reviewer, sdd-reviewer, sdd-coder and sdd-validator
+  And the agent selector shows no SDD agents (no dedicated orchestrator; the six subagents sdd-planner, sdd-reviewer, sdd-coder, sdd-validator, sdd-plan-reviewer and sdd-explore are all hidden)
   And each of those entries shows a description ending in (provided by opencode-sdd) — the baked definitions carry it too: qa exec 'grep -lc "(provided by opencode-sdd)" /app/src/assets/commands/*.md'
   And I keep opencode.log and screenshots of the / list and the agent selector in the evidence folder
   # The web slash menu renders the command descriptions in full, so the
@@ -35,7 +35,7 @@ Scenario: Fresh registration surface
 @TC-REG-02 @P0
 Scenario: Commands resolve their templates
   When I run /prd-write with fixture F2
-  And I watch the first assistant message from sdd-build
+  And I watch the first assistant message from the session agent
   And I grep the log for unresolved and @opencode-sdd-templates
   Then the assistant's message contains the PRD template headings # PRD:, ## Problem Statement, ## Solution and ## User Stories
   And the log contains zero unresolved or opencode-sdd-templates literals
@@ -49,7 +49,7 @@ Scenario: User agent settings survive registration
   And I kick off a run that reaches sdd-explore, for example the doc-development research step or a review dimension that explores
   And I read the gateway log: `qa exec 'curl -fsS "http://bifrost:8080/api/logs?models=qwen3.5-plus-20260420&limit=5"'`
   Then the merge warning appears for sdd-explore on every config-hook evaluation of that boot (the opencode server evaluates the hook several times per boot — multi-project + client/server contexts — so a per-evaluation occurrence is expected; record the count and the boot run id, never assert an exact global count)
-  And the agent selector still shows a single sdd-build (no duplicate registration) and sdd-explore keeps its plugin description, prompt and permission while using the configured model
+  And the agent selector still shows no SDD agents (no duplicate registration) and sdd-explore keeps its plugin description, prompt and permission while using the configured model
   And the gateway log shows requests for qwen3.5-plus-20260420 and none for the default deepseek-v4-flash in that delegation (record the request window)
   And no other user agent keys are touched
   And I keep the log excerpt, the /api/logs excerpt and opencode.json before and after in the evidence folder

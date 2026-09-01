@@ -29,8 +29,9 @@ This repository builds an opencode plugin (`opencode-sdd`) that installs a
 specification-driven development (SDD) workflow into opencode. The plugin is
 loaded by opencode and extends its merged configuration with:
 
-- **Agents** — an `sdd-orchestrator` coordinator (and, in later iterations,
-  specialist agents it delegates to).
+- **Agents** — the hidden SDD worker subagents (`sdd-planner`,
+  `sdd-reviewer`, `sdd-coder`, `sdd-validator`, `sdd-plan-reviewer`,
+  `sdd-explore`) the commands delegate to.
 - **Commands** — slash commands such as `sdd-prd-write` that produce
   specification artifacts.
 
@@ -331,8 +332,10 @@ This plugin talks to opencode exclusively through the `config` hook:
   (mirroring the command loader); the file name (minus `.md`) becomes the
   agent name, frontmatter becomes the `AgentConfig` fields, and the Markdown
   body becomes `prompt`. `hidden: true` hides a `subagent` from the Tab
-  switcher. The orchestrator is a `subagent` so it coexists with opencode's
-  built-in agents.
+  switcher. There is no dedicated orchestrator agent: `/prd-auto-implement`
+  runs under whatever agent the user invokes it with, and every shipped
+  agent is a hidden `subagent` so it coexists with opencode's built-in
+  agents.
 - **Prefer `permission` over the deprecated `tools` field.** opencode
   marks `tools` as deprecated in favour of `permission` for finer-grained
   control, and opencode ignores `tools` for plugin-registered tools. All

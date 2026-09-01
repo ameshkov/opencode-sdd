@@ -170,7 +170,7 @@ describe('sdd plugin agent registration', () => {
     }
   });
 
-  it('registers the bundled sdd-build as a primary agent with edit:ask, sdd-* task allowlist, and sdd-command denied', async () => {
+  it('registers every bundled agent as a hidden subagent (no primary agent shipped)', async () => {
     // Neutralise command loading; leave SDD_AGENTS_DIR unset so the real
     // bundled agents directory is loaded.
     process.env['SDD_COMMANDS_DIR'] = join(tmpdir(), 'definitely-missing-cmds');
@@ -180,23 +180,16 @@ describe('sdd plugin agent registration', () => {
       const config: Config = {};
       await hooks.config?.(config);
 
-      const build = config.agent?.['sdd-build'];
-      expect(build).toBeDefined();
-      expect(build?.mode).toBe('primary');
-      expect(build?.['hidden']).not.toBe(true);
-      const buildPerm = build?.permission as Record<string, unknown> | undefined;
-      // sdd-build reinforces the global sdd-command deny rather than allowing it.
-      expect(buildPerm?.['sdd-command']).toBe('deny');
-      expect(build?.permission?.edit).toBe('ask');
-      expect(buildPerm?.read).toBe('allow');
-      expect(buildPerm?.glob).toBe('allow');
-      expect(buildPerm?.grep).toBe('allow');
-      expect(buildPerm?.question).toBe('allow');
-      const task = buildPerm?.task;
-      expect(task).toEqual({
-        '*': 'deny',
-        'sdd-*': 'allow',
-      });
+      const agentNames = Object.keys(config.agent ?? {});
+      expect(agentNames.length).toBeGreaterThan(0);
+      for (const name of agentNames) {
+        const agent = config.agent?.[name];
+        expect(agent?.mode).toBe('subagent');
+        expect(agent?.['hidden']).toBe(true);
+      }
+      // The orchestrator is not a dedicated agent: prd-auto-implement runs
+      // under whatever agent the user invokes it with.
+      expect(config.agent?.['sdd-build']).toBeUndefined();
       // Global deny is registered on the merged config as well.
       expect(permissionRecord(config)?.['sdd-command']).toBe('deny');
     } finally {

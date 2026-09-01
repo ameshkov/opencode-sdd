@@ -47,7 +47,7 @@ export function writeFilesScenario(files: Array<{ filePath: string; content: str
  * directly, then replies `done`.
  *
  * The agent is chosen via the prompt's `agent` field
- * (`sdd-planner`/`sdd-validator` for the worker success path, `sdd-build` for
+ * (`sdd-planner`/`sdd-validator` for the worker success path, `sdd-explore` for
  * the deny path), so the call and its result stay in the session the test
  * inspects.
  *

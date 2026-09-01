@@ -78,7 +78,7 @@ function buildChoices(
  * `main`'s top-level guard surfaces it as a non-zero exit (mirrors
  * `promptTarget`'s error-narrowing policy).
  *
- * @param agent The shipped SDD subagent name (e.g. `sdd-build`).
+ * @param agent The shipped SDD subagent name (e.g. `sdd-planner`).
  * @param models The probe's enumerated `Model[]` (already deduplicated).
  * @param recommendation The matching entry from `SUBAGENT_RECOMMENDATIONS`.
  * @param deps Optional test double for the `select` call.

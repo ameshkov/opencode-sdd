@@ -25,14 +25,14 @@ function modelStub(overrides: Partial<Model> & { id: string; providerID: string 
   };
 }
 
-const sddBuild = SUBAGENT_RECOMMENDATIONS.find(
-  (r) => r.agent === 'sdd-build',
+const sddPlanner = SUBAGENT_RECOMMENDATIONS.find(
+  (r) => r.agent === 'sdd-planner',
 ) as AgentRecommendation;
 
 describe('promptAgentModel', () => {
   it('returns null without calling select when models is empty', async () => {
     const selectAgentModel = vi.fn();
-    const result = await promptAgentModel('sdd-build', [], sddBuild, {
+    const result = await promptAgentModel('sdd-planner', [], sddPlanner, {
       selectAgentModel,
     });
     expect(result).toBeNull();
@@ -44,7 +44,7 @@ describe('promptAgentModel', () => {
     const qwen = modelStub({ id: 'qwen-coder', providerID: 'qwen' });
     const other = modelStub({ id: 'gpt-4o', providerID: 'openai' });
     const selectAgentModel = vi.fn().mockResolvedValue(deepseek);
-    const result = await promptAgentModel('sdd-build', [other, qwen, deepseek], sddBuild, {
+    const result = await promptAgentModel('sdd-planner', [other, qwen, deepseek], sddPlanner, {
       selectAgentModel,
     });
     expect(result).toBe(deepseek);
@@ -68,7 +68,7 @@ describe('promptAgentModel', () => {
   it('returns the chosen Model object directly (no path-lookup)', async () => {
     const deepseek = modelStub({ id: 'deepseek-chat', providerID: 'deepseek' });
     const selectAgentModel = vi.fn().mockResolvedValue(deepseek);
-    const result = await promptAgentModel('sdd-build', [deepseek], sddBuild, {
+    const result = await promptAgentModel('sdd-planner', [deepseek], sddPlanner, {
       selectAgentModel,
     });
     expect(result).toBe(deepseek);
@@ -79,9 +79,9 @@ describe('promptAgentModel', () => {
     exitError.name = 'ExitPromptError';
     const selectAgentModel = vi.fn().mockRejectedValue(exitError);
     const result = await promptAgentModel(
-      'sdd-build',
+      'sdd-planner',
       [modelStub({ id: 'deepseek-chat', providerID: 'deepseek' })],
-      sddBuild,
+      sddPlanner,
       { selectAgentModel },
     );
     expect(result).toBeNull();
@@ -91,9 +91,9 @@ describe('promptAgentModel', () => {
     const selectAgentModel = vi.fn().mockRejectedValue(new Error('broken TTY'));
     await expect(
       promptAgentModel(
-        'sdd-build',
+        'sdd-planner',
         [modelStub({ id: 'deepseek-chat', providerID: 'deepseek' })],
-        sddBuild,
+        sddPlanner,
         { selectAgentModel },
       ),
     ).rejects.toThrow('broken TTY');

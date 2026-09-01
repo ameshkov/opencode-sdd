@@ -55,13 +55,13 @@ Scenario: prd-validate is in the allowlist
   # the manual half is witness+record, not first-time proof.
 
 @TC-TOOL-03 @P2
-Scenario: Orchestrator cannot call it
+Scenario: Agent without a per-agent allow cannot call it
   Given TC-REG-1 passed
   And no leftover plugin entry exists in the global config (the wizard runs in group C may patch ~/.config/opencode/opencode.jsonc with "plugin": ["opencode-sdd"] — restore it; the case must resolve the baked file:///app instance, exactly one plugin registration)
-  When I ask sdd-build in a session to use sdd-command directly
+  When I ask the session agent to use sdd-command directly
   And I read the denied-tool message
-  Then the tool is not available to sdd-build — a denial or unknown-tool response
-  And the agent instead delegates to a worker
+  Then the tool is not available to the session agent — a denial or unknown-tool response
+  And the agent instead delegates to a worker (the orchestrator of prd-auto-implement is whatever agent runs it, none of which carry a per-agent allow)
   # Note: the tools['sdd-command'] === false form is ignored by opencode for plugin-registered tools and must not be asserted; only the permission deny takes effect.
   # If the call succeeds anyway, read the loaded source path: a path under
   # ~/.cache/opencode/packages/opencode-sdd@latest/ (instead of

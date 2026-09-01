@@ -28,8 +28,8 @@ Scenario: Interactive install picks the project config
   And the wiring registers the six-model allowlist including the wizard keyword families deepseek and qwen (strong tier) and mimo and gemini (cheap tier)
   When I run the wizard: `qa exec 'node /app/build/cli/install.js install'`
   And I answer the target prompt — pick the project config
-  And I read the sdd-build choice list (strong tier)
-  And I accept it and the next four
+  And I read the sdd-planner choice list (strong tier)
+  And I accept it and the next three
   And I read the sdd-plan-reviewer list (cheap tier)
   And for each subagent prompt I keep the recommended model
   And I review the printed unified diff and answer the confirm prompt
@@ -51,7 +51,7 @@ Scenario: Non-interactive install is idempotent
   And I note the file mtime and size with `stat`
   And I re-run the same command and stat the file again
   Then the first run exits 0 and prints opencode <version> detected, a diff, and no confirmation prompt
-  And opencode.json contains `"plugin": ["opencode-sdd"]` and one agent.<subagent>.model per subagent: deepseek for the 5 strong agents and mimo for the 2 cheap ones
+  And opencode.json contains `"plugin": ["opencode-sdd"]` and one agent.<subagent>.model per subagent: deepseek for the 4 strong agents and mimo for the 2 cheap ones
   And the re-run prints exactly install: no changes., exits 0, and the file mtime and size are unchanged
   And I keep both command outputs and the file mtime in the evidence folder
 
@@ -66,7 +66,7 @@ Scenario: No config found
   Then it offers a choice labeled Create new config at /work/empty/opencode.json
   And declining prints install: declined; no file written. and exits 0, but the minimal skeleton ($schema plus plugin plus agent:{}, 95 B) was already written before the confirmation gate
   When I run interactively again and ACCEPT the confirmation
-  Then it grows the skeleton to all 7 per-subagent assignments (about 650 B) and exits 0
+  Then it grows the skeleton to all 6 per-subagent assignments (about 570 B) and exits 0
   And the model lists show the built-in opencode provider catalog (for example opencode/nemotron-3.5-lightning-free), not the QA allowlist — expected, since no config declares bifrost here
   And I keep the terminal capture and ls -la /work/empty before and after in the evidence folder
   # Note: restore the stashed configs with `rm -rf` on the target first — the probe re-creates /home/qa/.config/opencode mid-test.

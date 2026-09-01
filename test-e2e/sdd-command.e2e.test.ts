@@ -6,7 +6,9 @@
  * plugin loaded:
  *
  *   - the merged config carries the deny rule (and no `tools` write), and
- *   - an agent without a per-agent allow — `sdd-build`, the orchestrator —
+ *   - an agent without a per-agent allow — `sdd-explore`, a read-only
+ *     researcher (the orchestrator role is played by whichever agent runs
+ *     `prd-auto-implement`, and none of those carry a per-agent allow) —
  *     cannot actually run `sdd-command`: a scripted call produces no
  *     `Loaded command` output. The worker positive path, where a per-agent
  *     `sdd-command: allow` beats the global deny, is covered by the worker
@@ -105,7 +107,7 @@ describe('sdd-command tool e2e: deny at runtime', () => {
     mock?.close();
   });
 
-  it('lets an orchestrator run a scripted sdd-command call without loading the command', async () => {
+  it('lets an agent without a per-agent allow run a scripted sdd-command call without loading the command', async () => {
     const directory = tempProjectDir();
     mock.reset(sddCommandScenario('prd-validate'));
 
@@ -114,7 +116,7 @@ describe('sdd-command tool e2e: deny at runtime', () => {
     await client.session.prompt({
       path: { id: session.id },
       body: {
-        agent: 'sdd-build',
+        agent: 'sdd-explore',
         parts: [{ type: 'text', text: 'load the validate stage' }],
       },
       query: { directory },

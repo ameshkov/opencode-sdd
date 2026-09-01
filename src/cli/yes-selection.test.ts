@@ -68,7 +68,7 @@ describe('formatModelValue', () => {
 describe('buildYesSelection', () => {
   it('auto-selects the first matching recommended model per subagent + formats provider/model', async () => {
     // Both `deepseek-chat` and `qwen-coder` are available; the strong
-    // agents (sdd-build, sdd-planner, sdd-reviewer, sdd-coder, sdd-validator)
+    // agents (sdd-planner, sdd-reviewer, sdd-coder, sdd-validator)
     // all match `deepseek` first per the shipped SUBAGENT_RECOMMENDATIONS
     // table (keywords: ['deepseek', 'qwen'], tier: 'strong').
     const models: Record<string, Model> = {
@@ -91,7 +91,7 @@ describe('buildYesSelection', () => {
     expect(result.selection.models).toBeDefined();
     const map = result.selection.models!;
     // deepseek beats qwen (declaration-order priority).
-    expect(map.get('sdd-build')).toBe('deepseek/deepseek-chat');
+    expect(map.get('sdd-planner')).toBe('deepseek/deepseek-chat');
     expect(map.get('sdd-coder')).toBe('deepseek/deepseek-chat');
     expect(map.get('sdd-explore')).toBeUndefined();
   });
@@ -130,8 +130,8 @@ describe('buildYesSelection', () => {
     });
     expect(result.degraded).toBe(false);
     expect(result.selection.models).toBeUndefined();
-    // Each of the seven shipped agents produced a warning naming it.
-    expect(result.warnings).toHaveLength(7);
+    // Each of the six shipped agents produced a warning naming it.
+    expect(result.warnings).toHaveLength(6);
     expect(result.warnings.some((w) => w.includes('sdd-explore'))).toBe(true);
     expect(result.warnings.some((w) => w.includes('sdd-coder'))).toBe(true);
     for (const w of result.warnings) {
@@ -165,7 +165,7 @@ describe('buildYesSelection', () => {
   });
 
   it('mixed: some agents matched, some unset — only the unset produce warnings', async () => {
-    // deepseek available (covers the five strong agents); the two cheap
+    // deepseek available (covers the four strong agents); the two cheap
     // agents (sdd-explore, sdd-plan-reviewer) match neither mimo nor
     // gemini and have no small_model fallback -> they go unset.
     const models: Record<string, Model> = {
@@ -176,7 +176,7 @@ describe('buildYesSelection', () => {
       createClient: () => stubClient(models, {}),
     });
     expect(result.degraded).toBe(false);
-    expect(result.selection.models?.get('sdd-build')).toBe('deepseek/deepseek-chat');
+    expect(result.selection.models?.get('sdd-planner')).toBe('deepseek/deepseek-chat');
     expect(result.selection.models?.get('sdd-explore')).toBeUndefined();
     expect(result.warnings).toHaveLength(2); // the two cheap agents only
     expect(

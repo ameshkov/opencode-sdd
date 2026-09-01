@@ -41,7 +41,7 @@ describe('rankFor', () => {
   });
 
   it('ranks by keyword declaration order: [deepseek, mimo] with both available ranks deepseek first', () => {
-    const r = rec('sdd-build', ['deepseek', 'mimo'], 'strong');
+    const r = rec('sdd-reviewer', ['deepseek', 'mimo'], 'strong');
     const models = [model('mimo-7b'), model('deepseek-reasoner')];
     const ranked = rankFor(r, models);
     expect(ranked.map((x) => x.model.id)).toEqual([
@@ -125,7 +125,7 @@ describe('autoSelect', () => {
   });
 
   it('selects deepseek over mimo when both match a strong agent', () => {
-    const agents = [rec('sdd-build', ['deepseek', 'mimo'], 'strong')];
+    const agents = [rec('sdd-reviewer', ['deepseek', 'mimo'], 'strong')];
     const models = [model('mimo-7b'), model('deepseek-reasoner')];
     const sel = autoSelect(agents, models, {});
     const s = sel[0];
@@ -194,13 +194,13 @@ describe('autoSelect', () => {
 
   it('returns one selection per agent in input order', () => {
     const agents = [
-      rec('sdd-build', ['deepseek'], 'strong'),
+      rec('sdd-planner', ['deepseek'], 'strong'),
       rec('sdd-explore', ['mimo'], 'cheap'),
       rec('sdd-coder', ['qwen'], 'strong'),
     ];
     const models = [model('deepseek-chat'), model('mimo-7b'), model('qwen-coder')];
     const sel = autoSelect(agents, models, {});
-    expect(sel.map((s) => s.agent)).toEqual(['sdd-build', 'sdd-explore', 'sdd-coder']);
+    expect(sel.map((s) => s.agent)).toEqual(['sdd-planner', 'sdd-explore', 'sdd-coder']);
     for (const s of sel) {
       expect(s.status).toBe('selected');
       if (s.status !== 'selected') throw new Error('unreachable');
@@ -219,11 +219,10 @@ describe('autoSelect', () => {
 });
 
 describe('SUBAGENT_RECOMMENDATIONS', () => {
-  it('curates exactly the seven shipped SDD subagents', () => {
-    expect(SUBAGENT_RECOMMENDATIONS).toHaveLength(7);
+  it('curates exactly the six shipped SDD subagents', () => {
+    expect(SUBAGENT_RECOMMENDATIONS).toHaveLength(6);
     expect(SUBAGENT_RECOMMENDATIONS.map((r) => r.agent).sort()).toEqual(
       [
-        'sdd-build',
         'sdd-coder',
         'sdd-explore',
         'sdd-plan-reviewer',
@@ -240,11 +239,10 @@ describe('SUBAGENT_RECOMMENDATIONS', () => {
     expect(cheap.map((r) => r.agent).sort()).toEqual(['sdd-explore', 'sdd-plan-reviewer']);
   });
 
-  it('assigns exactly five strong-tier agents', () => {
+  it('assigns exactly four strong-tier agents', () => {
     const strong = SUBAGENT_RECOMMENDATIONS.filter((r) => r.tier === 'strong');
-    expect(strong).toHaveLength(5);
+    expect(strong).toHaveLength(4);
     expect(strong.map((r) => r.agent).sort()).toEqual([
-      'sdd-build',
       'sdd-coder',
       'sdd-planner',
       'sdd-reviewer',
@@ -271,7 +269,7 @@ describe('SUBAGENT_RECOMMENDATIONS', () => {
       model('gemini-flash'),
     ];
     const sel = autoSelect(SUBAGENT_RECOMMENDATIONS, models, {});
-    expect(sel).toHaveLength(7);
+    expect(sel).toHaveLength(6);
     for (const s of sel) {
       expect(s.status).toBe('selected');
       if (s.status !== 'selected') throw new Error('unreachable');
