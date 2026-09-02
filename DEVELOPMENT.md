@@ -374,7 +374,7 @@ plan and the runner usage.
 ## Continuous Integration
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push
-to `main`/`master`, on `v*` tags, and on pull requests, with four jobs:
+to `main`/`master`, on `v*` tags, and on pull requests, with five jobs:
 
 - **ci** — the full local gate (`pnpm check`: format, lint, typecheck,
   unit tests), on Ubuntu.
@@ -389,6 +389,11 @@ to `main`/`master`, on `v*` tags, and on pull requests, with four jobs:
   [`Dockerfile`](./Dockerfile) `ci-output` collector on Ubuntu. It guards
   the reproducible, host-tool-free CI path described above ("Running
   Checks in Docker") alongside the native matrix.
+- **canary** — on pushes to `main`/`master` (never on PRs or tags), once
+  the other jobs pass, publishes an unreleased `-canary.<sha>` build to
+  npm's `canary` dist-tag (tokenless, via the same OIDC Trusted
+  Publisher as the release job). `latest` and the `v*` tag flow are
+  untouched.
 - **release** — on `v*` tags, once the other jobs pass, builds the plugin,
   packs it, and publishes a GitHub Release with auto-generated notes and
   the resulting `*.tgz`.

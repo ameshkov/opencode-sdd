@@ -24,6 +24,7 @@ clean, isolated session.
 - [The Solution](#the-solution)
 - [Install](#install)
     - [Manual install](#manual-install)
+    - [Canary](#canary)
 - [The SDD Short Flow](#the-sdd-short-flow)
 - [The PRD Long Flow](#the-prd-long-flow)
     - [Auto-Implement](#auto-implement)
@@ -124,6 +125,25 @@ reasoning/coding model; the two read-only researchers (`sdd-plan-reviewer`
 and `sdd-explore`) can use a cheaper/faster one. The tier split is
 defined in `src/cli/recommend.ts` (`SUBAGENT_RECOMMENDATIONS`) — it is
 the source of truth the install wizard consults.
+
+### Canary
+
+Every push to `master` publishes a fresh canary build to the `canary`
+npm dist-tag — the package version plus a `-canary.<sha>` suffix (for
+example `1.2.1-canary.<sha>`). Use it to try the latest unreleased work:
+
+```sh
+npx opencode-sdd@canary install
+```
+
+or install it as a regular package:
+
+```sh
+npm install opencode-sdd@canary
+```
+
+Canary builds never touch `latest`; stable `v*` releases are published
+the usual way.
 
 ## The SDD Short Flow
 

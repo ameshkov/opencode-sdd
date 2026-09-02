@@ -99,6 +99,51 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Publishes an unreleased canary build to npm on every push to the
+  # default branch (never on PRs or tags). The version gets a
+  # `-canary.<sha>` prerelease suffix, so `canary` always resolves to the
+  # newest build while `latest` and the `v*` tag release flow stay
+  # untouched. Tokenless via OIDC Trusted Publishers, exactly like the
+  # release job below (the npmjs trust entry already matches this repo +
+  # workflow filename, so no npmjs-side change is needed).
+  canary:
+    name: Publish Canary (master)
+    needs:
+      - ci
+      - e2e-tests
+      - docker
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write # to enable npm provenance (OIDC)
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # `1.2.1-canary.<sha12>` sorts below the release `1.2.1` (SemVer
+      # prerelease) and above the previous canary. The npm view guard makes
+      # re-runs (e.g. retrying a failed job) idempotent; concurrent master
+      # pushes get distinct SHAs, hence distinct versions.
+      - name: Publish canary to npm
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version + '-canary.' + process.env.GITHUB_SHA.slice(0, 12)")"
+          if npm view opencode-sdd@"$VERSION" version >/dev/null 2>&1; then
+            echo "Canary $VERSION already published; skipping"
+            exit 0
+          fi
+          npm pkg set version="$VERSION"
+          npm publish --tag canary --provenance --access public
+
   # Publishes to npm (tokenless via OIDC Trusted Publishers) and creates a
   # GitHub release. Only runs on version tags after all CI gates pass.
   #

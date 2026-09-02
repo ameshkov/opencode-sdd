@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- The `canary` npm dist-tag: every `master` push publishes an unreleased
+  `-canary.<sha>` build, so `npx opencode-sdd@canary` always installs
+  the newest work. `latest` and stable `v*` releases are untouched.
 - `opencode-sdd` CLI binary: `install` subcommand with `--help` and a
   `--yes` non-interactive mode. Discovers a patchable opencode config,
   probes reachable models and recommends one per SDD subagent, shows a
