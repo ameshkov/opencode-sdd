@@ -122,3 +122,13 @@ Scenario: Pinned and local plugin entries
   When I run `install --yes --local /app`
   Then it exits 0 and opencode.json contains `"plugin": ["file:///app"]`
   And I keep the terminal capture and the final opencode.json in the evidence folder
+
+@TC-CLI-10 @P2
+Scenario: Bin entry runs through the npm .bin symlink
+  Given a fresh scratch config with no plugin entry
+  When I run the wizard through a POSIX bin symlink (as npx does): `qa exec 'mkdir -p /tmp/qa-bin && chmod +x /app/build/cli/install.js && ln -sf /app/build/cli/install.js /tmp/qa-bin/opencode-sdd && PATH=/tmp/qa-bin:$PATH opencode-sdd install --yes; echo exit=$?'`
+  Then it exits 0 and stdout is not empty (it prints opencode <version> detected and plugin entry: opencode-sdd)
+  And opencode.json contains `"plugin": ["opencode-sdd"]`
+  When I re-run the same symlinked command
+  Then it prints install: no changes. and exits 0
+  And I keep the terminal capture and the final opencode.json in the evidence folder

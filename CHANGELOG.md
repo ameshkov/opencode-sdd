@@ -45,6 +45,12 @@ and this project adheres to
 - The `sdd-command` tool is now actually gated at runtime: denied
   globally via `permission`, allowed for SDD workers, and explicitly
   denied for other agents (requires opencode 1.18.23+).
+- `npx opencode-sdd@<tag>` silently exit 0 on POSIX without doing
+  anything: npm exposes the bin as a `node_modules/.bin` symlink, the
+  entry guard compared `import.meta.url` (resolved file) with
+  `process.argv[1]` (symlink path) and never matched. The guard now
+  compares real paths. On Windows the `.cmd` shim already invoked the
+  resolved file, so only POSIX installs were affected.
 
 ## [v1.2.1] - 2026-07-03
 

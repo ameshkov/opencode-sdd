@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isDirectInvocation } from './bin-entry.js';
 import { parseArgs, type ParsedArgs } from './argv.js';
 import {
   applyPatch,
@@ -499,9 +499,13 @@ export async function main(argv: string[], deps: MainDeps = {}): Promise<number>
 
 // Bin entry: only run when invoked directly as the script, never on
 // import (so unit tests can call `main` without exiting the process).
+// Real-path comparison (`isDirectInvocation`), not a URL comparison:
+// npm exposes the bin through a `node_modules/.bin` symlink on POSIX,
+// so `process.argv[1]` is the symlink path while `import.meta.url` is
+// the resolved file — a string comparison would silently never match.
 // `main` is async, so `.then` maps the resolved exit code to
 // `process.exit`; `process.exit(main(...))` would coerce the Promise
 // to NaN.
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+if (isDirectInvocation(import.meta.url, process.argv[1])) {
   main(process.argv.slice(2)).then((code) => process.exit(code));
 }
