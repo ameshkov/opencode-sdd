@@ -108,3 +108,17 @@ Scenario: Config discovery and duplicate prevention
   And the second run prints install: no changes.
   # Note: the pure env path — stash /work/sdd-manual and /home/qa/.config away and re-run; the env file IS patched when it is the only candidate.
   And I keep both configs and the outputs in the evidence folder
+
+@TC-CLI-09 @P2
+Scenario: Pinned and local plugin entries
+  Given a fresh scratch config with no plugin entry
+  When I run `install --yes --tag canary`: `qa exec 'node /app/build/cli/install.js install --yes --tag canary; echo exit=$?'`
+  Then it exits 0 and the diff shows `+ "opencode-sdd@canary"` in plugin
+  And opencode.json contains `"plugin": ["opencode-sdd@canary"]`
+  And `plugin entry: opencode-sdd@canary` is printed to stdout
+  When I re-run the plain `install --yes` (release default on the same config)
+  Then it exits 0 and prints install: no changes. while stderr warns opencode-sdd is already referenced in the config as 'opencode-sdd@canary'
+  And opencode.json still contains `"plugin": ["opencode-sdd@canary"]` exactly once (no silent downgrade)
+  When I run `install --yes --local /app`
+  Then it exits 0 and opencode.json contains `"plugin": ["file:///app"]`
+  And I keep the terminal capture and the final opencode.json in the evidence folder

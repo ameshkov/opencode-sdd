@@ -20,6 +20,12 @@ and this project adheres to
   order preserved). Offers to create `opencode.json` when none exists
   and degrades gracefully (no model values, exit 0) when the probe
   fails.
+- `install` accepts `--tag <spec>` (pins `opencode-sdd@<spec>`, e.g.
+  `canary` or a version) and `--local [path]` (registers a local build
+  via a `file://` entry, defaulting to the running package). A canary
+  (prerelease) build self-pins the `canary` dist-tag, and the wizard
+  never silently switches a config that already pins a build back to
+  `latest`.
 
 ### Changed
 
@@ -31,7 +37,7 @@ and this project adheres to
   verify them before finishing.
 - `doc-changelog` now omits R&D-only changes so the Unreleased section
   tracks user-facing changes only.
-- Pinned opencode to 1.18.23 (`@opencode-ai/sdk`, `@opencode-ai/plugin`,
+- Pinned opencode to 1.18.27 (`@opencode-ai/sdk`, `@opencode-ai/plugin`,
   binary).
 
 ### Fixed

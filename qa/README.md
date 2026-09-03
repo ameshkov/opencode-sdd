@@ -158,7 +158,7 @@ docker compose -f qa/docker-compose.yml cp qa:/work/sdd-manual/.sdd \
 | Docker engine | host | `docker info`; ~2 GB free (315 MB gateway image + ~1 GB workspace image) |
 | OpenRouter API key | `qa/.env` (gitignored) | needed to START the stack; see 3.2 |
 | Outbound HTTPS to `openrouter.ai/api/v1` | host (docker) | the gateway forwards every request there; checked by `check-deps.sh` |
-| opencode binary 1.18.23 | image | `qa/Dockerfile` `ARG OPENCODE_VERSION` |
+| opencode binary 1.18.27 | image | `qa/Dockerfile` `ARG OPENCODE_VERSION` |
 | Node 24, pnpm 10.14 | image + host | CLI wizard, scratch project; the runner needs `pnpm qa:run` on the host |
 | git, python3, vim, curl | image | scratch project, config edits, smoke tests |
 | Plugin source + `build/` | image | compiled by `qa/Dockerfile` from the repo context |

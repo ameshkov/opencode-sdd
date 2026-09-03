@@ -79,6 +79,30 @@ list. This Install section is kept in sync with the wizard's flags as
 part of the feature's definition of done — if the flags or behaviour
 change, this section is updated.
 
+By default the wizard registers the bare `"opencode-sdd"` entry (the npm
+`latest` release). Two flags change what is registered:
+
+- `--tag <spec>` — pin an npm dist-tag or version (e.g. `canary`,
+  `latest`, `1.2.0`), written as `"opencode-sdd@<spec>"`:
+
+  ```sh
+  npx opencode-sdd install --tag canary
+  ```
+
+- `--local [path]` — register a local build directory instead of an npm
+  package, written as `"file://<path>"` (defaults to the installed
+  opencode-sdd package itself; `path` may be relative):
+
+  ```sh
+  npx opencode-sdd install --local ../opencode-sdd
+  ```
+
+A canary (prerelease) build of the wizard self-pins the `canary`
+dist-tag even without `--tag`, so the config always references the
+build you installed. The wizard never silently switches a config that
+already pins a specific build back to the `latest` entry — it prints a
+warning and leaves the pinned reference untouched.
+
 ### Manual install
 
 If you prefer to edit config by hand, add `opencode-sdd` to the `plugin`
@@ -136,14 +160,28 @@ example `1.2.1-canary.<sha>`). Use it to try the latest unreleased work:
 npx opencode-sdd@canary install
 ```
 
-or install it as a regular package:
+The canary wizard writes `"opencode-sdd@canary"` into your config, so
+opencode loads the canary build it self-pinned — a release build's
+bare `"opencode-sdd"` entry would resolve to the `latest` release
+instead. You can also pin the tag from a release build:
+
+```sh
+npx opencode-sdd install --tag canary
+```
+
+or install canary as a regular package:
 
 ```sh
 npm install opencode-sdd@canary
 ```
 
 Canary builds never touch `latest`; stable `v*` releases are published
-the usual way.
+the usual way. The `opencode-sdd@canary` (and `name@version` /
+`file://`) plugin entry forms are supported as of opencode 1.18.x
+(verified against 1.18.27), which parses plugin specs with
+`npm-package-arg` and installs them with npm's Arborist. The `npm:` prefix
+is NOT a valid registry spec (`npm-package-arg` treats it as an alias
+target), so pinned entries are written as `opencode-sdd@<spec>`.
 
 ## The SDD Short Flow
 

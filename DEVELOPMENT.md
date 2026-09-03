@@ -339,7 +339,7 @@ Notes:
 - BuildKit (`# syntax=docker/dockerfile:1`) is required for the pnpm
   cache mounts and for `--output type=local`.
 - The `opencode` binary version is pinned via the `OPENCODE_VERSION`
-  build arg (default `1.18.23`, matching the version the e2e suite targets
+  build arg (default `1.18.27`, matching the version the e2e suite targets
   in [docs/e2e.md](./docs/e2e.md)).
   Override with `--build-arg OPENCODE_VERSION=...`.
 - `.dockerignore` excludes `build/`, `node_modules/`, and tooling

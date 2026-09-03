@@ -156,6 +156,13 @@ You MUST follow the following rules for EVERY task that you perform:
 - You MUST run tests with the `pnpm test` script to verify that your
   changes do not break existing functionality.
 
+- When you need to test anything against a real `opencode` host, do NOT
+  mess with the local opencode installation (its config files, state,
+  or installed binary). Always run it inside a Docker image instead —
+  the project images (`Dockerfile`, `qa/Dockerfile`) carry the tested
+  `opencode` binary and the plugin, and the virtual opencode config
+  stays isolated from the host.
+
 - After completing the task you MUST verify that the code you've written
   follows the Code Guidelines in this file.
 
@@ -273,10 +280,19 @@ CLI entry (src/cli/install.ts)
       ↓
 CLI modules (src/cli/*.ts: argv, prerequisites, config-resolver,
             target-select, model-probe, recommend, yes-selection,
-            interactive-selection, config-patcher, agent-model-*)
+            interactive-selection, config-patcher, plugin-entry,
+            own-package, agent-model-*)
       ↓
 User opencode config on disk (read + JSONC-safe patch + atomic write)
 ```
+
+The install CLI writes exactly three plugin entry forms: the bare
+`opencode-sdd` (npm `latest`), `opencode-sdd@<tag|version>` (an
+`npm-package-arg` registry spec — verified against opencode 1.18.27,
+which resolves plugin specs via `npm-package-arg` + Arborist), and
+`file://<abs-path>` for local builds. Never write the `npm:`-prefixed
+form: `npm-package-arg` parses it as an alias TARGET, not a registry
+spec, so it cannot resolve to `opencode-sdd`.
 
 Definitions MUST NOT import from the entry point. Sibling definition
 layers (`agents/`, `commands/`) MUST NOT import from each other; shared

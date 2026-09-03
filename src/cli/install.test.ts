@@ -6,7 +6,7 @@ import { main } from './install.js';
 import type { Candidate } from './config-resolver.js';
 import type { DetectResult } from './prerequisites.js';
 
-const ok = (): DetectResult => ({ ok: true, version: '1.18.23' });
+const ok = (): DetectResult => ({ ok: true, version: '1.18.27' });
 const missing = (): DetectResult => ({ ok: false });
 
 // A minimal valid JSON config written to the resolved target's path
@@ -414,6 +414,149 @@ describe('main (config patcher integration)', () => {
     };
     expect(onDisk.plugin).toEqual(['opencode-sdd']);
     log.mockRestore();
+    error.mockRestore();
+  });
+});
+
+describe('main (plugin entry resolution)', () => {
+  let dir: string;
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'sdd-install-entry-'));
+  });
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const releaseOwn = { root: '/tmp/opencode-sdd', version: '1.2.1', prerelease: false };
+  const canaryOwn = { root: '/tmp/opencode-sdd', version: '1.2.1-canary.abc123', prerelease: true };
+
+  /** Minimal deps for a patch-through run against `target`. */
+  function patchDeps(target: string, extra: object = {}) {
+    return {
+      detect: ok,
+      enumerateCandidates: () => [{ source: 'project', path: target } as Candidate],
+      promptTarget: vi.fn().mockResolvedValue({ source: 'project', path: target } as Candidate),
+      selectInteractiveModels: vi
+        .fn()
+        .mockResolvedValue({ selection: {}, warnings: [], degraded: false }),
+      confirmPatch: vi.fn().mockResolvedValue(true),
+      ...extra,
+    };
+  }
+
+  it('writes an npm pin and prints the entry when --tag is given', async () => {
+    const target = join(dir, 'tag.json');
+    writeFileSync(target, `{ "$schema": "x" }`);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const exit = await main(['install', '--tag', 'canary'], patchDeps(target));
+
+    expect(exit).toBe(0);
+    expect(log).toHaveBeenCalledWith('plugin entry: opencode-sdd@canary');
+    const onDisk = JSON.parse(readFileSync(target, 'utf8')) as {
+      plugin: string[];
+    };
+    expect(onDisk.plugin).toEqual(['opencode-sdd@canary']);
+    log.mockRestore();
+    error.mockRestore();
+  });
+
+  it('self-pins the canary dist-tag when the running build is a prerelease', async () => {
+    const target = join(dir, 'canary-self.json');
+    writeFileSync(target, `{ "$schema": "x" }`);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const exit = await main(['install'], patchDeps(target, { readOwnPackage: () => canaryOwn }));
+
+    expect(exit).toBe(0);
+    expect(log).toHaveBeenCalledWith('plugin entry: opencode-sdd@canary');
+    const onDisk = JSON.parse(readFileSync(target, 'utf8')) as {
+      plugin: string[];
+    };
+    expect(onDisk.plugin).toEqual(['opencode-sdd@canary']);
+    log.mockRestore();
+    error.mockRestore();
+  });
+
+  it('keeps the bare latest entry for a release build (default behaviour unchanged)', async () => {
+    const target = join(dir, 'release-default.json');
+    writeFileSync(target, `{ "$schema": "x" }`);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const exit = await main(['install'], patchDeps(target, { readOwnPackage: () => releaseOwn }));
+
+    expect(exit).toBe(0);
+    expect(log).toHaveBeenCalledWith('plugin entry: opencode-sdd');
+    const onDisk = JSON.parse(readFileSync(target, 'utf8')) as {
+      plugin: string[];
+    };
+    expect(onDisk.plugin).toEqual(['opencode-sdd']);
+    log.mockRestore();
+    error.mockRestore();
+  });
+
+  it('writes a file:// entry for --local (defaulting to the running package root)', async () => {
+    const target = join(dir, 'local.json');
+    writeFileSync(target, `{ "$schema": "x" }`);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const exit = await main(
+      ['install', '--local'],
+      patchDeps(target, { readOwnPackage: () => releaseOwn }),
+    );
+
+    expect(exit).toBe(0);
+    expect(log).toHaveBeenCalledWith('plugin entry: file:///tmp/opencode-sdd');
+    const onDisk = JSON.parse(readFileSync(target, 'utf8')) as {
+      plugin: string[];
+    };
+    expect(onDisk.plugin).toEqual(['file:///tmp/opencode-sdd']);
+    log.mockRestore();
+    error.mockRestore();
+  });
+
+  it('keeps a pinned reference and warns instead of silently downgrading it', async () => {
+    const target = join(dir, 'keep-pin.json');
+    const original = `{
+  "plugin": ["opencode-sdd@canary"]
+}`;
+    writeFileSync(target, original);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const exit = await main(['install'], patchDeps(target, { readOwnPackage: () => releaseOwn }));
+
+    expect(exit).toBe(0);
+    expect(readFileSync(target, 'utf8')).toBe(original); // untouched
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("'opencode-sdd@canary'"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('no changes'));
+    log.mockRestore();
+    error.mockRestore();
+  });
+
+  it('exits 1 when --tag has an invalid value', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exit = await main(['install', '--tag', 'bad value'], {
+      detect: ok,
+      enumerateCandidates: () => [],
+    });
+    expect(exit).toBe(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('invalid --tag value'));
+    error.mockRestore();
+  });
+
+  it('exits 1 when --local points at a missing path', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const exit = await main(['install', '--local', join(dir, 'does-not-exist')], {
+      detect: ok,
+      enumerateCandidates: () => [],
+    });
+    expect(exit).toBe(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('does not exist'));
     error.mockRestore();
   });
 });

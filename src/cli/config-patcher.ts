@@ -8,9 +8,11 @@ import {
   modify,
   parseTree,
   type FormattingOptions,
+  type Node as JsoncNode,
   type ParseError,
 } from 'jsonc-parser';
 import { applyAgentModels } from './agent-model-patch.js';
+import { isOpenCodeSddReference, planPluginEntry } from './plugin-entry.js';
 
 /**
  * The user's per-subagent model choices passed into {@link computePatch}.
@@ -65,6 +67,14 @@ export interface ComputedPatch {
    * before the write in every mode.
    */
   readonly diff: string;
+  /**
+   * Warning note set when the desired plugin entry was NOT applied
+   * because a different opencode-sdd reference is already present
+   * (`planPluginEntry` returned `keep-existing` — the config pins a
+   * form the automatic default must not silently switch away from).
+   * Printed by the caller and absent otherwise.
+   */
+  readonly pluginEntryNote?: string;
 }
 
 /**
@@ -82,13 +92,30 @@ interface PatcherFormatting {
 /**
  * Optional inputs to {@link computePatch}. `formatting` overrides the
  * 2-space default; `targetPath` is included in error messages so the
- * user can tell which file failed to parse.
+ * user can tell which file failed to parse. `pluginEntry`/`pluginExplicit`
+ * select the plugin entry the patch registers (default: the bare
+ * `opencode-sdd` entry) and whether it was explicitly requested via CLI
+ * flags.
  */
 export interface ComputeOptions {
   /** Override the default 2-space formatting for newly-created nodes. */
   readonly formatting?: PatcherFormatting;
   /** Included in malformed-JSONC error messages. */
   readonly targetPath?: string;
+  /**
+   * The plugin entry string to register (default `'opencode-sdd'`).
+   * Accepts the bare name, an npm `opencode-sdd@<spec>` pin, or a
+   * `file://<abs-path>` local-build entry.
+   */
+  readonly pluginEntry?: string;
+  /**
+   * `true` when `pluginEntry` was explicitly requested via CLI flags
+   * (`--tag`/`--local`). An explicit entry replaces an existing
+   * opencode-sdd reference; the automatic default only upgrades a bare
+   * `opencode-sdd` reference and keeps (never silently downgrades) a
+   * pinned one.
+   */
+  readonly pluginExplicit?: boolean;
 }
 
 /** Default 2-space formatting (matches opencode's config style). */
@@ -123,9 +150,11 @@ function renderDiff(current: string, patchedText: string, fileName?: string): st
 }
 
 /**
- * Compute an idempotent patch that adds the `opencode-sdd` plugin entry
- * to the target's `plugin` array when absent (deduped — never appended
- * twice), and applies the per-subagent `model` assignments from
+ * Compute an idempotent patch that adds the plugin entry (`opencode-sdd`
+ * by default, or the `pluginEntry` given in {@link ComputeOptions}) to
+ * the target's `plugin` array when absent (deduped — never appended
+ * twice, never replaced when the automatic default must not yank an
+ * existing pin), and applies the per-subagent `model` assignments from
  * {@link Selection.models} when present. `current` is parsed with
  * `jsonc-parser.parseTree`, which natively accepts `//` and `/* *&#47;`
  * comments, trailing commas, and unquoted property names — so `.json`
@@ -136,9 +165,10 @@ function renderDiff(current: string, patchedText: string, fileName?: string): st
  * patches the source text in place — untouched subtrees (including
  * adjacent comments) are never re-serialized.
  *
- * Idempotency: when the `plugin` array already contains `'opencode-sdd'`
- * and every selected model already equals the on-disk value, `modify` is
- * not called and `patchedText === current` — `noChanges` is `true`.
+ * Idempotency: when the `plugin` array already contains the desired
+ * entry and every selected model already equals the on-disk value,
+ * `modify` is not called and `patchedText === current` — `noChanges`
+ * is `true`.
  *
  * Failure modes: malformed JSONC raises an `Error('malformed JSONC ...
  * <path>')` before any `modify` runs; the caller's top-level guard
@@ -163,38 +193,14 @@ export function computePatch(
     throw new Error(`malformed JSONC${pathQualifier} (${errors.length} parse error(s))`);
   }
 
-  const pluginNode = findNodeAtLocation(root, ['plugin']);
-  let patchedText: string;
-  if (pluginNode === undefined) {
-    // Top-level `plugin` key is absent — create it with
-    // ['opencode-sdd']. `modify` inserts a new top-level key; the
-    // default `getInsertionIndex` appends at the end of the existing
-    // property list, preserving the relative order of existing keys.
-    patchedText = applyEdits(
-      current,
-      modify(current, ['plugin'], [PLUGIN_ENTRY], {
-        formattingOptions: formatting,
-      }),
-    );
-  } else {
-    const existingRaw = getNodeValue(pluginNode);
-    const existing = Array.isArray(existingRaw) ? (existingRaw as unknown[]) : [];
-    if (existing.includes(PLUGIN_ENTRY)) {
-      // Idempotent: the plugin entry is already present — no edits,
-      // `patchedText === current`.
-      patchedText = current;
-    } else {
-      // Append at index === current length. `jsonc-parser` inserts the
-      // new element at that index; existing entries (and any inline
-      // comments on them) are byte-preserved.
-      patchedText = applyEdits(
-        current,
-        modify(current, ['plugin', existing.length], PLUGIN_ENTRY, {
-          formattingOptions: formatting,
-        }),
-      );
-    }
-  }
+  const pluginEntry = options.pluginEntry ?? PLUGIN_ENTRY;
+  const pluginExplicit = options.pluginExplicit ?? false;
+
+  // Step 1: plugin registration. The `plugin` array is either created
+  // or planned via planPluginEntry (noop / add / replace / keep).
+  const pluginStep = applyPluginEntry(current, root, formatting, pluginEntry, pluginExplicit);
+  const pluginEntryNote = pluginStep.note;
+  let patchedText = pluginStep.patchedText;
 
   // Step 2: per-subagent model step. Delegated to the sibling pure
   // module to keep config-patcher.ts under the 300-line max-lines gate.
@@ -207,7 +213,98 @@ export function computePatch(
 
   const noChanges = patchedText === current;
   const diff = noChanges ? '' : renderDiff(current, patchedText, options.targetPath);
-  return { patchedText, noChanges, diff };
+  return {
+    patchedText,
+    noChanges,
+    diff,
+    ...(pluginEntryNote === undefined ? {} : { pluginEntryNote }),
+  };
+}
+
+/**
+ * Apply a single `jsonc-parser` `modify` edit at `path` (a top-level
+ * key or an array index) with the value `entry`, using the given
+ * formatting so newly created/adjacent nodes match opencode's style.
+ */
+function editPlugin(
+  current: string,
+  path: (string | number)[],
+  entry: string,
+  formatting: FormattingOptions,
+): string {
+  return applyEdits(
+    current,
+    modify(current, path, entry, {
+      formattingOptions: formatting,
+    }),
+  );
+}
+
+/**
+ * Resolve the plugin-array step of {@link computePatch}: create the
+ * top-level `plugin` key when absent, else plan against the existing
+ * entries (exact-match no-op, append, in-place replace, or keep with a
+ * warning note). Returns the patched text plus an optional keep-existing
+ * note for the caller.
+ */
+function applyPluginEntry(
+  current: string,
+  root: JsoncNode,
+  formatting: FormattingOptions,
+  pluginEntry: string,
+  pluginExplicit: boolean,
+): { patchedText: string; note?: string } {
+  const pluginNode = findNodeAtLocation(root, ['plugin']);
+  if (pluginNode === undefined) {
+    // Top-level `plugin` key is absent — create it with
+    // [pluginEntry] (the key's value is an ARRAY, unlike the element
+    // edits below). `modify` inserts a new top-level key; the default
+    // `getInsertionIndex` appends at the end of the existing property
+    // list, preserving the relative order of existing keys.
+    return {
+      patchedText: applyEdits(
+        current,
+        modify(current, ['plugin'], [pluginEntry], {
+          formattingOptions: formatting,
+        }),
+      ),
+    };
+  }
+
+  const existingRaw = getNodeValue(pluginNode);
+  const existing = Array.isArray(existingRaw) ? (existingRaw as string[]) : [];
+  const action = planPluginEntry(existing, pluginEntry, pluginExplicit);
+  if (action === 'noop') {
+    // Idempotent: the plugin entry is already present — no edits,
+    // `patchedText === current`.
+    return { patchedText: current };
+  }
+  if (action === 'add') {
+    // Append at index === current length. `jsonc-parser` inserts the
+    // new element at that index; existing entries (and any inline
+    // comments on them) are byte-preserved.
+    return {
+      patchedText: editPlugin(current, ['plugin', existing.length], pluginEntry, formatting),
+    };
+  }
+  if (action === 'replace') {
+    // Replace the single existing opencode-sdd reference in place;
+    // other plugin entries and their comments are byte-preserved.
+    const index = existing.findIndex(isOpenCodeSddReference);
+    return {
+      patchedText: editPlugin(current, ['plugin', index], pluginEntry, formatting),
+    };
+  }
+  // keep-existing: a different opencode-sdd reference is already
+  // present and the automatic default must not yank it. Leave the
+  // array untouched and surface a warning note for the caller.
+  const kept = existing.find(isOpenCodeSddReference) ?? '?';
+  return {
+    patchedText: current,
+    note:
+      `opencode-sdd is already referenced in the config as '${kept}'; ` +
+      `keeping it (requested '${pluginEntry}'). Re-run with --tag/--local or edit the config to switch.`,
+  };
 }
 
 /**

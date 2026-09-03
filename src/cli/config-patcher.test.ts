@@ -218,6 +218,100 @@ describe('computePatch — comment and formatting preservation', () => {
   });
 });
 
+describe('computePatch — custom plugin entry', () => {
+  it('creates the plugin key with a custom entry when absent', () => {
+    const current = `{
+  "$schema": "x"
+}`;
+    const { patchedText, noChanges } = computePatch(current, EMPTY_SELECTION, {
+      pluginEntry: 'opencode-sdd@canary',
+      pluginExplicit: true,
+    });
+    expect(noChanges).toBe(false);
+    const parsed = JSON.parse(patchedText) as { plugin: string[] };
+    expect(parsed.plugin).toEqual(['opencode-sdd@canary']);
+  });
+
+  it('is a no-op when the custom entry is already present (exact match)', () => {
+    const current = `{
+  "plugin": ["opencode-sdd@canary"]
+}`;
+    const { patchedText, noChanges, pluginEntryNote } = computePatch(current, EMPTY_SELECTION, {
+      pluginEntry: 'opencode-sdd@canary',
+    });
+    expect(noChanges).toBe(true);
+    expect(patchedText).toBe(current);
+    expect(pluginEntryNote).toBeUndefined();
+  });
+
+  it('replaces a different opencode-sdd reference when the entry is explicit', () => {
+    const current = `{
+  "plugin": ["other-plugin", "opencode-sdd"]
+}`;
+    const { patchedText, noChanges } = computePatch(current, EMPTY_SELECTION, {
+      pluginEntry: 'opencode-sdd@canary',
+      pluginExplicit: true,
+    });
+    expect(noChanges).toBe(false);
+    const parsed = JSON.parse(patchedText) as { plugin: string[] };
+    expect(parsed.plugin).toEqual(['other-plugin', 'opencode-sdd@canary']);
+  });
+
+  it('replaces in place and preserves comments on untouched sibling entries', () => {
+    const current = `{
+  "plugin": [
+    "other-plugin", // keep me
+    "opencode-sdd"
+  ]
+}`;
+    const { patchedText } = computePatch(current, EMPTY_SELECTION, {
+      pluginEntry: 'opencode-sdd@canary',
+      pluginExplicit: true,
+    });
+    // The comment on the untouched sibling entry survives, and the pinned
+    // entry replaced the bare one at its original position.
+    expect(patchedText).toContain('// keep me');
+    expect(patchedText).toContain('"opencode-sdd@canary"');
+  });
+
+  it('auto-upgrades a bare reference to the pin without explicit flags', () => {
+    const current = `{
+  "plugin": ["opencode-sdd"]
+}`;
+    const { patchedText, pluginEntryNote } = computePatch(current, EMPTY_SELECTION, {
+      pluginEntry: 'opencode-sdd@canary',
+    });
+    const parsed = JSON.parse(patchedText) as { plugin: string[] };
+    expect(parsed.plugin).toEqual(['opencode-sdd@canary']);
+    expect(pluginEntryNote).toBeUndefined();
+  });
+
+  it('keeps a pinned reference unchanged under the automatic default and surfaces a note', () => {
+    const current = `{
+  "plugin": ["opencode-sdd@canary"]
+}`;
+    const { patchedText, noChanges, pluginEntryNote } = computePatch(current, EMPTY_SELECTION, {
+      pluginEntry: 'opencode-sdd',
+    });
+    expect(noChanges).toBe(true);
+    expect(patchedText).toBe(current);
+    expect(pluginEntryNote).toContain("'opencode-sdd@canary'");
+    expect(pluginEntryNote).toContain("'opencode-sdd'");
+  });
+
+  it('keeps existing and notes ambiguity when multiple opencode-sdd references exist', () => {
+    const current = `{
+  "plugin": ["opencode-sdd", "opencode-sdd@canary"]
+}`;
+    const { noChanges, pluginEntryNote } = computePatch(current, EMPTY_SELECTION, {
+      pluginEntry: 'opencode-sdd@1.2.0',
+      pluginExplicit: true,
+    });
+    expect(noChanges).toBe(true);
+    expect(pluginEntryNote).toContain("'opencode-sdd@1.2.0'");
+  });
+});
+
 describe('computePatch — failure modes', () => {
   it('throws a clear error when the source is malformed JSONC', () => {
     // Broken: array literal is not closed.

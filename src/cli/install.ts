@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { parseArgs } from './argv.js';
+import { parseArgs, type ParsedArgs } from './argv.js';
 import {
   applyPatch,
   computePatch,
@@ -26,6 +26,8 @@ import {
   buildInteractiveSelection,
   type InteractiveSelectionResult,
 } from './interactive-selection.js';
+import { resolvePluginEntry, type PluginEntryResolution } from './plugin-entry.js';
+import { readOwnPackage, type OwnPackageInfo } from './own-package.js';
 
 /**
  * Printed to stderr (and the run exits 0) when no patchable target is
@@ -60,17 +62,22 @@ const CREATE_NEW_CONFIG_FILENAME = 'opencode.json';
  * `jsonc-parser.parseTree`, so the subsequent `computePatch` call (via
  * `applyConfigPatch`) reads + patches it through the same JSONC-safe
  * writer as an edit-existing run. The `plugin` array already contains
- * `'opencode-sdd'`, so the patcher's plugin-edit step is a no-op
- * against this skeleton — only the per-subagent `model` assignments
- * (via `applyAgentModels`) produce a diff. A minimal valid skeleton is
+ * `pluginEntry`, so the patcher's plugin-edit step is a no-op against
+ * this skeleton — only the per-subagent `model` assignments (via
+ * `applyAgentModels`) produce a diff. A minimal valid skeleton is
  * written first and then patched by the same code path that edits
  * existing files, so creation and editing share one JSONC-safe writer.
+ *
+ * @param pluginEntry - the resolved plugin entry string (bare name,
+ *                      `opencode-sdd@<spec>`, or `file://<abs-path>`).
  */
-const CREATE_NEW_SKELETON = `{
+function createNewSkeleton(pluginEntry: string): string {
+  return `{
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-sdd"],
+  "plugin": ["${pluginEntry}"],
   "agent": {}
 }`;
+}
 
 /**
  * Optional dependencies of {@link main}, used to inject test doubles.
@@ -110,6 +117,13 @@ export interface MainDeps {
    * already been printed by `applyConfigPatch`.
    */
   confirmPatch?: () => Promise<boolean>;
+  /**
+   * Override the own-package probe (used by tests to inject a canned
+   * {@link OwnPackageInfo} without reading the running package's
+   * `package.json`). Defaults to {@link readOwnPackage} applied to the
+   * module's own `import.meta.url`.
+   */
+  readOwnPackage?: () => OwnPackageInfo | null;
 }
 
 /**
@@ -126,6 +140,17 @@ function buildResolverEnv(): ResolverEnv {
     homedir: homedir(),
     platform: platform(),
   };
+}
+
+/**
+ * Default own-package probe: read the package this CLI belongs to by
+ * walking up from this module's `import.meta.url` (compiled as
+ * `<pkg>/build/cli/install.js`). Returns `null` when the running code
+ * is not inside an `opencode-sdd` package — the resolver then falls
+ * back to the bare entry.
+ */
+function defaultReadOwnPackage(): OwnPackageInfo | null {
+  return readOwnPackage(import.meta.url);
 }
 
 /**
@@ -153,6 +178,17 @@ async function pickOrPromptTarget(
 }
 
 /**
+ * The plugin entry resolution this run applies, threaded into
+ * {@link applyConfigPatch} after {@link createNewConfig} writes the
+ * skeleton. Carries the desired config string and whether it came from
+ * explicit CLI flags.
+ */
+interface PluginIntent {
+  readonly entry: string;
+  readonly explicit: boolean;
+}
+
+/**
  * Read the resolved target's current text, compute the idempotent
  * patch, print the diff preview, optionally gate on user confirmation,
  * and apply atomically. Returns the process exit status: 0 on success,
@@ -165,11 +201,17 @@ async function pickOrPromptTarget(
  * the diff was already printed above as the preview. Decline -> no
  * write, exit 0. The no-op short-circuit (`patch.noChanges`) runs
  * BEFORE the gate, so an idempotent re-run never prompts.
+ *
+ * `plugin` carries the desired plugin entry; a keep-existing note (a
+ * different opencode-sdd reference is already present) is printed to
+ * stderr before the no-op/diff dispatch so the reason is visible on
+ * both the idempotent and the patching paths.
  */
 async function applyConfigPatch(
   target: Candidate,
   deps: MainDeps,
   selection: Selection,
+  plugin: PluginIntent,
   confirm?: () => Promise<boolean>,
 ): Promise<number> {
   let currentText: string;
@@ -182,7 +224,16 @@ async function applyConfigPatch(
 
   const patch: ComputedPatch = computePatch(currentText, selection, {
     targetPath: target.path,
+    pluginEntry: plugin.entry,
+    pluginExplicit: plugin.explicit,
   });
+
+  if (patch.pluginEntryNote !== undefined) {
+    // keep-existing warning: printed in every mode, before the diff
+    // ("no changes" or preview), so the unchanged plugin array is
+    // explainable even on an idempotent re-run.
+    console.error(patch.pluginEntryNote);
+  }
 
   if (patch.noChanges) {
     // No-op path: print "no changes" to stdout, exit 0. The diff
@@ -268,7 +319,11 @@ async function buildModelSelection(
  * (`promptTarget` returns null on a Ctrl-C / cancel) — `main` then
  * prints {@link NO_TARGET_SELECTED_HINT} and exits 0.
  */
-async function createNewConfig(cwd: string, deps: MainDeps): Promise<Candidate | null> {
+async function createNewConfig(
+  cwd: string,
+  deps: MainDeps,
+  pluginEntry: string,
+): Promise<Candidate | null> {
   const synthetic: Candidate = {
     source: 'create',
     path: join(cwd, CREATE_NEW_CONFIG_FILENAME),
@@ -286,8 +341,68 @@ async function createNewConfig(cwd: string, deps: MainDeps): Promise<Candidate |
   // minimal valid skeleton is written first and then patched by the
   // same code path that edits existing files").
   const writeTarget = deps.writeTarget ?? defaultAtomicWrite;
-  writeTarget(accepted.path, CREATE_NEW_SKELETON);
+  writeTarget(accepted.path, createNewSkeleton(pluginEntry));
   return accepted;
+}
+
+/**
+ * Validate `--local` path existence and resolve the plugin entry this
+ * run registers. Precedence: explicit `--tag` / `--local` from the
+ * parsed args, else the build-aware default (a prerelease build pins
+ * the `canary` dist-tag; a release build keeps the bare `latest`
+ * entry). Returns the resolved intent, or an error message for the
+ * caller to print and bail.
+ */
+function resolvePlugin(
+  parsed: ParsedArgs,
+  deps: MainDeps,
+): { ok: true; plugin: PluginIntent } | { ok: false; message: string } {
+  if (parsed.localPath !== undefined && !existsSync(parsed.localPath)) {
+    return { ok: false, message: `--local path does not exist: ${parsed.localPath}` };
+  }
+  try {
+    const own = (deps.readOwnPackage ?? defaultReadOwnPackage)();
+    const resolved: PluginEntryResolution = resolvePluginEntry({
+      tag: parsed.tag,
+      local: parsed.local,
+      localPath: parsed.localPath,
+      cwd: buildResolverEnv().cwd,
+      own,
+    });
+    return { ok: true, plugin: resolved };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Select the configuration target this run patches. Empty candidates
+ * resolve to the interactive create-new fallback (offered only in
+ * interactive mode — `--yes` + no config is an error, never a
+ * non-interactive create). Otherwise the prompt or `--yes` default
+ * picks among the discovered candidates.
+ *
+ * @returns the selected target (or `null` when the user cancels), or an
+ *          error message when no config is resolvable and `--yes` is
+ *          set.
+ */
+async function selectTarget(
+  candidates: readonly Candidate[],
+  deps: MainDeps,
+  yes: boolean,
+  pluginEntry: string,
+): Promise<{ target: Candidate | null; error?: string }> {
+  if (candidates.length === 0) {
+    if (yes) {
+      // --yes + no resolvable config -> exit non-zero, writes nothing.
+      // create-new is a user choice, NOT a non-interactive default.
+      return { target: null, error: NO_RESOLVABLE_TARGET_HINT };
+    }
+    return {
+      target: await createNewConfig(buildResolverEnv().cwd, deps, pluginEntry),
+    };
+  }
+  return { target: await pickOrPromptTarget(candidates, deps, yes) };
 }
 
 /**
@@ -299,7 +414,8 @@ async function createNewConfig(cwd: string, deps: MainDeps): Promise<Candidate |
  * to stderr as `install: <message>` and translated to exit 1 rather
  * than escaping as an unhandled rejection.
  *
- * The spine is: parse argv -> detect opencode -> resolve target
+ * The spine is: parse argv -> detect opencode -> resolve the plugin
+ * entry (--tag/--local, else build-aware default) -> resolve target
  * (interactive prompt or `--yes` default) -> print the resolved path
  * -> read + compute + apply the patcher dispatch. With `--yes` +
  * no-config the wizard exits non-zero and writes nothing (create-new
@@ -327,35 +443,36 @@ export async function main(argv: string[], deps: MainDeps = {}): Promise<number>
       return 1;
     }
 
+    // Detect opencode first (the per-phase machine in the usage text),
+    // then resolve the plugin entry this run registers before touching
+    // any target: explicit --tag / --local, else the build-aware
+    // default (a canary build self-pins). Errors surface as a message
+    // + exit 1.
     const detected = (deps.detect ?? detect)();
     if (!detected.ok) {
       console.error(INSTALL_OPENCODE_HINT);
       return 1;
     }
-
     console.log(`opencode ${detected.version} detected`);
 
-    const candidates = (deps.enumerateCandidates ?? enumerateCandidates)(buildResolverEnv());
-    if (candidates.length === 0 && yes) {
-      // --yes + no resolvable config -> exit non-zero, writes nothing.
-      // create-new is a user choice, NOT a non-interactive default (the
-      // --yes path never auto-creates).
-      console.error(NO_RESOLVABLE_TARGET_HINT);
+    const resolvedPlugin = resolvePlugin(parsed.args, deps);
+    if (!resolvedPlugin.ok) {
+      console.error(`install: ${resolvedPlugin.message}`);
       return 1;
     }
+    const plugin: PluginIntent = resolvedPlugin.plugin;
+    console.log(`plugin entry: ${plugin.entry}`);
 
-    let target: Candidate | null;
-    if (candidates.length === 0) {
-      // Interactive create-new fallback. Offer the synthetic create-new
-      // candidate (at `<cwd>/opencode.json`) via the existing
-      // promptTarget wrapper; on accept, write the minimal skeleton via
-      // the same atomic-write primitive as applyPatch. On decline
-      // (Ctrl-C at the create-new prompt), falls through to the
-      // NO_TARGET_SELECTED_HINT + exit 0 path below.
-      target = await createNewConfig(buildResolverEnv().cwd, deps);
-    } else {
-      target = await pickOrPromptTarget(candidates, deps, yes);
+    // Resolve the target config: prompt (interactive) or `--yes`
+    // default over the discovered candidates; create-new fallback
+    // when none exists. Cancel -> exit 0, unresolvable + --yes -> 1.
+    const candidates = (deps.enumerateCandidates ?? enumerateCandidates)(buildResolverEnv());
+    const selected = await selectTarget(candidates, deps, yes, plugin.entry);
+    if (selected.error !== undefined) {
+      console.error(selected.error);
+      return 1;
     }
+    const target = selected.target;
     if (target === null) {
       // Cancel at the prompt (Ctrl-C -> null) — exit 0 per the exit
       // -status policy. This branch fires on both the interactive
@@ -369,7 +486,7 @@ export async function main(argv: string[], deps: MainDeps = {}): Promise<number>
     console.log(target.path);
 
     const { selection, confirm } = await buildModelSelection(yes, deps);
-    return await applyConfigPatch(target, deps, selection, confirm);
+    return await applyConfigPatch(target, deps, selection, plugin, confirm);
   } catch (error) {
     // Top-level guard: any phase error -> non-zero exit with a message.
     // `promptTarget` rethrows non-Ctrl-C failures; this catch surfaces

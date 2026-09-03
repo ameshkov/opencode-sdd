@@ -27,7 +27,7 @@ env:
   # The opencode-ai npm package is published in lockstep with the binary, so
   # this pins both the binary and the package. Matches the version the e2e
   # suite targets (see Dockerfile build arg and docs/e2e.md).
-  OPENCODE_VERSION: '1.18.23'
+  OPENCODE_VERSION: '1.18.27'
 
 jobs:
   ci:

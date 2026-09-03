@@ -39,7 +39,7 @@ describe('package.json CLI wiring', () => {
     // moves from devDependencies to dependencies. Pinned at the same
     // version as the prior devDependency so the CLI's runtime, the CLI's
     // type surface, and the plugin entry's type surface never skew.
-    expect(manifest.dependencies?.['@opencode-ai/sdk']).toBe('1.18.23');
+    expect(manifest.dependencies?.['@opencode-ai/sdk']).toBe('1.18.27');
   });
 
   it('removes @opencode-ai/sdk from devDependencies (no duplicate)', () => {
