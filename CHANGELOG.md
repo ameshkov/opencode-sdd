@@ -10,47 +10,33 @@ and this project adheres to
 
 ### Added
 
-- The `canary` npm dist-tag: every `master` push publishes an unreleased
-  `-canary.<sha>` build, so `npx opencode-sdd@canary` always installs
-  the newest work. `latest` and stable `v*` releases are untouched.
-- `opencode-sdd` CLI binary: `install` subcommand with `--help` and a
-  `--yes` non-interactive mode. Discovers a patchable opencode config,
-  probes reachable models and recommends one per SDD subagent, shows a
-  diff preview, and writes the patch atomically (JSONC comments and key
-  order preserved). Offers to create `opencode.json` when none exists
-  and degrades gracefully (no model values, exit 0) when the probe
-  fails.
-- `install` accepts `--tag <spec>` (pins `opencode-sdd@<spec>`, e.g.
-  `canary` or a version) and `--local [path]` (registers a local build
-  via a `file://` entry, defaulting to the running package). A canary
-  (prerelease) build self-pins the `canary` dist-tag, and the wizard
-  never silently switches a config that already pins a build back to
-  `latest`.
+- `opencode-sdd` CLI: `install` wizard (`--yes`, `--help`) that finds a
+  patchable opencode config, probes reachable models and recommends one
+  per SDD agent, shows a diff preview, and writes the patch atomically.
+- `install --tag <spec>` and `--local [path]`: pin an npm dist-tag or
+  version, or register a local build directory; prerelease builds
+  self-pin the `canary` tag and pinned entries are never silently reset.
+- Canary releases: every `master` push publishes `<version>-canary.<sha>`
+  to the `canary` npm dist-tag (`npx opencode-sdd@canary`).
 
 ### Changed
 
-- Removed the `sdd-build` orchestrator agent: `/prd-auto-implement` now
-  runs under whichever agent invokes it, and the install wizard no
-  longer recommends a model for it.
-- `prd-implement-issue` and `sdd-implement` require flipping the
-  `### [ ] Task N:` heading markers (not only the step bullets) and
-  verify them before finishing.
-- `doc-changelog` now omits R&D-only changes so the Unreleased section
-  tracks user-facing changes only.
+- `sdd-build` orchestrator removed: `/prd-auto-implement` now runs under
+  whichever agent invokes it.
+- `prd-implement-issue` and `sdd-implement` require checking the
+  `### [ ] Task N:` heading markers and verify them before finishing.
+- `doc-changelog` omits R&D-only changes, keeping the Unreleased section
+  user-facing only.
 - Pinned opencode to 1.18.27 (`@opencode-ai/sdk`, `@opencode-ai/plugin`,
   binary).
 
 ### Fixed
 
-- The `sdd-command` tool is now actually gated at runtime: denied
-  globally via `permission`, allowed for SDD workers, and explicitly
-  denied for other agents (requires opencode 1.18.23+).
-- `npx opencode-sdd@<tag>` silently exit 0 on POSIX without doing
-  anything: npm exposes the bin as a `node_modules/.bin` symlink, the
-  entry guard compared `import.meta.url` (resolved file) with
-  `process.argv[1]` (symlink path) and never matched. The guard now
-  compares real paths. On Windows the `.cmd` shim already invoked the
-  resolved file, so only POSIX installs were affected.
+- `sdd-command` is now actually gated: denied globally via `permission`,
+  allowed for SDD workers, and explicitly denied to other agents
+  (requires opencode 1.18.23+).
+- On POSIX, `npx opencode-sdd@<tag>` no longer exits 0 without doing
+  anything: the bin entry guard now resolves the npm `.bin` symlink.
 
 ## [v1.2.1] - 2026-07-03
 
