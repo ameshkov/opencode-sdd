@@ -153,8 +153,8 @@ the source of truth the install wizard consults.
 ### Canary
 
 Every push to `master` publishes a fresh canary build to the `canary`
-npm dist-tag — the package version plus a `-canary.<sha>` suffix (for
-example `1.2.1-canary.<sha>`). Use it to try the latest unreleased work:
+npm dist-tag — the package version plus a `-canary.<sha>` suffix. Use
+it to try the latest unreleased work:
 
 ```sh
 npx opencode-sdd@canary install

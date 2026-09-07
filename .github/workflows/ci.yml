@@ -129,10 +129,10 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      # `1.2.1-canary.<sha12>` sorts below the release `1.2.1` (SemVer
-      # prerelease) and above the previous canary. The npm view guard makes
-      # re-runs (e.g. retrying a failed job) idempotent; concurrent master
-      # pushes get distinct SHAs, hence distinct versions.
+      # The `<version>-canary.<sha12>` suffix sorts below the release
+      # `<version>` (SemVer prerelease) and above the previous canary. The
+      # npm view guard makes re-runs (e.g. retrying a failed job) idempotent;
+      # concurrent master pushes get distinct SHAs, hence distinct versions.
       - name: Publish canary to npm
         run: |
           set -euo pipefail
