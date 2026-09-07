@@ -6,7 +6,7 @@ import { main } from './install.js';
 import type { Candidate } from './config-resolver.js';
 import type { DetectResult } from './prerequisites.js';
 
-const ok = (): DetectResult => ({ ok: true, version: '1.18.27' });
+const ok = (): DetectResult => ({ ok: true, version: '1.18.29' });
 const missing = (): DetectResult => ({ ok: false });
 
 // A minimal valid JSON config written to the resolved target's path

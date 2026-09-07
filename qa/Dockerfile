@@ -28,7 +28,7 @@ RUN pnpm install --frozen-lockfile && pnpm build
 
 FROM node:24-bookworm-slim AS qa-workspace
 
-ARG OPENCODE_VERSION=1.18.27
+ARG OPENCODE_VERSION=1.18.29
 
 # Baked at build time by qa/scripts/setup/qa-up.sh (which computes the
 # repo hash and passes it via `docker compose build --build-arg`).

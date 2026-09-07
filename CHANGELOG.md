@@ -27,7 +27,7 @@ and this project adheres to
   `### [ ] Task N:` heading markers and verify them before finishing.
 - `doc-changelog` omits R&D-only changes, keeping the Unreleased section
   user-facing only.
-- Pinned opencode to 1.18.27 (`@opencode-ai/sdk`, `@opencode-ai/plugin`,
+- Pinned opencode to 1.18.29 (`@opencode-ai/sdk`, `@opencode-ai/plugin`,
   binary).
 
 ### Fixed

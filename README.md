@@ -178,7 +178,7 @@ npm install opencode-sdd@canary
 Canary builds never touch `latest`; stable `v*` releases are published
 the usual way. The `opencode-sdd@canary` (and `name@version` /
 `file://`) plugin entry forms are supported as of opencode 1.18.x
-(verified against 1.18.27), which parses plugin specs with
+(verified against 1.18.29), which parses plugin specs with
 `npm-package-arg` and installs them with npm's Arborist. The `npm:` prefix
 is NOT a valid registry spec (`npm-package-arg` treats it as an alias
 target), so pinned entries are written as `opencode-sdd@<spec>`.

@@ -288,7 +288,7 @@ User opencode config on disk (read + JSONC-safe patch + atomic write)
 
 The install CLI writes exactly three plugin entry forms: the bare
 `opencode-sdd` (npm `latest`), `opencode-sdd@<tag|version>` (an
-`npm-package-arg` registry spec — verified against opencode 1.18.27,
+`npm-package-arg` registry spec — verified against opencode 1.18.29,
 which resolves plugin specs via `npm-package-arg` + Arborist), and
 `file://<abs-path>` for local builds. Never write the `npm:`-prefixed
 form: `npm-package-arg` parses it as an alias TARGET, not a registry
