@@ -67,6 +67,7 @@ describe('buildInteractiveSelection', () => {
 
   it('recommended-first sorting + badging passed to the prompt (integration with rankFor)', async () => {
     const deepseek = modelStub({ id: 'deepseek-chat', providerID: 'deepseek' });
+    const kimi = modelStub({ id: 'kimi-k2', providerID: 'moonshot' });
     const qwen = modelStub({ id: 'qwen-coder', providerID: 'qwen' });
     const selectAgentModel = vi.fn().mockResolvedValue(deepseek);
     await buildInteractiveSelection(
@@ -74,19 +75,22 @@ describe('buildInteractiveSelection', () => {
         createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
         createClient: () =>
           stubClient(
-            { 'qwen-coder': qwen, 'deepseek-chat': deepseek },
+            { 'qwen-coder': qwen, 'kimi-k2': kimi, 'deepseek-chat': deepseek },
             { small_model: 'qwen/qwen-coder', model: 'qwen/qwen-coder' },
           ),
       },
       { selectAgentModel },
     );
-    // First prompt call is for sdd-planner (keywords ['deepseek','qwen'], strong).
+    // First prompt call is for sdd-planner (strong keywords
+    // ['deepseek','kimi','qwen','opus','gpt']): kimi ranks immediately
+    // after deepseek, then qwen.
     const config = selectAgentModel.mock.calls[0]?.[0] as {
       choices: Array<{ value: Model; recommended: boolean; name: string }>;
     };
     expect(config.choices.map((c) => c.value.id)).toEqual([
       'deepseek-chat', // kw0
-      'qwen-coder', // kw1
+      'kimi-k2', // kw1
+      'qwen-coder', // kw2
     ]);
     expect(config.choices[0]?.name).toContain('[recommended]');
   });
@@ -94,9 +98,8 @@ describe('buildInteractiveSelection', () => {
   it('per-agent cancel (Ctrl-C -> null) emits an AGENT_UNSET_WARNING and skips that agent', async () => {
     const deepseek = modelStub({ id: 'deepseek-chat', providerID: 'deepseek' });
     // First agent (sdd-planner) -> cancelled; subsequent agents -> deepseek.
-    // All agents get prompted (recommended sorted first); the user can
-    // pick any model for any agent. The cheap agents CAN select deepseek
-    // even though it's not recommended for them.
+    // All agents get prompted (recommended models sorted first); the user
+    // can pick any model for any agent — recommended or not.
     const selectAgentModel = vi.fn().mockResolvedValueOnce(null).mockResolvedValue(deepseek);
     const result = await buildInteractiveSelection(
       {
@@ -132,7 +135,7 @@ describe('buildInteractiveSelection', () => {
         createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
         createClient: () => stubClient({ 'claude-3': claude }, {}),
       },
-      // No agent matches (claude is neither deepseek/qwen nor mimo/gemini),
+      // No agent matches (claude is none of the shipped keyword families),
       // but a prompt IS shown per agent (ranked.length === models.length > 0).
       { selectAgentModel: vi.fn().mockResolvedValue(claude) },
     );

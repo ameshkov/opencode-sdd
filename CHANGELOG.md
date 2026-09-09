@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Install wizard recommendation keywords: every SDD agent now prefers
+  `deepseek` first. The four strong agents additionally rank `kimi`
+  (right after `deepseek`), `qwen`, `opus` and `gpt`; the two read-only
+  researchers now prefer `deepseek`/`qwen` instead of `mimo`/`gemini`.
+
 ## [v1.3.0] - 2026-09-07
 
 ### Added

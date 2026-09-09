@@ -258,15 +258,17 @@ describe('SUBAGENT_RECOMMENDATIONS', () => {
   });
 
   it('drives autoSelect for the shipped table — every agent selects its recommended match from a covering fixture', () => {
-    // A fixture covering every shipped keyword (deepseek, qwen, mimo,
-    // gemini) so every shipped agent selects a recommended model (no
+    // A fixture covering every shipped keyword (deepseek, kimi, qwen,
+    // opus, gpt for the strong tier; deepseek and qwen for the cheap
+    // tier) so every shipped agent selects a recommended model (no
     // fallback/unset needed) — verifying the shipped table flows through
     // autoSelect end-to-end.
     const models = [
       model('deepseek-chat'),
+      model('kimi-k2'),
       model('qwen-coder'),
-      model('mimo-7b'),
-      model('gemini-flash'),
+      model('opus-4'),
+      model('gpt-5'),
     ];
     const sel = autoSelect(SUBAGENT_RECOMMENDATIONS, models, {});
     expect(sel).toHaveLength(6);
@@ -275,5 +277,18 @@ describe('SUBAGENT_RECOMMENDATIONS', () => {
       if (s.status !== 'selected') throw new Error('unreachable');
       expect(s.reason).toBe('recommended');
     }
+    // The two cheap agents also recommend `deepseek` first (shared kw0).
+    expect(sel[4]).toEqual({
+      agent: 'sdd-plan-reviewer',
+      status: 'selected',
+      model: model('deepseek-chat'),
+      reason: 'recommended',
+    });
+    expect(sel[5]).toEqual({
+      agent: 'sdd-explore',
+      status: 'selected',
+      model: model('deepseek-chat'),
+      reason: 'recommended',
+    });
   });
 });

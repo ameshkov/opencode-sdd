@@ -9,8 +9,10 @@
 #   `bifrost/openrouter/<slug>` in config `model` values.
 # - ORDER MATTERS: this is the enumeration order the CLI wizard sees, so
 #   the keyword-priority ordering assertions of TC-CLI-02 read the same
-#   order as `SUBAGENT_RECOMMENDATIONS` (deepseek/qwen = strong tier,
-#   mimo/gemini = cheap tier). Keep the rows tier-mixed exactly like this.
+#   order as `SUBAGENT_RECOMMENDATIONS` (deepseek + qwen are recommended
+#   for every agent; gpt-5.6-luna additionally matches the strong tier's
+#   `gpt` keyword; kimi/opus have no allowlist entry). Keep the rows
+#   tier-mixed exactly like this.
 # - Keep the list <= 7 models: the wizard's per-agent prompt folds after
 #   seven entries.
 # - Before changing an id, confirm it still exists and still supports

@@ -74,24 +74,25 @@ export interface AgentRecommendation {
  * fallback rule.
  *
  * Keywords are model-family substrings matched case-insensitively against
- * a model's `id` (primary) and `name` (secondary). Strong agents prefer
- * capable reasoning/coding families (`deepseek`, `qwen`); cheap agents
- * prefer fast/cheap families (`mimo`, `gemini`). This is the
- * minimum-viable curated set; it is the SINGLE source of truth for
- * keyword updates — the algorithm in this module never references
- * specific families, so the table can be revised by editing only this
- * constant (no algorithm change). The maintainer's update cadence is:
- * edit `SUBAGENT_RECOMMENDATIONS` and ship a new release.
+ * a model's `id` (primary) and `name` (secondary). Both tiers now prefer
+ * the same capable reasoning/coding base families (`deepseek` first, then
+ * `qwen`); the strong tier additionally ranks `kimi` (immediately after
+ * `deepseek`), `opus` and `gpt`. This is the minimum-viable curated set;
+ * it is the SINGLE source of truth for keyword updates — the algorithm in
+ * this module never references specific families, so the table can be
+ * revised by editing only this constant (no algorithm change). The
+ * maintainer's update cadence is: edit `SUBAGENT_RECOMMENDATIONS` and
+ * ship a new release.
  */
 export const SUBAGENT_RECOMMENDATIONS: readonly AgentRecommendation[] = [
   // STRONG (fallback: `model`) — the heavyweight agents.
-  { agent: 'sdd-planner', keywords: ['deepseek', 'qwen'], tier: 'strong' },
-  { agent: 'sdd-reviewer', keywords: ['deepseek', 'qwen'], tier: 'strong' },
-  { agent: 'sdd-coder', keywords: ['deepseek', 'qwen'], tier: 'strong' },
-  { agent: 'sdd-validator', keywords: ['deepseek', 'qwen'], tier: 'strong' },
+  { agent: 'sdd-planner', keywords: ['deepseek', 'kimi', 'qwen', 'opus', 'gpt'], tier: 'strong' },
+  { agent: 'sdd-reviewer', keywords: ['deepseek', 'kimi', 'qwen', 'opus', 'gpt'], tier: 'strong' },
+  { agent: 'sdd-coder', keywords: ['deepseek', 'kimi', 'qwen', 'opus', 'gpt'], tier: 'strong' },
+  { agent: 'sdd-validator', keywords: ['deepseek', 'kimi', 'qwen', 'opus', 'gpt'], tier: 'strong' },
   // CHEAP (fallback: `small_model` then `model`) — the read-only researchers.
-  { agent: 'sdd-plan-reviewer', keywords: ['mimo', 'gemini'], tier: 'cheap' },
-  { agent: 'sdd-explore', keywords: ['mimo', 'gemini'], tier: 'cheap' },
+  { agent: 'sdd-plan-reviewer', keywords: ['deepseek', 'qwen'], tier: 'cheap' },
+  { agent: 'sdd-explore', keywords: ['deepseek', 'qwen'], tier: 'cheap' },
 ];
 
 /**

@@ -143,12 +143,14 @@ an object whose `model` field is that string — for example:
 
 Replace the example `provider/model` values with the IDs your providers
 expose (run `npx opencode-sdd install` to see them listed and recommended
-per subagent). The four heavyweight agents (`sdd-planner`,
-`sdd-reviewer`, `sdd-coder`, `sdd-validator`) benefit from a strong
-reasoning/coding model; the two read-only researchers (`sdd-plan-reviewer`
-and `sdd-explore`) can use a cheaper/faster one. The tier split is
-defined in `src/cli/recommend.ts` (`SUBAGENT_RECOMMENDATIONS`) — it is
-the source of truth the install wizard consults.
+per subagent). All six subagents are recommended capable
+reasoning/coding families with `deepseek` first; the four heavyweight
+agents (`sdd-planner`, `sdd-reviewer`, `sdd-coder`, `sdd-validator`)
+additionally rank `kimi`, `qwen`, `opus` and `gpt`, while the two
+read-only researchers (`sdd-plan-reviewer` and `sdd-explore`) rank
+`qwen` second and fall back to a cheaper/faster `small_model`. The tier
+split is defined in `src/cli/recommend.ts` (`SUBAGENT_RECOMMENDATIONS`)
+— it is the source of truth the install wizard consults.
 
 ### Canary
 

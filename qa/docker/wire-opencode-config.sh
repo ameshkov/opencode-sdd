@@ -30,10 +30,13 @@
 # offer them) and (b) pollutes every model list with its 7 models, which
 # pushes the QA models below the CLI wizard's 7-item prompt fold.
 #
-# Keyword coverage: the allowlist layout (deepseek + qwen for strong
-# agents, mimo + gemini for cheap ones) is what makes the wizard's
+# Keyword coverage: the allowlist layout (deepseek + qwen recommended
+# for every agent, gpt-5.6-luna additionally for the strong tier; mimo,
+# gemini and claude are non-recommended) is what makes the wizard's
 # `[recommended]` badges and keyword-priority ordering observable — see
-# qa/bifrost/models.tsv. Keep at least one model per keyword when editing.
+# qa/bifrost/models.tsv. Keep at least one model per keyword when editing
+# (kimi and opus currently have no allowlist entry; they are exercised by
+# the unit tests instead).
 set -euo pipefail
 
 PROJECT="${1:-}"

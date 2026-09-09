@@ -67,10 +67,11 @@ describe('formatModelValue', () => {
 
 describe('buildYesSelection', () => {
   it('auto-selects the first matching recommended model per subagent + formats provider/model', async () => {
-    // Both `deepseek-chat` and `qwen-coder` are available; the strong
-    // agents (sdd-planner, sdd-reviewer, sdd-coder, sdd-validator)
-    // all match `deepseek` first per the shipped SUBAGENT_RECOMMENDATIONS
-    // table (keywords: ['deepseek', 'qwen'], tier: 'strong').
+    // Both `deepseek-chat` and `qwen-coder` are available; every shipped
+    // agent (strong and cheap tiers alike) recommends `deepseek` first per
+    // the shipped SUBAGENT_RECOMMENDATIONS table (deepseek is the shared
+    // first keyword) — so all six agents pick deepseek-chat and no
+    // warnings are emitted.
     const models: Record<string, Model> = {
       'deepseek-chat': modelStub({ id: 'deepseek-chat', providerID: 'deepseek' }),
       'qwen-coder': modelStub({ id: 'qwen-coder', providerID: 'qwen' }),
@@ -80,20 +81,15 @@ describe('buildYesSelection', () => {
       createClient: () => stubClient(models, {}),
     });
     expect(result.degraded).toBe(false);
-    // The two cheap-tier agents (sdd-explore, sdd-plan-reviewer) have
-    // keywords ['mimo','gemini'] — neither matches deepseek-chat/qwen-coder,
-    // and the fixture's empty defaults `{}` mean no small_model/model
-    // fallback — both go `unset` and each emit an AGENT_UNSET_WARNING.
-    expect(result.warnings).toHaveLength(2);
-    expect(
-      result.warnings.every((w) => w.includes('sdd-explore') || w.includes('sdd-plan-reviewer')),
-    ).toBe(true);
+    expect(result.warnings).toHaveLength(0);
     expect(result.selection.models).toBeDefined();
     const map = result.selection.models!;
-    // deepseek beats qwen (declaration-order priority).
+    // deepseek beats qwen (declaration-order priority) for every agent.
+    expect(map.size).toBe(6);
     expect(map.get('sdd-planner')).toBe('deepseek/deepseek-chat');
     expect(map.get('sdd-coder')).toBe('deepseek/deepseek-chat');
-    expect(map.get('sdd-explore')).toBeUndefined();
+    expect(map.get('sdd-explore')).toBe('deepseek/deepseek-chat');
+    expect(map.get('sdd-plan-reviewer')).toBe('deepseek/deepseek-chat');
   });
 
   it('deepseek chosen over qwen when both available (keyword priority)', async () => {
@@ -165,18 +161,19 @@ describe('buildYesSelection', () => {
   });
 
   it('mixed: some agents matched, some unset — only the unset produce warnings', async () => {
-    // deepseek available (covers the four strong agents); the two cheap
-    // agents (sdd-explore, sdd-plan-reviewer) match neither mimo nor
-    // gemini and have no small_model fallback -> they go unset.
+    // kimi-k2 available (matches the strong tier's `kimi` keyword); the
+    // two cheap agents (sdd-explore, sdd-plan-reviewer) match neither
+    // deepseek nor qwen and have no small_model fallback -> they go
+    // unset.
     const models: Record<string, Model> = {
-      'deepseek-chat': modelStub({ id: 'deepseek-chat', providerID: 'deepseek' }),
+      'kimi-k2': modelStub({ id: 'kimi-k2', providerID: 'moonshot' }),
     };
     const result = await buildYesSelection({
       createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
       createClient: () => stubClient(models, {}),
     });
     expect(result.degraded).toBe(false);
-    expect(result.selection.models?.get('sdd-planner')).toBe('deepseek/deepseek-chat');
+    expect(result.selection.models?.get('sdd-planner')).toBe('moonshot/kimi-k2');
     expect(result.selection.models?.get('sdd-explore')).toBeUndefined();
     expect(result.warnings).toHaveLength(2); // the two cheap agents only
     expect(

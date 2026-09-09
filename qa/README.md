@@ -352,9 +352,10 @@ Why the provider is shaped this way:
   verbatim, so `openrouter/deepseek/deepseek-v4-flash` reaches
   OpenRouter as `deepseek/deepseek-v4-flash`).
 - Six models from four families with distinct cost tiers; the order IS
-  the wizard's enumeration order (see the allowlist file for why
-  deepseek/qwen precede mimo/gemini: it matches the wizard's
-  recommendation keywords).
+  the wizard's enumeration order (see the allowlist file: deepseek and
+  qwen are recommended for every agent, gpt-5.6-luna additionally for
+  the strong tier, and mimo/gemini/claude are non-recommended — the
+  split makes the wizard's `[recommended]` badges observable).
 - `disabled_providers: ["opencode"]` turns off opencode's built-in
   free-tier provider, which is loaded automatically whenever no explicit
   provider list is set. Leaving it on breaks two QA properties: requests

@@ -25,7 +25,7 @@ Scenario: Usage and argument handling
 Scenario: Interactive install picks the project config
   Given I reset the scratch baseline first (wired config + fresh git): qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'
   And opencode.json has the plugin array REMOVED and no agent entries (the provider and model stay)
-  And the wiring registers the six-model allowlist including the wizard keyword families deepseek and qwen (strong tier) and mimo and gemini (cheap tier)
+  And the wiring registers the six-model allowlist including the wizard keyword families deepseek and qwen (recommended for every agent) and gpt (strong tier via gpt-5.6-luna; kimi and opus have no allowlist entry)
   When I run the wizard: `qa exec 'node /app/build/cli/install.js install'`
   And I answer the target prompt — pick the project config
   And I read the sdd-planner choice list (strong tier)
@@ -35,8 +35,8 @@ Scenario: Interactive install picks the project config
   And I review the printed unified diff and answer the confirm prompt
   Then the target prompt text is Select the opencode config to patch: and the choice is labeled [project] /work/sdd-manual/opencode.json
   And each subagent prompt is Select a model for <agent>: and lists only bifrost/* models
-  And the strong-tier list is, in order: bifrost/openrouter/deepseek/deepseek-v4-flash [recommended], bifrost/openrouter/qwen/qwen3.5-plus-20260420 [recommended], bifrost/openrouter/xiaomi/mimo-v2.5, bifrost/openrouter/google/gemini-3.1-flash-lite, bifrost/openrouter/anthropic/claude-sonnet-5, bifrost/openrouter/openai/gpt-5.6-luna
-  And the cheap-tier list is bifrost/openrouter/xiaomi/mimo-v2.5 [recommended], bifrost/openrouter/google/gemini-3.1-flash-lite [recommended] followed by the four non-recommended in allowlist order
+  And the strong-tier list is, in order: bifrost/openrouter/deepseek/deepseek-v4-flash [recommended], bifrost/openrouter/qwen/qwen3.5-plus-20260420 [recommended], bifrost/openrouter/openai/gpt-5.6-luna [recommended], bifrost/openrouter/xiaomi/mimo-v2.5, bifrost/openrouter/google/gemini-3.1-flash-lite, bifrost/openrouter/anthropic/claude-sonnet-5
+  And the cheap-tier list is bifrost/openrouter/deepseek/deepseek-v4-flash [recommended], bifrost/openrouter/qwen/qwen3.5-plus-20260420 [recommended] followed by the four non-recommended in allowlist order
   And the diff shows `+ "opencode-sdd"` in plugin and the recommended model per strong and cheap subagent
   And the confirm prompt is Apply this patch? and answering it applies the patch with exit code 0
   And opencode.json is still valid JSONC with comments and formatting of untouched parts preserved
@@ -51,7 +51,7 @@ Scenario: Non-interactive install is idempotent
   And I note the file mtime and size with `stat`
   And I re-run the same command and stat the file again
   Then the first run exits 0 and prints opencode <version> detected, a diff, and no confirmation prompt
-  And opencode.json contains `"plugin": ["opencode-sdd"]` and one agent.<subagent>.model per subagent: deepseek for the 4 strong agents and mimo for the 2 cheap ones
+  And opencode.json contains `"plugin": ["opencode-sdd"]` and one agent.<subagent>.model per subagent: deepseek for all six subagents (every agent shares the deepseek first keyword)
   And the re-run prints exactly install: no changes., exits 0, and the file mtime and size are unchanged
   And I keep both command outputs and the file mtime in the evidence folder
 

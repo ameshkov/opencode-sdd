@@ -42,7 +42,7 @@ describe('promptAgentModel', () => {
   it('sorts recommended models first by keyword declaration order + badges them', async () => {
     const deepseek = modelStub({ id: 'deepseek-chat', providerID: 'deepseek' });
     const qwen = modelStub({ id: 'qwen-coder', providerID: 'qwen' });
-    const other = modelStub({ id: 'gpt-4o', providerID: 'openai' });
+    const other = modelStub({ id: 'claude-4', providerID: 'anthropic' });
     const selectAgentModel = vi.fn().mockResolvedValue(deepseek);
     const result = await promptAgentModel('sdd-planner', [other, qwen, deepseek], sddPlanner, {
       selectAgentModel,
@@ -51,12 +51,12 @@ describe('promptAgentModel', () => {
     const config = selectAgentModel.mock.calls[0]?.[0] as {
       choices: Array<{ value: Model; name: string; recommended: boolean }>;
     };
-    // Recommended [deepseek (kw0), qwen (kw1)] first by keyword priority;
-    // non-recommended [gpt-4o] last in input order.
+    // Recommended [deepseek (kw0), qwen (kw2)] first by keyword priority;
+    // non-recommended [claude-4] last in input order.
     expect(config.choices.map((c) => c.value.id)).toEqual([
       'deepseek-chat',
       'qwen-coder',
-      'gpt-4o',
+      'claude-4',
     ]);
     expect(config.choices[0]?.name).toContain('[recommended]');
     expect(config.choices[1]?.name).toContain('[recommended]');
