@@ -6,6 +6,7 @@ describe('USAGE_TEXT', () => {
     expect(USAGE_TEXT).toContain('-y');
     expect(USAGE_TEXT).toContain('--yes');
     expect(USAGE_TEXT).toContain('--help');
+    expect(USAGE_TEXT).toContain('--version');
     expect(USAGE_TEXT).toContain('install');
   });
 });

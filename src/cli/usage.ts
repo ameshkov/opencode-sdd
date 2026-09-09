@@ -9,6 +9,7 @@ export const USAGE_TEXT = `opencode-sdd install - set up the opencode-sdd plugin
 Usage:
   opencode-sdd install [-y|--yes] [--tag <spec> | --local [path]]
   opencode-sdd --help
+  opencode-sdd --version
 
 Flags:
   -y, --yes   Auto-select the recommended model for each SDD subagent and
@@ -22,6 +23,7 @@ Flags:
               path defaults to the opencode-sdd package this CLI runs
               from; writes "file://<path>". Paths may be relative.
   --help      Show this help and exit.
+  --version   Print the opencode-sdd version and exit.
 
 Workflow:
   1. Detect the opencode binary on PATH.

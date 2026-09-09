@@ -75,9 +75,10 @@ The wizard edits configuration only; opencode itself installs the plugin
 from the npm registry on the next restart. Restart opencode (or start a
 new session) to load it — the `/sdd-*`, `/prd-*`, and `/doc-*` commands
 become available immediately. Run `npx opencode-sdd --help` for the full flag
-list. This Install section is kept in sync with the wizard's flags as
-part of the feature's definition of done — if the flags or behaviour
-change, this section is updated.
+list, or `npx opencode-sdd --version` to print the installed
+opencode-sdd version. This Install section is kept in sync with the
+wizard's flags as part of the feature's definition of done — if the
+flags or behaviour change, this section is updated.
 
 By default the wizard registers the bare `"opencode-sdd"` entry (the npm
 `latest` release). Two flags change what is registered:

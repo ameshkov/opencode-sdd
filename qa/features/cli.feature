@@ -21,6 +21,14 @@ Scenario: Usage and argument handling
   And the bogus flag and the unknown subcommand print the usage to stderr and exit 1
   And I keep the terminal capture in the evidence folder
 
+@TC-CLI-11 @P2
+Scenario: Version flag
+  When I run `--version`: `qa exec 'node /app/build/cli/install.js --version; echo exit=$?'`
+  And I run `install --version`: `qa exec 'node /app/build/cli/install.js install --version; echo exit=$?'`
+  Then both invocations print opencode-sdd <version> (the version read from /app/package.json) and exit 0
+  And the output carries no opencode detected line, no prompts, and no diff
+  And I keep the terminal capture in the evidence folder
+
 @TC-CLI-02 @P0
 Scenario: Interactive install picks the project config
   Given I reset the scratch baseline first (wired config + fresh git): qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'

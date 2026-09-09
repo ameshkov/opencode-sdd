@@ -154,6 +154,47 @@ function defaultReadOwnPackage(): OwnPackageInfo | null {
 }
 
 /**
+ * Handle `--version`: print the running opencode-sdd version
+ * (`opencode-sdd <version>`) to stdout and return exit 0. When the
+ * running code is not inside an opencode-sdd package the version is
+ * unknown — the run fails with a stderr message and exit 1. `--version`
+ * is an informational flag like `--help`: it short-circuits before
+ * opencode detection, config resolution, and the patcher. Extracted
+ * from {@link main} so `main` stays a thin orchestrator under the
+ * AGENTS.md 50-line function SHOULD.
+ */
+function printVersion(deps: MainDeps): number {
+  const own = (deps.readOwnPackage ?? defaultReadOwnPackage)();
+  if (own === null) {
+    console.error(
+      'opencode-sdd: cannot determine the version (not running from an opencode-sdd package)',
+    );
+    return 1;
+  }
+  console.log(`opencode-sdd ${own.version}`);
+  return 0;
+}
+
+/**
+ * Handle the short-circuit informational flags: `--help` prints the
+ * usage to stdout, `--version` prints the running package version.
+ * Returns the process exit status, or `null` when neither flag was
+ * given (the caller continues into the install wizard). Extracted from
+ * {@link main} so `main` stays a thin orchestrator under the AGENTS.md
+ * 50-line function SHOULD.
+ */
+function handleInfoFlag(args: ParsedArgs, deps: MainDeps): number | null {
+  if (args.help) {
+    console.log(USAGE_TEXT);
+    return 0;
+  }
+  if (args.version) {
+    return printVersion(deps);
+  }
+  return null;
+}
+
+/**
  * Pick the default target under `--yes` (non-interactive) or prompt
  * the user interactively. Returns `null` when no target is selected
  * (Ctrl-C on the prompt maps to `null` via {@link promptTarget}'s
@@ -432,10 +473,10 @@ export async function main(argv: string[], deps: MainDeps = {}): Promise<number>
       return 1;
     }
 
-    const { subcommand, help, yes } = parsed.args;
-    if (help) {
-      console.log(USAGE_TEXT);
-      return 0;
+    const { subcommand, yes } = parsed.args;
+    const infoFlag = handleInfoFlag(parsed.args, deps);
+    if (infoFlag !== null) {
+      return infoFlag;
     }
 
     if (subcommand !== 'install') {

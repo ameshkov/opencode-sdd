@@ -8,6 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `opencode-sdd` CLI: `--version` flag prints the running package
+  version (e.g. `opencode-sdd 1.4.0`) and exits, without running the
+  install wizard.
+
 ## [v1.4.0] - 2026-09-09
 
 ### Changed

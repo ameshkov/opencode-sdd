@@ -1,9 +1,10 @@
 /**
- * Parsed CLI arguments (excluding `node` and the script path). `yes` and
- * `help` are independent flags; `help` short-circuits regardless of the
- * subcommand. `tag`/`local`/`localPath` select the plugin entry the
- * installer registers (`--tag <spec>` pins an npm dist-tag/version;
- * `--local [path]` registers a local build directory).
+ * Parsed CLI arguments (excluding `node` and the script path). `yes`,
+ * `help` and `version` are independent flags; `help` and `version`
+ * short-circuit regardless of the subcommand. `tag`/`local`/`localPath`
+ * select the plugin entry the installer registers (`--tag <spec>` pins
+ * an npm dist-tag/version; `--local [path]` registers a local build
+ * directory).
  *
  * @internal Exported for tests and the parent discriminated-union type;
  *           not directly importable from a barrel.
@@ -12,6 +13,8 @@ export interface ParsedArgs {
   subcommand: 'install' | undefined;
   yes: boolean;
   help: boolean;
+  /** `true` when `--version` was given (prints the package version). */
+  version: boolean;
   /** Value of `--tag <spec>`, when given. */
   tag: string | undefined;
   /** `true` when `--local` was given (with or without a path). */
@@ -87,22 +90,22 @@ function consumePositional(
  * Returns a discriminated union: `{ ok: true, args }` on success, or
  * a typed error describing the first violation (unknown flag, missing
  * subcommand, unknown subcommand, missing flag value, or conflicting
- * `--tag`/`--local` flags). `--help` short-circuits to success
- * regardless of the subcommand; an unknown flag is still an error even
- * alongside `--help` (no silent misconfiguration).
+ * `--tag`/`--local` flags). `--help` and `--version` short-circuit to
+ * success regardless of the subcommand; an unknown flag is still an
+ * error even alongside `--help` (no silent misconfiguration).
  */
 export function parseArgs(argv: string[]): ParseResult {
   let subcommand: 'install' | undefined;
   let yes = false;
-  let help = false;
+  let infoFlag: 'help' | 'version' | undefined;
   let tag: string | undefined;
   let local = false;
   let localPath: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
-    if (token === '--help') {
-      help = true;
+    if (token === '--help' || token === '--version') {
+      infoFlag = token === '--help' ? 'help' : 'version';
       continue;
     }
     if (token === '-y' || token === '--yes') {
@@ -137,18 +140,18 @@ export function parseArgs(argv: string[]): ParseResult {
     subcommand = positional.subcommand;
   }
 
-  return finalizeArgs(subcommand, yes, help, tag, local, localPath);
+  return finalizeArgs(subcommand, yes, infoFlag, tag, local, localPath);
 }
 
 /**
  * Apply the post-argv validation and build the success result: `--tag`
- * and `--local` are mutually exclusive, and without `--help` a
- * subcommand is required.
+ * and `--local` are mutually exclusive, and without an informational
+ * flag (`--help` or `--version`) a subcommand is required.
  */
 function finalizeArgs(
   subcommand: 'install' | undefined,
   yes: boolean,
-  help: boolean,
+  infoFlag: 'help' | 'version' | undefined,
   tag: string | undefined,
   local: boolean,
   localPath: string | undefined,
@@ -156,8 +159,19 @@ function finalizeArgs(
   if (tag !== undefined && local) {
     return { ok: false, reason: 'conflicting-flags' };
   }
-  if (!help && subcommand === undefined) {
+  if (infoFlag === undefined && subcommand === undefined) {
     return { ok: false, reason: 'missing-subcommand' };
   }
-  return { ok: true, args: { subcommand, yes, help, tag, local, localPath } };
+  return {
+    ok: true,
+    args: {
+      subcommand,
+      yes,
+      help: infoFlag === 'help',
+      version: infoFlag === 'version',
+      tag,
+      local,
+      localPath,
+    },
+  };
 }
