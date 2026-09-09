@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v1.4.0] - 2026-09-09
+
 ### Changed
 
 - Install wizard recommendation keywords: every SDD agent now prefers
@@ -157,7 +159,8 @@ and this project adheres to
   server.
 - Husky pre-commit hook running the full `pnpm check` gate.
 
-[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.3.0...HEAD
+[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.4.0...HEAD
+[v1.4.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.4.0
 [v1.3.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.3.0
 [v1.2.1]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.2.1
 [v1.2.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.2.0
