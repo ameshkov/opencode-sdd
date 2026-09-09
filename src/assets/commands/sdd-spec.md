@@ -257,6 +257,9 @@ These are plan failures — never write them:
 - Complete code in every step — if a step changes code, show the code
 - Exact commands with expected output
 - DRY, YAGNI, TDD
+- **No spec references in code**: Code shown in plan steps must never reference
+  the spec, its task IDs, or the plan in comments, identifiers, or test names —
+  comments describe what the code does, not where the code came from.
 
 ### Full Document Template
 

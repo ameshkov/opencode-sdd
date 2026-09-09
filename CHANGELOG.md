@@ -14,6 +14,11 @@ and this project adheres to
   `deepseek` first. The four strong agents additionally rank `kimi`
   (right after `deepseek`), `qwen`, `opus` and `gpt`; the two read-only
   researchers now prefer `deepseek`/`qwen` instead of `mimo`/`gemini`.
+- `prd-implement-issue`, `sdd-implement`, `sdd-spec`, and `prd-issue-to-plan`
+  now explicitly instruct that code comments must not reference the PRD, the
+  spec, or the implementation plan, and must not embed their internal IDs
+  (success criteria, acceptance criteria, issue/task IDs) in comments,
+  identifiers, or test names.
 
 ## [v1.3.0] - 2026-09-07
 

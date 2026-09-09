@@ -321,3 +321,8 @@ Read and follow the plan template:
   Decisions` decision is `Resolved`.
 - **No placeholders**: Every step must contain actual content — never “TBD”,
   “TODO”, or “similar to Task N”
+- **No PRD/plan references in code**: Code shown in plan steps must never
+  reference the PRD, the issue, or the plan — and must never embed their
+  internal identifiers (success criteria, acceptance criteria, issue IDs) in
+  comments, identifiers, or test names. Comments describe what the code does,
+  not where the code came from.

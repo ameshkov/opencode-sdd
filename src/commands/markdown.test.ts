@@ -34,6 +34,8 @@ describe('sdd-spec command file', () => {
       expect(template).toContain('@opencode-sdd-templates/sdd-spec/plan-template.md');
       expect(template).toContain('@opencode-sdd-templates/sdd-spec/task-structure-template.md');
       expect(template).toMatch(/`explore`\s+subagent/);
+      // Code written into plan steps must not reference the spec or its IDs.
+      expect(template).toContain('No spec references in code');
       const asset = await readFile(
         join(markdownDir, 'templates', 'sdd-spec', 'plan-template.md'),
         'utf8',
@@ -55,8 +57,9 @@ describe('sdd-implement command file', () => {
       expect(template).toContain('$ARGUMENTS');
       expect(template).toContain('spec.md');
       // Spec-internal identifiers live in gitignored spec artifacts and must
-      // not leak into shipped source code.
-      expect(template).toContain('No spec-internal IDs in shipped code');
+      // not leak into shipped source code; code comments must not reference
+      // the spec or the implementation plan.
+      expect(template).toContain('No spec/plan references in shipped code');
     }
   });
 });
@@ -133,6 +136,9 @@ describe('prd-issue-to-plan command file', () => {
       expect(result.command.config.template).toContain('before-implementation');
       expect(result.command.config.template).toContain('## Human Decisions');
       expect(result.command.config.template).toContain('Resolved');
+      // Code written into plan steps must not reference the PRD, the issue, or
+      // the plan in comments.
+      expect(result.command.config.template).toContain('No PRD/plan references in code');
       const asset = await readFile(
         join(markdownDir, 'templates', 'prd-issue-to-plan', 'plan-template.md'),
         'utf8',
@@ -153,9 +159,10 @@ describe('prd-implement-issue command file', () => {
       expect(result.command.config.template).toContain('$ARGUMENTS');
       expect(result.command.config.template).toContain('plan.md');
       expect(result.command.config.template).toContain('Blocked by');
-      // Spec-internal IDs (success criteria, user stories, issue IDs) live in
-      // gitignored spec artifacts and must not leak into shipped source code.
-      expect(result.command.config.template).toContain('No spec-internal IDs in shipped code');
+      // Spec-internal identifiers (success criteria, user stories, issue IDs)
+      // live in gitignored spec artifacts and must not leak into shipped
+      // source code; code comments must not reference the PRD or the plan.
+      expect(result.command.config.template).toContain('No PRD/plan references in shipped code');
       expect(result.command.config.template).toContain('SC-001');
       expect(result.command.config.template).toContain('1-AFK');
     }
