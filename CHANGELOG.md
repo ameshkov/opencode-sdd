@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v1.5.0] - 2026-09-22
+
 ### Added
 
 - `opencode-sdd` CLI: `--version` flag prints the running package
@@ -171,7 +173,8 @@ and this project adheres to
   server.
 - Husky pre-commit hook running the full `pnpm check` gate.
 
-[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.4.0...HEAD
+[unreleased]: https://github.com/ameshkov/opencode-sdd/compare/v1.5.0...HEAD
+[v1.5.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.5.0
 [v1.4.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.4.0
 [v1.3.0]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.3.0
 [v1.2.1]: https://github.com/ameshkov/opencode-sdd/releases/tag/v1.2.1
