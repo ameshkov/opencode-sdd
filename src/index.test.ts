@@ -88,26 +88,6 @@ describe('sdd plugin', () => {
     });
   });
 
-  it('registers all five documentation-maintenance commands from Markdown', async () => {
-    await withCommandsDir(async () => {
-      const hooks = await sddPlugin(pluginInput());
-      const config: Config = {};
-      await hooks.config?.(config);
-
-      const docCommands = [
-        'doc-agents',
-        'doc-changelog',
-        'doc-deployment',
-        'doc-development',
-        'doc-readme',
-      ];
-      for (const name of docCommands) {
-        expect(config.command?.[name]).toBeDefined();
-        expect(config.command?.[name]?.template).toContain('$ARGUMENTS');
-      }
-    });
-  });
-
   it('preserves existing user commands and agents', async () => {
     await withCommandsDir(async () => {
       const hooks = await sddPlugin(pluginInput());
@@ -166,7 +146,7 @@ describe('sdd plugin', () => {
         ['---', 'description: a', '---', '', 'Body A $ARGUMENTS', ''].join('\n'),
       );
       await writeFile(
-        join(dirB, 'doc-gen.md'),
+        join(dirB, 'sample-cmd.md'),
         ['---', 'description: b', '---', '', 'Body B $ARGUMENTS', ''].join('\n'),
       );
 
@@ -177,13 +157,13 @@ describe('sdd plugin', () => {
       const configA: Config = {};
       await hooks.config?.(configA);
       expect(configA.command?.['prd-write']?.template).toContain('Body A');
-      expect(configA.command?.['doc-gen']).toBeUndefined();
+      expect(configA.command?.['sample-cmd']).toBeUndefined();
 
       // Second invocation loads dirB — proving the env var is read per call.
       process.env['SDD_COMMANDS_DIR'] = dirB;
       const configB: Config = {};
       await hooks.config?.(configB);
-      expect(configB.command?.['doc-gen']?.template).toContain('Body B');
+      expect(configB.command?.['sample-cmd']?.template).toContain('Body B');
       expect(configB.command?.['prd-write']).toBeUndefined();
     } finally {
       delete process.env['SDD_COMMANDS_DIR'];

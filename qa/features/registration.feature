@@ -1,6 +1,6 @@
 @registration
 Feature: Plugin registration and config merging
-  A clean opencode startup registers the full plugin surface: 16
+  A clean opencode startup registers the full plugin surface: 11
   commands, 6 agents, the `sdd-command` global permission deny and the
   template permission grant — without prompting or erroring. These
   cases re-check on the real runtime what the deterministic mock-LLM
@@ -20,11 +20,11 @@ Background:
 Scenario: Fresh registration surface
   Given I reset the scratch baseline first: qa exec '/app/qa/docker/reset-scratch.sh /work/sdd-manual'
   When I start opencode via the web UI (qa/README.md 3.6): qa/docker/serve-web.sh
-  And I type / in the web UI prompt and list the prd-*, sdd-* and doc-* entries
+  And I type / in the web UI prompt and list the prd-* and sdd-* entries
   And I open the agent selector (Choose agent) and inspect it
-  Then the log contains plugin loading, SDD commands registered with count 16 and SDD agents registered with count 6
+  Then the log contains plugin loading, SDD commands registered with count 11 and SDD agents registered with count 6
   And the log contains no failed to register SDD commands line
-  And the / list shows exactly sdd-spec, sdd-implement, sdd-validate, prd-write, prd-to-issues, prd-issue-to-plan, prd-review-plan, prd-implement-issue, prd-validate-issue, prd-validate, prd-auto-implement, doc-readme, doc-development, doc-deployment, doc-agents and doc-changelog
+  And the / list shows exactly sdd-spec, sdd-implement, sdd-validate, prd-write, prd-to-issues, prd-issue-to-plan, prd-review-plan, prd-implement-issue, prd-validate-issue, prd-validate and prd-auto-implement
   And the agent selector shows no SDD agents (no dedicated orchestrator; the six subagents sdd-planner, sdd-reviewer, sdd-coder, sdd-validator, sdd-plan-reviewer and sdd-explore are all hidden)
   And each of those entries shows a description ending in (provided by opencode-sdd) — the baked definitions carry it too: qa exec 'grep -lc "(provided by opencode-sdd)" /app/src/assets/commands/*.md'
   And I keep opencode.log and screenshots of the / list and the agent selector in the evidence folder
@@ -46,7 +46,7 @@ Scenario: User agent settings survive registration
   Given I added `"agent": { "sdd-explore": { "model": "bifrost/openrouter/qwen/qwen3.5-plus-20260420" } }` to /work/sdd-manual/opencode.json
   And that model differs from the global default bifrost/openrouter/deepseek/deepseek-v4-flash
   When I restart opencode and grep the log for agent name collision, merging onto existing config
-  And I kick off a run that reaches sdd-explore, for example the doc-development research step or a review dimension that explores
+  And I kick off a run that reaches sdd-explore, for example a review dimension that explores
   And I read the gateway log: `qa exec 'curl -fsS "http://bifrost:8080/api/logs?models=qwen3.5-plus-20260420&limit=5"'`
   Then the merge warning appears for sdd-explore on every config-hook evaluation of that boot (the opencode server evaluates the hook several times per boot — multi-project + client/server contexts — so a per-evaluation occurrence is expected; record the count and the boot run id, never assert an exact global count)
   And the agent selector still shows no SDD agents (no duplicate registration) and sdd-explore keeps its plugin description, prompt and permission while using the configured model
@@ -58,11 +58,11 @@ Scenario: User agent settings survive registration
   # the post-merge surface, not a log-line cardinality. The gateway-log
   # half depends on the model under test actually delegating to
   # sdd-explore — on the cheap default the planner may skip the explore
-  # step entirely (all requests deepseek; the doc-development /
-  # doc-readme research steps DO delegate and the qwen requests happen
-  # there). If no explore delegation ran, record that and assert the
-  # mechanism (merge + preservation) only — the delegation trigger is
-  # model-whim dependent, the merge is the product behavior.
+  # step entirely (all requests deepseek; when a review dimension does
+  # explore, the qwen requests happen there). If no explore delegation
+  # ran, record that and assert the mechanism (merge + preservation)
+  # only — the delegation trigger is model-whim dependent, the merge is
+  # the product behavior.
 
 @TC-REG-04 @P1
 Scenario: Command collision is replaced with a warning

@@ -9,4 +9,8 @@ describe('USAGE_TEXT', () => {
     expect(USAGE_TEXT).toContain('--version');
     expect(USAGE_TEXT).toContain('install');
   });
+
+  it('lists config discovery in project, env, global order', () => {
+    expect(USAGE_TEXT).toContain('(project, ENV override, global)');
+  });
 });

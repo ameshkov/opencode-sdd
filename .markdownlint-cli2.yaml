@@ -27,6 +27,4 @@ ignores:
   - qa/evidence/**
   - qa/output/**
   - test/__fixtures__/**
-  - src/assets/commands/templates/doc-agents/**
-  - src/assets/commands/templates/doc-readme/**
   - src/assets/commands/templates/sdd-spec/task-structure-template.md

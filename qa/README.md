@@ -1,7 +1,7 @@
 # Manual QA — opencode-sdd (Gherkin plan + bifrost stack)
 
 This is the manual QA suite for
-[opencode-sdd](https://github.com/opencode-ai/opencode-sdd). It runs the
+[opencode-sdd](https://github.com/ameshkov/opencode-sdd). It runs the
 plugin's real flows against **real frontier models** through
 [bifrost](https://github.com/maximhq/bifrost) (a thin AI gateway) with the
 [OpenRouter](https://openrouter.ai) provider: PRD/SDD flows need a model
@@ -43,7 +43,7 @@ real opencode session and a real LLM:
 - Plugin registration: commands, agents, permission grants, config merging.
 - The short SDD flow, the PRD long flow, and the `prd-auto-implement`
   orchestrator: artifact lifecycle, status transitions, finalization.
-- The `sdd-command` tool and the doc-maintenance commands.
+- The `sdd-command` tool.
 - Failure paths: missing artifacts, missing prerequisites, gateway down,
   malformed config, missing asset directories.
 - Cost sanity: tokens/cost per step, context fit, thinking-mode
@@ -304,7 +304,6 @@ Fixtures (feature descriptions used by the cases):
 | F1 | "Add `mul(a, b)` to `src/math.ts` following TDD." | Short flow |
 | F2 | "Add `divide(a, b)` to `src/math.ts` that throws on division by zero. Single issue, no HITL." | PRD flow |
 | F3 | F2 but the PRD must ask the human whether to throw or return `null` on division by zero. | HITL gate |
-| F4 | "Update the docs of this scaffolding project." | Doc commands |
 
 ### 3.4 opencode configuration
 
@@ -520,15 +519,16 @@ letter/prefix in each TC id matches the file's group:
 | `short-flow.feature` | E — SDD short flow | TC-SF-01..05 |
 | `prd-flow.feature` | F — PRD long flow | TC-PF-01..06 |
 | `orchestrator.feature` | G — `prd-auto-implement` orchestrator | TC-ORCH-01..04 |
-| `docs.feature` | H — Doc maintenance commands | TC-DOC-01..04 |
 | `robustness.feature` | I — Robustness and degradation | TC-ROB-01..05 |
 | `perf.feature` | J — Cost and performance | TC-PERF-01..03 |
 
 The group letter in each TC id (`TC-<GROUP>-NN`) matches the table
 above, so the coverage matrix, exit criteria, and record sheet reference
-files and groups interchangeably. Run one group per opencode session
-using the execution drill in section 2.1; groups are independent unless
-a case's `Given` states otherwise.
+files and groups interchangeably. Group H (the retired doc-maintenance
+suite) has no feature file; the remaining groups keep their historical
+letters. Run one group per opencode session using the execution drill in
+section 2.1; groups are independent unless a case's `Given` states
+otherwise.
 
 ## 5. Coverage Matrix
 
@@ -539,7 +539,7 @@ a case's `Given` states otherwise.
 | Permission merging + model preservation | yes | TC-REG-03..05 |
 | Orchestrator loops / escalation / resume | yes | TC-ORCH-01..03 (web UI) |
 | CLI wizard end to end | no | TC-CLI-01..08 |
-| Short flow / PRD flow / doc flow with a real LLM | no | Groups E, F, H |
+| Short flow / PRD flow with a real LLM | no | Groups E, F |
 | Failure paths (server down, missing assets) | partial | TC-ROB-01..05 |
 | Token cost and context fit | no | Group J |
 | Artifact templates' actual content | partial | Group E/F assertions |
@@ -562,7 +562,7 @@ pnpm qa:run --run-id <id>      # fixed run id instead of a timestamp
 ```
 
 `--case-reset` runs `qa/docker/reset-scratch.sh` in the workspace before
-every case (use it for INDEPENDENT groups — registry, CLI, docs; never
+every case (use it for INDEPENDENT groups — registry, CLI; never
 for the chained groups F/G and E/SF-2..4, which build on the previous
 case's artifacts; those reset once at their first case, see 6.1).
 `--evidence` copies each case's `.sdd` tree and raw `opencode.log` into
@@ -699,7 +699,7 @@ Inference goes through OpenRouter and is **billed to the key's account**:
 - Keep fixtures one-function sized (section 3.3); every file the agent
   reads is paid for in prompt tokens.
 - Merely STARTING the stack costs nothing (no inference until a flow
-  runs); only groups A (smoke), B..J consume tokens. Group C (wizard)
+  runs); only groups A (smoke), B..G and I..J consume tokens. Group C (wizard)
   and the TC-REG-01 surface check need no inference at all.
 - Keep the e2e suite as the regression workhorse — it is free and far
   faster than a manual re-run; use manual runs for what it cannot cover.
@@ -712,7 +712,7 @@ Inference goes through OpenRouter and is **billed to the key's account**:
 - **Expected time per LLM-heavy case** (typical on deepseek-v4-flash):
   `/prd-auto-implement` chain 22–35 min
   (interrupt/resume adds a resume run), planner/review/implement/validate
-  commands 2–8 min each, doc commands 2–5 min, PERF-03's two planner runs
+  commands 2–8 min each, PERF-03's two planner runs
   ~8 min together. A five-minute re-check of `/api/logs` before a re-run
   is cheaper than a second failed run.
 - **Nondeterminism is budgeted**: the flows' interview/approval gates may

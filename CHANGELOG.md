@@ -14,6 +14,12 @@ and this project adheres to
   version (e.g. `opencode-sdd 1.4.0`) and exits, without running the
   install wizard.
 
+### Changed
+
+- Removed the five `/doc-*` documentation-maintenance commands
+  (`/doc-readme`, `/doc-development`, `/doc-deployment`, `/doc-agents`,
+  `/doc-changelog`) and their bundled templates.
+
 ## [v1.4.0] - 2026-09-09
 
 ### Changed

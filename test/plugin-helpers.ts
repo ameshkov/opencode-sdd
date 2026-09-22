@@ -46,11 +46,6 @@ export async function withCommandsDir(fn: (dir: string) => Promise<void>): Promi
     writeCmd('sdd-spec', 'Produce a spec'),
     writeCmd('sdd-implement', 'Implement a spec'),
     writeCmd('sdd-validate', 'Validate a spec'),
-    writeCmd('doc-agents', 'Actualize AGENTS.md'),
-    writeCmd('doc-changelog', 'Update CHANGELOG.md'),
-    writeCmd('doc-deployment', 'Actualize DEPLOYMENT.md'),
-    writeCmd('doc-development', 'Actualize DEVELOPMENT.md'),
-    writeCmd('doc-readme', 'Actualize README.md'),
   ]);
   process.env['SDD_COMMANDS_DIR'] = dir;
   // Neutralise agent loading so command tests stay deterministic (they

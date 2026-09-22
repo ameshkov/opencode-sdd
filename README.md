@@ -13,101 +13,61 @@
          alt="OpenCode SDD Demo" width="600"/>
 </p>
 
-You describe what you want in vague terms.
-The plugin produces a complete, validated development plan — PRD, issues,
-implementation plans, and validation reports — with every phase running in a
-clean, isolated session.
+AI coding agents are great at writing code, but they are terrible at
+*planning* it. You tell an agent "build a payment system" and it starts
+typing without requirements, architecture, or validation. By the time you
+realize it built the wrong thing, you have burned a session full of context
+and a pile of tokens.
+
+**opencode-sdd** gives you a proper workflow: **plan everything before you
+build anything.** The plugin produces a complete, validated development plan
+— PRD, issues, implementation plans, and validation reports — with every
+phase running in a clean, isolated session.
 
 ## Table of Contents
 
-- [The Problem](#the-problem)
-- [The Solution](#the-solution)
 - [Install](#install)
     - [Manual install](#manual-install)
     - [Canary](#canary)
-- [The SDD Short Flow](#the-sdd-short-flow)
+- [Quick Start](#quick-start)
 - [The PRD Long Flow](#the-prd-long-flow)
     - [Auto-Implement](#auto-implement)
-- [Keeping Documentation Current](#keeping-documentation-current)
 - [Honorable Mentions](#honorable-mentions)
-- [Additional Resources](#additional-resources)
-
-## The Problem
-
-AI coding agents are great at writing code, but they're terrible at *planning*
-code. You tell an agent “build a payment system” and it starts typing without
-requirements, architecture, or validation. By the time you realize it built the
-wrong it built the wrong thing, you’ve burned a session full of context and
-a pile of tokens.
-
-## The Solution
-
-**opencode-sdd** is a tool that let's you have a proper workflow:
-**plan everything before you build anything.**
+- [Documentation](#documentation)
 
 ## Install
 
-The quickest way to set up `opencode-sdd` is the `install` wizard. It
-edits your `opencode.json` (or `opencode.jsonc`) to register the plugin
-and assign a model to each SDD subagent.
-
-Run (via `npx`, no global install needed):
+The quickest way to set up `opencode-sdd` is the `install` wizard. It edits
+your `opencode.json` (or `opencode.jsonc`) to register the plugin and assign
+a model to each SDD subagent. Run it via `npx` (no global install needed):
 
 ```sh
 npx opencode-sdd install
 ```
 
-The wizard detects the `opencode` binary on PATH, discovers patchable
-configs (global, an `OPENCODE_CONFIG` override, or project-local), probes
-the models reachable from your configured providers, recommends a
-per-subagent model, shows a before/after diff, and writes the change with
-an idempotent, comment- and order-preserving patch. Re-running it with
-the same selection leaves the file byte-for-byte unchanged.
-
-Pass `-y` (or `--yes`) for a fully unattended install: it auto-selects
-the recommended model per subagent *and* skips the confirmation gate.
+The wizard detects the `opencode` binary, discovers patchable configs
+(project-local, an `OPENCODE_CONFIG` override, or global), probes the models
+reachable from your providers, recommends a per-subagent model, shows a
+before/after diff, and writes the change with an idempotent, comment- and
+order-preserving patch. Pass `-y` (or `--yes`) for a fully unattended
+install:
 
 ```sh
 npx opencode-sdd install --yes
 ```
 
-The wizard edits configuration only; opencode itself installs the plugin
-from the npm registry on the next restart. Restart opencode (or start a
-new session) to load it — the `/sdd-*`, `/prd-*`, and `/doc-*` commands
-become available immediately. Run `npx opencode-sdd --help` for the full flag
-list, or `npx opencode-sdd --version` to print the installed
-opencode-sdd version. This Install section is kept in sync with the
-wizard's flags as part of the feature's definition of done — if the
-flags or behaviour change, this section is updated.
-
-By default the wizard registers the bare `"opencode-sdd"` entry (the npm
-`latest` release). Two flags change what is registered:
-
-- `--tag <spec>` — pin an npm dist-tag or version (e.g. `canary`,
-  `latest`, `1.2.0`), written as `"opencode-sdd@<spec>"`:
-
-  ```sh
-  npx opencode-sdd install --tag canary
-  ```
-
-- `--local [path]` — register a local build directory instead of an npm
-  package, written as `"file://<path>"` (defaults to the installed
-  opencode-sdd package itself; `path` may be relative):
-
-  ```sh
-  npx opencode-sdd install --local ../opencode-sdd
-  ```
-
-A canary (prerelease) build of the wizard self-pins the `canary`
-dist-tag even without `--tag`, so the config always references the
-build you installed. The wizard never silently switches a config that
-already pins a specific build back to the `latest` entry — it prints a
-warning and leaves the pinned reference untouched.
+The wizard edits configuration only; opencode installs the plugin from the
+npm registry on the next restart. Restart opencode (or start a new session)
+to load it — the `/sdd-*` and `/prd-*` commands become available
+immediately. Run `npx opencode-sdd --help` for the full flag list and
+`npx opencode-sdd --version` to print the installed version. See the
+[Install CLI Reference](./docs/reference/install-cli.md) for the workflow,
+the plugin entry forms, canary pinning, and the model recommendation rules.
 
 ### Manual install
 
-If you prefer to edit config by hand, add `opencode-sdd` to the `plugin`
-array in your `opencode.json` (or `opencode.jsonc`):
+To edit config by hand, add `opencode-sdd` to the `plugin` array in your
+`opencode.json` (or `opencode.jsonc`):
 
 ```json
 {
@@ -118,175 +78,94 @@ array in your `opencode.json` (or `opencode.jsonc`):
 
 Then restart opencode as described above. The manual path registers the
 plugin but does not set per-subagent models — run
-`npx opencode-sdd install` afterwards to assign them, or set each
-`agent["<subagent>"].model` entry yourself.
-
-The six SDD subagents are `sdd-planner`, `sdd-reviewer`, `sdd-coder`,
-`sdd-validator`, `sdd-plan-reviewer`, and `sdd-explore`.
-The value is a `provider/model` string from one of your configured
-providers. Add a top-level `agent` object mapping each subagent name to
-an object whose `model` field is that string — for example:
-
-```json
-{
-    "$schema": "https://opencode.ai/config.json",
-    "plugin": ["opencode-sdd"],
-    "agent": {
-        "sdd-planner": { "model": "anthropic/claude-sonnet-4" },
-        "sdd-reviewer": { "model": "anthropic/claude-sonnet-4" },
-        "sdd-coder": { "model": "anthropic/claude-sonnet-4" },
-        "sdd-validator": { "model": "anthropic/claude-sonnet-4" },
-        "sdd-plan-reviewer": { "model": "openai/gpt-4o-mini" },
-        "sdd-explore": { "model": "openai/gpt-4o-mini" }
-    }
-}
-```
-
-Replace the example `provider/model` values with the IDs your providers
-expose (run `npx opencode-sdd install` to see them listed and recommended
-per subagent). All six subagents are recommended capable
-reasoning/coding families with `deepseek` first; the four heavyweight
-agents (`sdd-planner`, `sdd-reviewer`, `sdd-coder`, `sdd-validator`)
-additionally rank `kimi`, `qwen`, `opus` and `gpt`, while the two
-read-only researchers (`sdd-plan-reviewer` and `sdd-explore`) rank
-`qwen` second and fall back to a cheaper/faster `small_model`. The tier
-split is defined in `src/cli/recommend.ts` (`SUBAGENT_RECOMMENDATIONS`)
-— it is the source of truth the install wizard consults.
+`npx opencode-sdd install` afterwards, or set each
+`agent["<subagent>"].model` entry yourself. The six SDD subagents are
+`sdd-planner`, `sdd-reviewer`, `sdd-coder`, `sdd-validator`,
+`sdd-plan-reviewer`, and `sdd-explore`; the
+[Install CLI Reference](./docs/reference/install-cli.md#manual-install-equivalent)
+shows a complete config example and the recommendation rules.
 
 ### Canary
 
-Every push to `master` publishes a fresh canary build to the `canary`
-npm dist-tag — the package version plus a `-canary.<sha>` suffix. Use
-it to try the latest unreleased work:
+Every push to `master` publishes a fresh canary build to the `canary` npm
+dist-tag. Use it to try the latest unreleased work:
 
 ```sh
 npx opencode-sdd@canary install
 ```
 
-The canary wizard writes `"opencode-sdd@canary"` into your config, so
-opencode loads the canary build it self-pinned — a release build's
-bare `"opencode-sdd"` entry would resolve to the `latest` release
-instead. You can also pin the tag from a release build:
+Canary builds never touch `latest`; stable `v*` releases are published the
+usual way. The canary wizard pins `"opencode-sdd@canary"` in your config, so
+opencode loads the canary build it self-pinned. See the
+[Install CLI Reference](./docs/reference/install-cli.md#plugin-entry-forms)
+for the supported plugin entry forms.
 
-```sh
-npx opencode-sdd install --tag canary
-```
-
-or install canary as a regular package:
-
-```sh
-npm install opencode-sdd@canary
-```
-
-Canary builds never touch `latest`; stable `v*` releases are published
-the usual way. The `opencode-sdd@canary` (and `name@version` /
-`file://`) plugin entry forms are supported as of opencode 1.18.x
-(verified against 1.18.29), which parses plugin specs with
-`npm-package-arg` and installs them with npm's Arborist. The `npm:` prefix
-is NOT a valid registry spec (`npm-package-arg` treats it as an alias
-target), so pinned entries are written as `opencode-sdd@<spec>`.
-
-## The SDD Short Flow
+## Quick Start
 
 For a small change you can analyze, implement, and verify in three commands.
 Each command runs with your current agent — no dedicated orchestrator is
 required.
 
-1. Describe the change and produce a lightweight plan.
-2. Implement the plan's tasks following the TDD flow.
-3. Validate the result and write a report.
+1. `/sdd-spec` — describe the change; it writes a lightweight plan to
+   `{SPECS_DIR}/spec.md` (problem analysis, affected files, proposed
+   solution, and tasks).
+2. `/sdd-implement` — run the plan's tasks using the TDD flow (write
+   failing test → verify failure → implement → verify pass).
+3. `/sdd-validate` — validate the result and write
+   `{SPECS_DIR}/validation.md`.
 
-- `/sdd-spec` — analyze a problem and write `SPECS_DIR/spec.md`
-  (problem analysis, affected files, proposed solution, and tasks).
-- `/sdd-implement` — run the tasks defined in `spec.md` using the TDD flow
-  (write failing test → verify failure → implement → verify pass).
-- `/sdd-validate` — validate the implementation and write
-  `SPECS_DIR/validation.md`.
+If `/sdd-validate` reports an incomplete implementation, loop
+`/sdd-implement` → `/sdd-validate` until the overall status is `Complete`.
 
-If `/sdd-validate` reports an incomplete implementation, loop:
-`/sdd-implement` → `/sdd-validate` → `/sdd-implement` → `/sdd-validate`.
-Each revision marks the validation's issues as resolved and sets the
-overall status to `Revised`; re-run `/sdd-validate` until the overall
-status is `Complete`.
-
-`SPECS_DIR` defaults to `.sdd/.current/`.
-
-It's up to you whether you want to keep that directory in source control.
+`SPECS_DIR` defaults to `.sdd/.current/`; whether to keep that directory in
+source control is up to you. See the
+[Slash Command Reference](./docs/reference/commands.md#sdd-short-flow) for
+the full short-flow semantics.
 
 ## The PRD Long Flow
 
-For a larger feature, drive requirements through validated implementation
-in six steps (plus an optional plan review). Each step runs in a clean
-session and produces the next artifact.
+For a larger feature, drive requirements through validated implementation in
+six steps (plus an optional plan review). Each step runs in a clean session
+and produces the next artifact.
 
-1. Write a product spec from a feature description.
-2. Break the spec into independent vertical-slice issues.
-3. Plan a single issue.
-4. *(Optional)* Review that issue's plan before implementing it.
-5. Implement that issue's plan.
-6. Validate that issue against its plan.
-7. Cross-validate every implemented issue.
+1. `/prd-write` — write a product spec (`{SPECS_DIR}/prd.md`) from a
+   feature description.
+2. `/prd-to-issues` — break the spec into independent vertical-slice issues
+   under `{SPECS_DIR}/issues/`.
+3. `/prd-issue-to-plan` — write a plan for one issue.
+4. `/prd-review-plan` — *(optional)* review that issue's plan across six
+   dimensions; writes `review.md` and sets the plan's status to `Approved`
+   or `Needs Revision`.
+5. `/prd-implement-issue` — run one issue's plan.
+6. `/prd-validate-issue` — validate one issue against its plan.
+7. `/prd-validate` — cross-validate all implemented issues and write
+   `{SPECS_DIR}/validation.md`.
 
-- `/prd-write` — produce `SPECS_DIR/prd.md` from a feature description.
-- `/prd-to-issues` — write vertical-slice issues under `SPECS_DIR/issues/`.
-- `/prd-issue-to-plan` — write a plan for one issue.
-- `/prd-review-plan` — *(optional)* review a plan across six dimensions;
-  writes `review.md` and sets the plan's status to Approved or Needs
-  Revision.
-- `/prd-implement-issue` — run one issue's plan.
-- `/prd-validate-issue` — validate one issue against its plan.
-- `/prd-validate` — cross-validate all implemented issues and write
-  `SPECS_DIR/validation.md`.
-
-The two quality gates are iterative — you loop on them until the artifact
-passes:
-
-- **Plan review loop** — `/prd-issue-to-plan` → `/prd-review-plan` →
-  `/prd-issue-to-plan` → `/prd-review-plan` … Each revision marks the
-  review's findings as resolved and sets the verdict to `Revised`; re-run
-  `/prd-review-plan` until the verdict is `Approved`.
-- **Implementation validation loop** — `/prd-implement-issue` →
-  `/prd-validate-issue` → `/prd-implement-issue` → `/prd-validate-issue` …
-  Each revision marks the validation's issues as resolved and sets the
-  overall status to `REVISED`; re-run `/prd-validate-issue` until the
-  overall status is `COMPLETE`.
+The two quality gates are iterative: loop `/prd-issue-to-plan` →
+`/prd-review-plan` until the review verdict is `Approved`, and
+`/prd-implement-issue` → `/prd-validate-issue` until the validation's
+overall status is `Complete`. See the
+[Slash Command Reference](./docs/reference/commands.md#prd-long-flow) for
+the report statuses and revision semantics.
 
 ### Auto-Implement
 
 Once the PRD and its issues exist (steps 1–2 above), `/prd-auto-implement`
 orchestrates the rest in a single session under whatever agent you invoke it
-with — no dedicated orchestrator agent is required:
-it plans, reviews, implements, and validates every issue in numeric order,
-then runs the cross-cutting validation. It hard-stops if the PRD or issues
-are missing. Each review, validation, and cross-cutting loop is capped at
-`MAX_ATTEMPTS` (default `3`) and escalates to you when it can't converge;
-re-running it after an interruption (crash, stop, or escalation) resumes
-where it left off without redoing completed work.
+with — no dedicated orchestrator agent is required: it plans, reviews,
+implements, and validates every issue in numeric order, then runs the
+cross-cutting validation. It hard-stops if the PRD or issues are missing.
+Each loop is capped at `MAX_ATTEMPTS` (default `3`) and escalates to you
+when it cannot converge; re-running it after an interruption (crash, stop,
+or escalation) resumes where it left off without redoing completed work.
 
-- `/prd-auto-implement` — orchestrate the full PRD implementation end-to-end.
-  `SPECS_DIR` (default `.sdd/.current/`) sets where specs live; `MAX_ATTEMPTS`
-  (default `3`) caps every loop.
-
-The full run can take hours depending on the number of issues. A `HITL` issue
-records its human decisions in a `## Human Decisions` section, each tagged
-`before-planning` or `before-implementation`. The planner (`prd-issue-to-plan`)
-owns HITL: it asks those decisions at their gate (before-planning before it
-writes the plan, before-implementation after), and records your answers back in
-the issue. Under `/prd-auto-implement` it surfaces the questions to you, records
-your answers, and re-dispatches the planner. `AFK` issues proceed without
-asking.
-
-## Keeping Documentation Current
-
-The `doc-*` commands update the project's standard documentation files to
-match the codebase. Run them after a change that affects the corresponding
-file.
-
-- `/doc-readme` — update `README.md` to stay a user manual.
-- `/doc-development` — update `DEVELOPMENT.md` (build and debug guide).
-- `/doc-deployment` — update `DEPLOYMENT.md`.
-- `/doc-agents` — update `AGENTS.md` (guidelines and project structure).
-- `/doc-changelog` — add the Unreleased entry to `CHANGELOG.md`.
+An issue that needs human input records its decisions in a
+`## Human Decisions` section, each tagged `before-planning` or
+`before-implementation`; `/prd-auto-implement` surfaces the questions to you
+and records your answers back in the issue. `AFK` issues proceed without
+asking. The full run can take hours depending on the number of issues. See
+the [Slash Command Reference](./docs/reference/commands.md#auto-implement)
+for the orchestration details.
 
 ## Honorable Mentions
 
@@ -296,11 +175,17 @@ file.
   originally inspired by GitHub's Spec Kit, but is essentially a simplified
   version of it.
 
-## Additional Resources
+## Documentation
 
+- [Install CLI Reference](./docs/reference/install-cli.md) — wizard flags,
+  config discovery, plugin entry forms, and model recommendations.
+- [Slash Command Reference](./docs/reference/commands.md) — every command,
+  its artifacts, and the revision loops.
 - [AGENTS.md](./AGENTS.md) — code guidelines, project structure, and the
   plugin surface contract.
 - [DEVELOPMENT.md](./DEVELOPMENT.md) — build and debug guide.
 - [CHANGELOG.md](./CHANGELOG.md) — release history.
 - [`docs/e2e.md`](./docs/e2e.md) — how the mock-LLM e2e suite works,
   including the template-rewriting mechanism.
+- [`qa/README.md`](./qa/README.md) — the manual QA suite that drives the
+  plugin against real frontier models.

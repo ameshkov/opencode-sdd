@@ -12,7 +12,8 @@ agent loop, the `write` tool executing, and bundled template assets being
 inlined into the model prompt. How the suite works (the mock LLM, server
 lifecycle, `$HOME` isolation, permission auto-approve, and template-asset
 rewriting) is documented in the code comments of `test-e2e/`, starting with
-`harness.ts` and `mock-server.ts`.
+`harness.ts` and `mock-server.ts`. The unit-test conventions it complements
+are in the Testing section of [AGENTS.md](../AGENTS.md#testing).
 
 ## Prerequisites
 

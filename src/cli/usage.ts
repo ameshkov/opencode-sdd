@@ -30,7 +30,7 @@ Workflow:
   2. Resolve the plugin entry: --tag/--local win; otherwise a canary
      (prerelease) build pins the canary dist-tag and a release build
      keeps the latest entry.
-  3. Discover patchable opencode configs (global, ENV override, project).
+  3. Discover patchable opencode configs (project, ENV override, global).
   4. Enumerate the models reachable from your configured providers.
   5. Apply the plugin entry and per-subagent model assignments with an
      idempotent, comment-preserving patch.

@@ -16,11 +16,11 @@ clean, isolated session.
 - [Code Guidelines](#code-guidelines)
     - [System Design](#system-design)
     - [Architecture](#architecture)
-    - [Plugin Surface](#plugin-surface)
     - [Code Quality](#code-quality)
     - [Testing](#testing)
     - [Dependency Management](#dependency-management)
     - [Configuration & Documentation](#configuration--documentation)
+    - [Plugin Surface](#plugin-surface)
     - [Markdown Formatting](#markdown-formatting)
 
 ## Project Overview
@@ -32,7 +32,7 @@ loaded by opencode and extends its merged configuration with:
 - **Agents** — the hidden SDD worker subagents (`sdd-planner`,
   `sdd-reviewer`, `sdd-coder`, `sdd-validator`, `sdd-plan-reviewer`,
   `sdd-explore`) the commands delegate to.
-- **Commands** — slash commands such as `sdd-prd-write` that produce
+- **Commands** — slash commands such as `prd-write` that produce
   specification artifacts.
 
 The plugin does not run as a standalone process. It is a module that exports a
@@ -48,11 +48,17 @@ commands.
 | Runtime | Node.js 24+ (loaded inside the opencode host) |
 | Package Manager | pnpm 10+ |
 | Framework | OpenCode Plugin SDK (`@opencode-ai/plugin`, `@opencode-ai/sdk`) |
+| Primary Dependencies | `@inquirer/prompts`, `jsonc-parser`, `diff` (CLI runtime); the OpenCode SDK/Plugin packages are type-only for the plugin entry |
+| Storage | None — SDD artifacts are Markdown files under `SPECS_DIR` |
 | Linting | ESLint 10.x + typescript-eslint |
 | Formatting | Prettier 3.x, Markdownlint (markdownlint-cli2) |
 | Unused-export analysis | Knip |
 | Tests | Vitest 4.x |
+| Target Platform | opencode host process (Node.js 24+), macOS/Linux/Windows |
 | Project Type | opencode plugin (ESM, compiled to `build/`) |
+| Performance Goals | N/A — startup-time registration of 11 commands and 6 agents |
+| Constraints | zero runtime `@opencode-ai/*` imports in the plugin entry; the `config` hook must never throw; opencode hard-fails on invalid config |
+| Scale/Scope | one opencode host process per user; registers 11 slash commands and 6 hidden subagents |
 
 ## Project Structure
 
@@ -83,7 +89,10 @@ opencode-sdd/
 │                               # server driven by a local SSE mock LLM)
 ├── scripts/                    # Build-time helpers (copy-assets,
 │                               # check-runtime-imports)
-├── docs/                        # Long-form developer docs (e2e.md)
+├── docs/                        # Reference docs (docs/reference/:
+│                               # install CLI + slash commands) and
+│                               # long-form developer docs (e2e.md,
+│                               # assets/)
 ├── qa/                          # Manual QA suite: the OpenRouter-backed
 │                               # bifrost gateway compose + model allowlist
 │                               # (qa/bifrost/), the isolated workspace
@@ -101,7 +110,10 @@ opencode-sdd/
 ├── .agents/skills/              # Manual QA skills: qa-test-planning
 │                               # (coverage matrix + case selection) and
 │                               # manual-test-run (execute + record)
+├── .github/                     # CI workflows (quality gate, canary, release)
+├── .husky/                      # pre-commit hook (pnpm check + e2e)
 ├── README.md, DEVELOPMENT.md    # User-facing + build/debug guides
+├── CHANGELOG.md                 # Release history
 ├── Dockerfile                   # Multi-stage CI image (lint, test, e2e)
 ├── eslint.config.mjs            # ESLint flat config
 ├── knip.config.ts               # Unused-export analysis config
@@ -115,10 +127,14 @@ opencode-sdd/
 - `pnpm build` — compile TypeScript to `build/`
 - `pnpm typecheck` — check for TypeScript type errors in production
   and test code
+- `pnpm test` — run the Vitest unit suite once (excludes
+  `*.e2e.test.ts`)
+- `pnpm test:watch` — run Vitest in watch mode
 - `pnpm lint` — lint source files with ESLint, check for unused
   exports with Knip, and verify the Gherkin QA plans (`lint:gherkin`:
   `@TC-*` ID convention + `gherkin-lint` over `qa/features/`)
 - `pnpm lint:fix` — lint and auto-fix issues
+- `pnpm lint:gherkin` — run only the Gherkin plan checks
 - `pnpm knip` — run Knip unused-export analysis separately
 - `pnpm format:check` — check formatting with Prettier and Markdownlint
 - `pnpm format:fix` — fix formatting issues
@@ -127,6 +143,8 @@ opencode-sdd/
 - `pnpm test:e2e` — run the mock-LLM e2e suite against a real
   `opencode` server (NOT part of `pnpm check`; needs the `opencode`
   binary on PATH and a built `build/`)
+- `pnpm qa:run` — run the interactive manual QA runner over
+  `qa/features/` (writes a report to `qa/output/`)
 - `pnpm clean` — remove `node_modules` and `build/`
 
 ## Contribution Instructions
@@ -281,7 +299,8 @@ CLI entry (src/cli/install.ts)
 CLI modules (src/cli/*.ts: argv, prerequisites, config-resolver,
             target-select, model-probe, recommend, yes-selection,
             interactive-selection, config-patcher, plugin-entry,
-            own-package, agent-model-*)
+            own-package, agent-model-*, install, usage, bin-entry,
+            config-paths, confirm-patch, server-auth)
       ↓
 User opencode config on disk (read + JSONC-safe patch + atomic write)
 ```
@@ -299,75 +318,6 @@ layers (`agents/`, `commands/`) MUST NOT import from each other; shared
 parsing helpers live in the `utils/` layer below them. New layers (e.g.,
 services, utilities) introduced in later iterations MUST sit below the
 entry point and above definitions only when they are consumed by them.
-
-### Plugin Surface
-
-This plugin talks to opencode exclusively through the `config` hook:
-
-- **Registering agents and commands is a config-hook concern.** The
-  `config` hook receives opencode's live merged `Config` object and mutates
-  it in place. Agents go under `config.agent`; commands go under
-  `config.command`.
-- **Never overwrite existing user configuration.** Always spread-merge at
-  the top level so the plugin adds its entries without clobbering keys the
-  user already defined: `config.agent = { ...config.agent, <key>: <value> }`.
-  When the same entry already exists (`config.agent[<key>]` was user-set),
-  also shallow-merge at the entry level — `{ ...existing, ...pluginConfig }`
-  — so plugin-defined fields (`description`, `mode`, `permission`, `prompt`)
-  take precedence while user-only fields the plugin never sets (notably
-  `model`, e.g. from `opencode.json`) are preserved instead of clobbered.
-  Commands are exempt: a colliding command is fully replaced (its
-  `template` is the plugin's contract), and the overwrite is logged as a
-  warning.
-- **Rewriting template asset mentions is a config-hook concern.**
-  Command Markdown files embed bundled template assets using the portable
-  token `@opencode-sdd-templates/<subdir>/<file>.md` (environment-
-  independent, baked into source). The absolute assets directory is only
-  known at runtime (`resolveTemplatesDir()` in `src/index.ts`), so the
-  `config` hook rewrites each loaded command template at registration
-  time, replacing `@opencode-sdd-templates/` with `@<abs-templates-dir>/`
-  via `rewriteAssetReferences`. opencode's `resolvePromptParts` inlines
-  the file via the `read` tool with `bypassCwdCheck: true`, so the
-  mention-inlining path itself needs no `external_directory` permission.
-  As a defensive measure the hook ALSO grants `external_directory` read
-  access to `<abs-templates-dir>/**` (spread-merged onto any existing
-  `config.permission`, preserving other categories and path-glob rules,
-  and never loosening a global `"deny"`/`"ask"` string into object form)
-  so an SDD worker that reads a template file directly via the `read`
-  tool is not gated behind a prompt. The grant is layered in
-  `registerBundledTemplatesPermission` and verified by a live-config e2e
-  test.
-- **Command shape:** `{ template: string, description?: string, agent?:
-  string, model?: string, subtask?: boolean }`. `template` is required and
-  is the prompt body; `$ARGUMENTS` is interpolated with the user's input.
-- **Agent shape:** `{ description?: string, mode?: 'subagent' | 'primary'
-  | 'all', prompt?: string, model?: string, tools?: { [name: string]:
-  boolean }, permission?: { read?, edit?, bash?, glob?, grep?, task?,
-  websearch?, webfetch?, ... }, hidden?: boolean, ... }`. Agents are loaded
-  from bundled Markdown+frontmatter assets under `src/assets/agents/`
-  (mirroring the command loader); the file name (minus `.md`) becomes the
-  agent name, frontmatter becomes the `AgentConfig` fields, and the Markdown
-  body becomes `prompt`. `hidden: true` hides a `subagent` from the Tab
-  switcher. There is no dedicated orchestrator agent: `/prd-auto-implement`
-  runs under whatever agent the user invokes it with, and every shipped
-  agent is a hidden `subagent` so it coexists with opencode's built-in
-  agents.
-- **Prefer `permission` over the deprecated `tools` field.** opencode
-  marks `tools` as deprecated in favour of `permission` for finer-grained
-  control, and opencode ignores `tools` for plugin-registered tools. All
-  shipped agents gate the `sdd-command` custom tool with `permission`:
-  the `config` hook denies it globally
-  (`config.permission['sdd-command'] = 'deny'`, spread-merged like the
-  templates grant), worker frontmatters allow it per-agent
-  (`permission: { sdd-command: allow }`), and non-worker agents carry an
-  explicit `permission: { sdd-command: deny }`.
-- **Type the surface against the SDK.** Import `AgentConfig` from
-  `@opencode-ai/sdk` and derive command types from `Config` so the
-  compiler catches shape mistakes early. opencode hard-fails on invalid
-  config, so the cost of a wrong shape is a broken startup.
-- **The plugin must not throw during load.** Keep the `config` hook
-  deterministic; if registration of a feature fails, degrade gracefully
-  rather than breaking opencode startup.
 
 ### Code Quality
 
@@ -578,6 +528,12 @@ Configuration and documentation MUST stay synchronized with code:
   surface, or configuration MUST update relevant documentation.
 - **Structure tracking**: Changes to project structure MUST update the
   Project Structure section in `AGENTS.md`.
+- **Reference docs**: `docs/reference/` owns the install CLI reference
+  (`install-cli.md`) and the slash-command reference (`commands.md`);
+  `README.md` and `DEVELOPMENT.md` keep summaries and link there. When the
+  wizard's flags or behavior change, update `install-cli.md` and the
+  README Install section in the same change; when the command surface
+  changes, update `commands.md`.
 - **TypeScript project structure**: The project uses a base/build/test
   tsconfig split. `tsconfig.json` is the shared base and the config the
   editor keys off; it includes production source and tests and sets
@@ -592,6 +548,75 @@ Configuration and documentation MUST stay synchronized with code:
 
 **Rationale**: Stale documentation causes onboarding friction and
 operational incidents.
+
+### Plugin Surface
+
+This plugin talks to opencode exclusively through the `config` hook:
+
+- **Registering agents and commands is a config-hook concern.** The
+  `config` hook receives opencode's live merged `Config` object and mutates
+  it in place. Agents go under `config.agent`; commands go under
+  `config.command`.
+- **Never overwrite existing user configuration.** Always spread-merge at
+  the top level so the plugin adds its entries without clobbering keys the
+  user already defined: `config.agent = { ...config.agent, <key>: <value> }`.
+  When the same entry already exists (`config.agent[<key>]` was user-set),
+  also shallow-merge at the entry level — `{ ...existing, ...pluginConfig }`
+  — so plugin-defined fields (`description`, `mode`, `permission`, `prompt`)
+  take precedence while user-only fields the plugin never sets (notably
+  `model`, e.g. from `opencode.json`) are preserved instead of clobbered.
+  Commands are exempt: a colliding command is fully replaced (its
+  `template` is the plugin's contract), and the overwrite is logged as a
+  warning.
+- **Rewriting template asset mentions is a config-hook concern.**
+  Command Markdown files embed bundled template assets using the portable
+  token `@opencode-sdd-templates/<subdir>/<file>.md` (environment-
+  independent, baked into source). The absolute assets directory is only
+  known at runtime (`resolveTemplatesDir()` in `src/index.ts`), so the
+  `config` hook rewrites each loaded command template at registration
+  time, replacing `@opencode-sdd-templates/` with `@<abs-templates-dir>/`
+  via `rewriteAssetReferences`. opencode's `resolvePromptParts` inlines
+  the file via the `read` tool with `bypassCwdCheck: true`, so the
+  mention-inlining path itself needs no `external_directory` permission.
+  As a defensive measure the hook ALSO grants `external_directory` read
+  access to `<abs-templates-dir>/**` (spread-merged onto any existing
+  `config.permission`, preserving other categories and path-glob rules,
+  and never loosening a global `"deny"`/`"ask"` string into object form)
+  so an SDD worker that reads a template file directly via the `read`
+  tool is not gated behind a prompt. The grant is layered in
+  `registerBundledTemplatesPermission` and verified by a live-config e2e
+  test.
+- **Command shape:** `{ template: string, description?: string, agent?:
+  string, model?: string, subtask?: boolean }`. `template` is required and
+  is the prompt body; `$ARGUMENTS` is interpolated with the user's input.
+- **Agent shape:** `{ description?: string, mode?: 'subagent' | 'primary'
+  | 'all', prompt?: string, model?: string, tools?: { [name: string]:
+  boolean }, permission?: { read?, edit?, bash?, glob?, grep?, task?,
+  websearch?, webfetch?, ... }, hidden?: boolean, ... }`. Agents are loaded
+  from bundled Markdown+frontmatter assets under `src/assets/agents/`
+  (mirroring the command loader); the file name (minus `.md`) becomes the
+  agent name, frontmatter becomes the `AgentConfig` fields, and the Markdown
+  body becomes `prompt`. `hidden: true` hides a `subagent` from the Tab
+  switcher. There is no dedicated orchestrator agent: `/prd-auto-implement`
+  runs under whatever agent the user invokes it with, and every shipped
+  agent is a hidden `subagent` so it coexists with opencode's built-in
+  agents.
+- **Prefer `permission` over the deprecated `tools` field.** opencode
+  marks `tools` as deprecated in favour of `permission` for finer-grained
+  control, and opencode ignores `tools` for plugin-registered tools. All
+  shipped agents gate the `sdd-command` custom tool with `permission`:
+  the `config` hook denies it globally
+  (`config.permission['sdd-command'] = 'deny'`, spread-merged like the
+  templates grant), worker frontmatters allow it per-agent
+  (`permission: { sdd-command: allow }`), and non-worker agents carry an
+  explicit `permission: { sdd-command: deny }`.
+- **Type the surface against the SDK.** Import `AgentConfig` from
+  `@opencode-ai/sdk` and derive command types from `Config` so the
+  compiler catches shape mistakes early. opencode hard-fails on invalid
+  config, so the cost of a wrong shape is a broken startup.
+- **The plugin must not throw during load.** Keep the `config` hook
+  deterministic; if registration of a feature fails, degrade gracefully
+  rather than breaking opencode startup.
 
 ### Markdown Formatting
 
