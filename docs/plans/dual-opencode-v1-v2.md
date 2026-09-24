@@ -402,3 +402,22 @@ opencode 2.0.14 unless stated otherwise; they complement section 2):
   surface differ enough that re-routing would have rewritten every spec
   without adding coverage. The V1 specs remain in `test-e2e/*.e2e.test.ts`
   and the shared/v1/v2 directory split matches the plan.
+- **V2 subagent catalog and `hidden`.** V2's subagent tool builds the
+  catalog it shows the model with an explicit `!agent.hidden` filter
+  (`model-resolver-4skav2s8.js`), so a hidden agent is callable by id but
+  never advertised. The V2 agent adapter therefore does not map the
+  frontmatter `hidden` flag: the SDD agents register non-hidden, and
+  `mode: 'subagent'` keeps them out of primary/default selection. V1 keeps
+  `hidden: true`.
+- **V2 command precedence.** The host's `opencode.config.command` plugin
+  registers in the internal `post` group, after external plugins, and
+  `editor.add` is a last-write-wins `Map.set`; a user-config command of the
+  same name therefore shadows an SDD command on V2 and no collision warning
+  is emitted. Accepted as host precedence and recorded in `qa/README.md`
+  section 3.4 and TC-REG-04.
+- **V2 agent model scope.** `Agent.Info.model` is consumed by the subagent
+  tool (`input.model ?? agent.model ?? parent.model`) and by config-command
+  subagent dispatch, but not by primary sessions, whose model resolves from
+  `session.model` or the global default. An SDD agent's configured model is
+  therefore honored on the delegation path only; the adapter does not
+  compensate.

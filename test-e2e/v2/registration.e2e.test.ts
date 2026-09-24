@@ -1,8 +1,10 @@
 /**
  * V2 in-process registration surface: the real plugin object passed through
  * `OpenCode.create({ plugins })` must register the same SDD agents the V1 lane
- * sees — six hidden subagents with mapped permission rules and a global
- * `sdd-command` deny on non-SDD agents.
+ * sees — six subagents with mapped permission rules and a global
+ * `sdd-command` deny on non-SDD agents. The agents are registered non-hidden
+ * on V2 because its subagent tool filters hidden agents out of the catalog it
+ * shows the model; `mode: subagent` keeps them out of primary selection.
  *
  * Command registration is asserted by the loader smoke (the real binary logs
  * the registered count) and by `command.e2e.test.ts` (dispatch behavior),
@@ -16,6 +18,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createMockLlm, type MockLlmState } from '../shared/mock-server.js';
 import {
   createV2Session,
+  promptV2,
   startV2Host,
   v2MockConfig,
   type V2Client,
@@ -46,6 +49,26 @@ interface V2AgentInfo {
   readonly hidden?: boolean;
   readonly system?: string;
   readonly permissions: V2AgentRule[];
+}
+
+/**
+ * The `subagent` tool description from the first captured model request that
+ * carries one, or `''` when no request exposed the tool.
+ *
+ * V2 appends the model-facing subagent catalog to that description on every
+ * request, so it is the runtime proof that the SDD agents are delegable.
+ */
+function subagentToolDescription(mock: MockLlmState): string {
+  for (const { body } of mock.requests) {
+    const tools = (
+      body as { tools?: Array<{ function?: { name?: string; description?: string } }> }
+    )?.tools;
+    const tool = tools?.find((candidate) => candidate.function?.name === 'subagent');
+    if (tool?.function?.description !== undefined) {
+      return tool.function.description;
+    }
+  }
+  return '';
 }
 
 describe('V2 in-process registration', () => {
@@ -99,12 +122,29 @@ describe('V2 in-process registration', () => {
     throw lastError;
   }
 
-  it('registers every shipped agent as a hidden subagent with a system prompt', async () => {
+  it('registers every shipped agent as a non-hidden subagent with a system prompt', async () => {
     for (const name of SHIPPED_AGENTS) {
       const agent = await getAgent(name);
       expect(agent.mode, `agent ${name} mode`).toBe('subagent');
-      expect(agent.hidden, `agent ${name} hidden`).toBe(true);
+      // V2's subagent tool excludes hidden agents from the model-facing
+      // catalog (`!agent.hidden`), so the SDD workers must stay non-hidden.
+      expect(agent.hidden, `agent ${name} hidden`).toBe(false);
       expect(agent.system ?? '', `agent ${name} system`).not.toBe('');
+    }
+  });
+
+  it('advertises every shipped agent in the subagent tool description', async () => {
+    // Regression for the orchestrator falling back to the built-in `general`
+    // agent: V2's subagent tool builds its model-facing catalog from the
+    // non-hidden agents only, so a hidden SDD agent is never delegated to.
+    mock.reset([{ type: 'text', text: 'ok' }]);
+    const sessionID = await createV2Session(client, projectDir);
+    await promptV2(client, sessionID, 'list the available subagents');
+
+    const description = subagentToolDescription(mock);
+    expect(description).not.toBe('');
+    for (const name of SHIPPED_AGENTS) {
+      expect(description, `subagent catalog for ${name}`).toContain(`- ${name}:`);
     }
   });
 

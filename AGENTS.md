@@ -29,9 +29,11 @@ This repository builds an opencode plugin (`opencode-sdd`) that installs a
 specification-driven development (SDD) workflow into opencode. The plugin is
 loaded by opencode and extends its merged configuration with:
 
-- **Agents** — the hidden SDD worker subagents (`sdd-planner`,
-  `sdd-reviewer`, `sdd-coder`, `sdd-validator`, `sdd-plan-reviewer`,
-  `sdd-explore`) the commands delegate to.
+- **Agents** — the SDD worker subagents (`sdd-planner`, `sdd-reviewer`,
+  `sdd-coder`, `sdd-validator`, `sdd-plan-reviewer`, `sdd-explore`) the
+  commands delegate to. V1 registers them hidden; V2 must register them
+  non-hidden because its subagent tool filters hidden agents out of the
+  catalog it shows the model.
 - **Commands** — slash commands such as `prd-write` that produce
   specification artifacts.
 
@@ -60,7 +62,7 @@ surface through the V2 editors. V1 never calls `setup`, and V2 ignores
 | Project Type | opencode plugin (ESM, compiled to `build/`) |
 | Performance Goals | N/A — startup-time registration of 11 commands and 6 agents |
 | Constraints | zero runtime `@opencode-ai/*` and `@opencode/*` imports in the plugin entry; the `config`/`setup` paths must never throw; opencode hard-fails on invalid config |
-| Scale/Scope | one opencode host process per user; registers 11 slash commands and 6 hidden subagents |
+| Scale/Scope | one opencode host process per user; registers 11 slash commands and 6 SDD subagents (hidden on V1, catalog-visible on V2) |
 
 ## Project Structure
 
@@ -614,9 +616,12 @@ This plugin talks to opencode exclusively through the `config` hook:
   — so plugin-defined fields (`description`, `mode`, `permission`, `prompt`)
   take precedence while user-only fields the plugin never sets (notably
   `model`, e.g. from `opencode.json`) are preserved instead of clobbered.
-  Commands are exempt: a colliding command is fully replaced (its
+  Commands are exempt on V1: a colliding command is fully replaced (its
   `template` is the plugin's contract), and the overwrite is logged as a
-  warning.
+  warning. On V2 the host's config-command plugin registers after user
+  plugins and `editor.add` is last-write-wins, so a user command of the
+  same name silently wins; that host precedence is accepted and recorded
+  in the QA plan, not fought by the adapter.
 - **Rewriting template asset mentions is a config-hook concern.**
   Command Markdown files embed bundled template assets using the portable
   token `@opencode-sdd-templates/<subdir>/<file>.md` (environment-
@@ -648,8 +653,13 @@ This plugin talks to opencode exclusively through the `config` hook:
   body becomes `prompt`. `hidden: true` hides a `subagent` from the Tab
   switcher. There is no dedicated orchestrator agent: `/prd-auto-implement`
   runs under whatever agent the user invokes it with, and every shipped
-  agent is a hidden `subagent` so it coexists with opencode's built-in
-  agents.
+  agent is a `subagent` so it coexists with opencode's built-in agents.
+  V1 registers them hidden; the V2 adapter deliberately does not map
+  `hidden` because V2's `subagent` tool filters hidden agents out of the
+  model-facing catalog (verified against 2.0.14), which would make the SDD
+  workers undispatchable. `mode: 'subagent'` still keeps them out of
+  primary/default selection on both hosts, and a user can set `hidden` in
+  host config (applied after the adapter).
 - **Prefer `permission` over the deprecated `tools` field.** opencode
   marks `tools` as deprecated in favour of `permission` for finer-grained
   control, and opencode ignores `tools` for plugin-registered tools. All
@@ -682,7 +692,12 @@ This plugin talks to opencode exclusively through the `config` hook:
   `external_directory` allow rule on the SDD agents. V2 does not inline
   `@<abs-path>` mentions in prompts, so the V2 command adapter inlines
   the referenced template file content itself
-  (`src/commands/template-inliner.ts`).
+  (`src/commands/template-inliner.ts`). V2 honors an agent's configured
+  `model` only for subagent execution (`input.model ?? agent.model ??
+  parent.model`); as of 2.0.14 a primary session created with or switched
+  to an agent resolves `session.model` or the global default instead, so
+  the SDD agents' models apply on the delegation path only and the adapter
+  does not work around it.
 
 ### Markdown Formatting
 

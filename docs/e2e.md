@@ -91,9 +91,10 @@ The V2 lane covers the same surface through V2's own mechanisms:
 
 - `v2/registration.e2e.test.ts` runs an in-process host
   (`OpenCode.create({ plugins: [sddPlugin] })`) and asserts the six
-  hidden subagents and their mapped permission rules (including the
-  `bash` -> `shell` and `task` -> `subagent` aliases and the global
-  `sdd-command` deny).
+  subagents — non-hidden on V2, whose subagent tool filters hidden agents
+  out of the model-facing catalog — and their mapped permission rules
+  (including the `bash` -> `shell` and `task` -> `subagent` aliases and
+  the global `sdd-command` deny).
 - `v2/command.e2e.test.ts` dispatches a real plugin command and asserts
   the mock LLM receives the inlined, argument-substituted template.
 - `v2/sdd-command-tool.e2e.test.ts` lets a worker agent call

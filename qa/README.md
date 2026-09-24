@@ -397,6 +397,23 @@ adapter inlines command templates itself (the V1 adapter rewrites the
 token and lets opencode inline it). Both behaviors deliver the template
 body to the model.
 
+Two V2 host behaviors are accepted, not fixed (verified against
+opencode 2.0.14):
+
+- **Command precedence.** A user-defined command with the same name as a
+  bundled command wins on V2: the host's `opencode.config.command` plugin
+  registers after user plugins and `editor.add` is last-write-wins, so
+  the plugin cannot replace it and no `command name collision` warning is
+  emitted (V1 replaces the user command and warns). TC-REG-04 records the
+  winner per environment.
+- **Agent models.** A configured `agents.<id>.model` is honored when that
+  agent runs as a subagent — the delegation tool resolves
+  `agent.model ?? parent.model` — so TC-REG-03 asserts the model on the
+  delegation path. A V2 primary session created with or switched to an
+  SDD agent resolves `session.model` or the global default instead; no
+  SDD workflow uses that path (the six agents are subagents and the
+  orchestrator delegates to them).
+
 Why the provider is shaped this way:
 
 - One opencode provider (`bifrost`) talks to the gateway's
@@ -455,7 +472,7 @@ Plugin log markers (grep the captured `opencode.log`):
 | `SDD commands registered` | All commands done (info, with count; count 0 when the dir was unreadable) |
 | `commands directory unreadable` / `commands path is not a directory` | Loader WARN: ENOENT dir vs existing-but-file path (never fatal) |
 | `failed to register SDD commands` | logger.error only if the whole registration throws — the loader prevents it, so it is not the ENOENT marker |
-| `command name collision, overwriting` | User command replaced |
+| `command name collision, overwriting` | User command replaced (V1; on V2 the user command wins silently — see 3.4) |
 | `loading SDD agents` / `SDD agents registered` | Agent phase |
 | `agent name collision, merging onto existing config` | User agent merged |
 | `registering sdd-command global deny` / `registered sdd-command global deny` | Custom tool denied globally |
@@ -467,7 +484,8 @@ Plugin log markers (grep the captured `opencode.log`):
 The gateway logs every request (enabled by `bifrost-provision.sh`):
 prompt + response content, model, tokens, cost, latency, and status.
 That is the evidence source for "which model got what" — for TC-REG-03
-(per-agent model honored), for group J (tokens/cost), and for any
+(per-agent model honored on the delegation path; see 3.4 for the V2
+primary-session drift), for group J (tokens/cost), and for any
 "the model did X" assertion.
 
 From inside the workspace (compose DNS):
@@ -604,7 +622,7 @@ otherwise.
 | --- | --- | --- |
 | Template rewrite / asset inlining | yes (deterministic) | TC-REG-02, TC-TOOL-01 |
 | `sdd-command` allowlist mechanics | yes | TC-TOOL-01..03 (sanity) |
-| Permission merging + model preservation | yes | TC-REG-03..05 |
+| Permission merging + model preservation | yes | TC-REG-03..05 (V2: model on delegation; drift in 3.4) |
 | Orchestrator loops / escalation / resume | yes | TC-ORCH-01..03 (web UI) |
 | CLI wizard end to end | no | TC-CLI-01..11 (V1) |
 | Short flow / PRD flow with a real LLM | no | Groups E, F |

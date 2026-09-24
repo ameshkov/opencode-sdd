@@ -19,7 +19,6 @@ import {
 interface MutableAgentInfo {
   description?: string;
   mode: 'subagent' | 'primary' | 'all';
-  hidden: boolean;
   system?: string;
   permissions: V2PermissionRule[];
 }
@@ -34,6 +33,13 @@ interface MutableAgentInfo {
  * `external_directory` grant is added to every SDD agent because any of them
  * may read a template file through the `read` tool.
  *
+ * The frontmatter `hidden` flag is intentionally not mapped. V2's `subagent`
+ * tool filters hidden agents out of the catalog it shows the model (verified
+ * against 2.0.14), which would make the SDD workers undispatchable; the
+ * `mode: 'subagent'` mapping already keeps them out of primary/default agent
+ * selection, and a user who wants them hidden can still say so in the host
+ * config (the config-agent plugin applies it after this adapter).
+ *
  * @param agent - Mutable agent info to update.
  * @param config - Loaded SDD agent config.
  * @param templatesDir - Absolute bundled templates directory.
@@ -44,9 +50,6 @@ function applySddAgent(agent: MutableAgentInfo, config: AgentConfig, templatesDi
   }
   if (config.mode !== undefined) {
     agent.mode = config.mode;
-  }
-  if (config.hidden !== undefined) {
-    agent.hidden = config.hidden === true;
   }
   if (config.prompt !== undefined) {
     agent.system = config.prompt;

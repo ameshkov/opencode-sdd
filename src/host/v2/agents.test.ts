@@ -15,6 +15,8 @@ describe('registerV2Agents', () => {
     const agents = agentsWith({
       description: 'Plans work',
       mode: 'subagent',
+      // The frontmatter hidden flag is deliberately not mapped on V2: its
+      // subagent tool filters hidden agents out of the model-facing catalog.
       hidden: true,
       prompt: 'Planner prompt',
       permission: {
@@ -30,7 +32,7 @@ describe('registerV2Agents', () => {
     expect(planner).toMatchObject({
       description: 'Plans work',
       mode: 'subagent',
-      hidden: true,
+      hidden: false,
       system: 'Planner prompt',
     });
     expect(planner?.permissions).toEqual([

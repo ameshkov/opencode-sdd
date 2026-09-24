@@ -25,12 +25,17 @@ Scenario: Fresh registration surface
   Then the log contains plugin loading, SDD commands registered with count 11 and SDD agents registered with count 6
   And the log contains no failed to register SDD commands line
   And the / list shows exactly sdd-spec, sdd-implement, sdd-validate, prd-write, prd-to-issues, prd-issue-to-plan, prd-review-plan, prd-implement-issue, prd-validate-issue, prd-validate and prd-auto-implement
-  And the agent selector shows no SDD agents (no dedicated orchestrator; the six subagents sdd-planner, sdd-reviewer, sdd-coder, sdd-validator, sdd-plan-reviewer and sdd-explore are all hidden)
+  And the agent selector shows no SDD agents (no dedicated orchestrator; the six subagents sdd-planner, sdd-reviewer, sdd-coder, sdd-validator, sdd-plan-reviewer and sdd-explore are mode: subagent and stay out of primary selection)
   And each of those entries shows a description ending in (provided by opencode-sdd) — the baked definitions carry it too: qa exec 'grep -lc "(provided by opencode-sdd)" /app/src/assets/commands/*.md'
   And I keep opencode.log and screenshots of the / list and the agent selector in the evidence folder
   # The web slash menu renders the command descriptions in full, so the
   # '(provided by opencode-sdd)' suffix is observable in the UI; the
   # baked-asset grep is the artifact-level cross-check.
+  # Host difference (verified against opencode 2.0.14): V1 registers the
+  # six subagents hidden; V2 registers them non-hidden so the subagent
+  # tool lists them to the model (V2 filters hidden agents out of that
+  # catalog). mode: subagent keeps them out of the primary selector on
+  # both hosts; on V2 they also appear in the @ autocomplete menu.
 
 @TC-REG-02 @P0
 Scenario: Commands resolve their templates
@@ -63,15 +68,26 @@ Scenario: User agent settings survive registration
   # ran, record that and assert the mechanism (merge + preservation)
   # only — the delegation trigger is model-whim dependent, the merge is
   # the product behavior.
+  # Host difference (verified against opencode 2.0.14): the configured
+  # model is honored when a worker delegates to sdd-explore via the
+  # subagent tool. A V2 primary session created with or switched to an
+  # SDD agent resolves session.model or the global default instead
+  # (Agent.Info.model is ignored there) — record that as host drift if
+  # probed; the delegation path is the product behavior.
 
 @TC-REG-04 @P1
-Scenario: Command collision is replaced with a warning
+Scenario: Command collision per host precedence
   Given /work/sdd-manual/opencode.json contains `"command": { "prd-validate": { "template": "USER OVERRIDE" } }`
   When I restart opencode and grep the log for command name collision
   And I run /prd-validate
-  Then the warning names prd-validate
-  And the command body is the plugin's validation report template, not USER OVERRIDE
+  Then on 1.x the warning names prd-validate and the command body is the plugin's validation report template, not USER OVERRIDE
+  And on 2.x the user command wins: no collision warning appears and /prd-validate sends USER OVERRIDE (record the observed winner)
   And I keep the log excerpt and the command preview (web UI or TUI) in the evidence folder
+  # Host difference (verified against opencode 2.0.14): V2's
+  # opencode.config.command plugin registers after user plugins and
+  # editor.add is last-write-wins, so a user command of the same name
+  # always shadows the plugin's and no collision warning can be emitted.
+  # V1 keeps the replace-and-warn contract.
 
 @TC-REG-05 @P1
 Scenario: Template read permission is granted

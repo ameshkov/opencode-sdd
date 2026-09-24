@@ -25,6 +25,19 @@ and this project adheres to
   entry still points at the package root.
 - On opencode 2.x the plugin inlines command template assets itself,
   because V2 does not inline `@<abs-path>` prompt mentions.
+- On opencode 2.x a user-defined command with the same name takes
+  precedence over a bundled command (the host registers config commands
+  after plugins), and a configured agent model is honored when a worker
+  delegates to that agent; on 1.x the bundled command replaces the user's
+  and a user-set agent model applies on every path.
+
+### Fixed
+
+- opencode 2.x: SDD agents are now registered non-hidden, so the host's
+  subagent tool lists them and the orchestrator delegates to
+  `sdd-planner`/`sdd-reviewer`/`sdd-coder`/`sdd-validator` instead of
+  falling back to the built-in `general` agent. They stay
+  `mode: subagent`, so primary agent selection is unaffected.
 
 ## [v1.5.0] - 2026-09-22
 
