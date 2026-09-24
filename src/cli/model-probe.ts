@@ -4,11 +4,8 @@ import { isolateServerAuth } from './server-auth.js';
 /**
  * The effective default model values read from the user's opencode config
  * via `client.config.get()`. Both are optional — the config may set
- * neither (the "no default" fallback path).
- *
- * @internal Exported for tests only (used by `model-probe.test.ts` and
- * `yes-selection.test.ts` fixture tables). Not re-exported from the module
- * barrel — consumed directly by co-located test files.
+ * neither (the "no default" fallback path). Shared with the V2 probe, which
+ * returns the same shape.
  */
 export interface ProbeDefaults {
   /** The user's configured default `model` (top-level opencode config). */

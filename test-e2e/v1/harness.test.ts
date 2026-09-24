@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createServer, type Server } from 'node:http';
-import { isolateServerAuth, replyToPendingQuestion, replyToQuestion } from './harness.js';
+import { isolateServerAuth } from '../shared/harness.js';
+import { replyToPendingQuestion, replyToQuestion } from './harness.js';
 
 const KEYS = ['OPENCODE_SERVER_PASSWORD', 'OPENCODE_SERVER_USERNAME'] as const;
 

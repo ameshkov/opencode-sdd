@@ -25,9 +25,12 @@ env:
   NODE_VERSION: '24'
   PNPM_VERSION: '10.14.0'
   # The opencode-ai npm package is published in lockstep with the binary, so
-  # this pins both the binary and the package. Matches the version the e2e
-  # suite targets (see Dockerfile build arg and docs/e2e.md).
+  # this pins both the binary and the package. Matches the version the V1 e2e
+  # lane targets (see Dockerfile build arg and docs/e2e.md).
   OPENCODE_VERSION: '1.18.29'
+  # The V2 CLI line (`@opencode/cli`, bins `opencode`/`opencode2`), pinned in
+  # lockstep with the `@opencode/plugin` and `@opencode/sdk` devDependencies.
+  OPENCODE_V2_VERSION: '2.0.14'
 
 jobs:
   ci:
@@ -46,11 +49,12 @@ jobs:
       # The full local gate: format:check, lint, typecheck, and unit tests.
       - run: pnpm check
 
-  # E2E runs on a Windows/macOS/Linux matrix because the plugin and its e2e
-  # suite must work on every platform opencode supports. Docker (used by the
-  # repo's Dockerfile) can only reproduce Linux, so these run natively per OS.
+  # The V1 e2e lane runs on a Windows/macOS/Linux matrix because the plugin
+  # and its e2e suite must work on every platform opencode supports. Docker
+  # (used by the repo's Dockerfile) can only reproduce Linux, so these run
+  # natively per OS.
   e2e-tests:
-    name: E2E Tests (${{ matrix.os }})
+    name: E2E Tests V1 (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -73,7 +77,28 @@ jobs:
         run: npm install --global opencode-ai@${{ env.OPENCODE_VERSION }}
       # The e2e harness loads the plugin from build/index.js via a file URL.
       - run: pnpm build
-      - run: pnpm test:e2e
+      - run: pnpm test:e2e:v1
+
+  # The V2 e2e lane: in-process `@opencode/sdk` specs (binary-free) plus the
+  # loader smoke against the real `opencode2` binary. Ubuntu-only because the
+  # V2 CLI's published binaries do not cover every runner OS uniformly.
+  e2e-v2:
+    name: E2E Tests V2 (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install opencode V2 binary
+        run: npm install --global @opencode/cli@${{ env.OPENCODE_V2_VERSION }}
+      - run: pnpm build
+      - run: pnpm test:e2e:v2
 
   # A containerized lane that runs the entire quality gate — format, lint,
   # type-check, unit tests, and the mock-LLM e2e suite — through the repo's
@@ -94,7 +119,9 @@ jobs:
           context: .
           file: Dockerfile
           target: ci-output
-          build-args: OPENCODE_VERSION=${{ env.OPENCODE_VERSION }}
+          build-args: |
+            OPENCODE_VERSION=${{ env.OPENCODE_VERSION }}
+            OPENCODE_V2_VERSION=${{ env.OPENCODE_V2_VERSION }}
           outputs: type=local,dest=./ci-output
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -111,6 +138,7 @@ jobs:
     needs:
       - ci
       - e2e-tests
+      - e2e-v2
       - docker
     if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
@@ -154,6 +182,7 @@ jobs:
     needs:
       - ci
       - e2e-tests
+      - e2e-v2
       - docker
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest

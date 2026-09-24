@@ -1,4 +1,4 @@
-@robustness
+@robustness @V1
 Feature: Robustness and degradation
   How the plugin and opencode survive bad inputs, unavailable assets
   and a provider that disappears — the config hook must degrade

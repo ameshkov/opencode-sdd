@@ -52,23 +52,36 @@ repository root.
 The plans are worthless against a stale or unprepared environment.
 Check before executing anything:
 
-1. **Is the environment running?** Follow the README's start
+1. **Which environment?** This suite supports two opencode
+   environments: `v1` (1.x binary) and `v2` (`@opencode/cli`).
+   Select one (`qa-up.sh --env v1|v2`, `pnpm qa:run --env ...`,
+   `QA_ENV=...` for the helper scripts) and use it consistently:
+   the runner drives the matching compose project, and the stack
+   must be the same environment. Scenarios are filtered by their
+   `@V1`/`@V2` tags, so a `--env v2` run covers only the V2-
+   applicable cases. When the task is dual-support verification,
+   run the P0 cases on BOTH environments and keep the reports side
+   by side.
+2. **Is the environment running?** Follow the README's start
    steps; confirm its services are up.
-2. **Is it current?** If the environment was set up before the
+3. **Is it current?** If the environment was set up before the
    change under test, rebuild or restart it per the README — an
    environment running old code tells you nothing about current
    code. For this suite: rebuild the workspace image when plugin
-   source changed (`docker compose -f qa/docker-compose.yml build qa`).
-3. **Are the plan's assumed inputs in place?** The plans assume a
+   source changed (`qa-up.sh --env <env>`, which cannot leave you
+   on a stale image).
+4. **Are the plan's assumed inputs in place?** The plans assume a
    specific configuration/state (the scratch project, the wired
    `opencode.json`, the provisioned OpenRouter provider). Verify
    what the README says is deployed matches the repo's baseline; if
-   it drifted, restore it.
-4. **Health check.** Confirm the environment answers the README's
+   it drifted, restore it. The wired config shape is
+   environment-specific (`plugin`/`provider` on V1, `plugins`/
+   `providers` on V2); the README documents both.
+5. **Health check.** Confirm the environment answers the README's
    health check. Note any networking quirks documented there (the
    gateway is reachable inside the workspace as
    `http://bifrost:8080`, never `localhost`).
-5. **Fail fast on broken tooling.** If the environment cannot be
+6. **Fail fast on broken tooling.** If the environment cannot be
    prepared, fix the cause first — do not start executing
    scenarios against an old setup.
 
@@ -78,9 +91,10 @@ Enumerate the selected cases and the exact order the runner will
 walk them:
 
 ```bash
-pnpm qa:run --list                    # every scenario, every file
-pnpm qa:run --feature <name> --list   # one feature file
-pnpm qa:run --id <case-id>            # one scenario id
+pnpm qa:run --env v1 --list                    # V1-applicable scenarios
+pnpm qa:run --env v2 --list                    # V2-applicable scenarios
+pnpm qa:run --feature <name> --list            # one feature file
+pnpm qa:run --id <case-id>                     # one scenario id
 ```
 
 Important: when you select a **feature file**, the runner walks
@@ -141,9 +155,10 @@ README shows the exact way to invoke it with the selected filter
 and a run id.
 
 Use a stable run id (when the runner offers one) so reports are
-findable and repeat runs do not collide. Reports land in
-`qa/output/<run-id>/`, written progressively so an interrupted run
-keeps its results.
+findable and repeat runs do not collide. The default id includes the
+environment (`<timestamp>-<env>`), so V1 and V2 reports never
+overwrite each other. Reports land in `qa/output/<run-id>/`, written
+progressively so an interrupted run keeps its results.
 
 ## Step 4 — Verify the report
 
@@ -156,6 +171,10 @@ After the run, check the generated report:
   record (runner order = file order; check a couple of IDs, not
   just the summary).
 - Every `fail`/`skip` carries a note a human can act on.
+- The report's `environment`, `opencodeVersion`, and `image` fields
+  match the stack you actually ran against. A report missing these
+  fields, or carrying the wrong environment, is not valid evidence
+  for a dual-support claim — re-run it with the matching `--env`.
 
 ## Step 5 — Clean up temporary files
 

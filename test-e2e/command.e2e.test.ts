@@ -19,16 +19,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { OpencodeClient, Part, ToolPart } from '@opencode-ai/sdk';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { REPO_ROOT } from './shared/harness.js';
 import {
-  REPO_ROOT,
   createSession,
   mockProviderConfig,
   pluginConfig,
   startOpencodeServer,
   type OpencodeServerHandle,
-} from './harness.js';
-import { createMockLlm, type MockLlmState } from './mock-server.js';
-import { writeFileScenario, writeFilesScenario } from './scenarios.js';
+} from './v1/harness.js';
+import { createMockLlm, type MockLlmState } from './shared/mock-server.js';
+import { writeFileScenario, writeFilesScenario } from './shared/scenarios.js';
 
 /** Temp dirs and mocks created during a test, cleaned up afterwards. */
 const cleanup: Array<() => void> = [];

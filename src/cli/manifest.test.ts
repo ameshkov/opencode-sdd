@@ -48,6 +48,21 @@ describe('package.json CLI wiring', () => {
     expect(manifest.devDependencies?.['@opencode-ai/sdk']).toBeUndefined();
   });
 
+  it('pins @opencode/plugin as a type-only devDependency', () => {
+    // The V2 plugin API types (`Plugin.Context`, editors) are imported with
+    // `import type` only and erased at compile time, so the package belongs
+    // in devDependencies, pinned in lockstep with the V2 binary.
+    expect(manifest.devDependencies?.['@opencode/plugin']).toBe('2.0.14');
+    expect(manifest.dependencies?.['@opencode/plugin']).toBeUndefined();
+  });
+
+  it('pins @opencode/sdk as a devDependency for the V2 e2e lane', () => {
+    // The in-process V2 e2e lane (`OpenCode.create`) runs in tests only and
+    // is never published, so the package stays a devDependency.
+    expect(manifest.devDependencies?.['@opencode/sdk']).toBe('2.0.14');
+    expect(manifest.dependencies?.['@opencode/sdk']).toBeUndefined();
+  });
+
   it('does not add cross-spawn as a dependency', () => {
     // CLI runtime deps cap: @inquirer/prompts, jsonc-parser,
     // @opencode-ai/sdk, diff. cross-spawn is NOT among them — the SDK's

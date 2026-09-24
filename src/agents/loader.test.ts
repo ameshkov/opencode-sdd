@@ -3,8 +3,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadAgents } from './loader.js';
-import { stubClient } from '../../test/stub-client.js';
-import { createLogger } from '../utils/index.js';
+import { stubLogger } from '../../test/plugin-helpers.js';
 
 const VALID = [
   '---',
@@ -21,7 +20,7 @@ const MALFORMED = ['---', 'mode: subagent', '---', '', 'no description', ''].joi
 
 describe('loadAgents', () => {
   it('returns an empty map for a missing directory', async () => {
-    const logger = createLogger(stubClient());
+    const logger = stubLogger();
     const result = await loadAgents(join(tmpdir(), 'no-such-agents-dir'), logger);
     expect(result.size).toBe(0);
   });
@@ -32,7 +31,7 @@ describe('loadAgents', () => {
     try {
       await writeFile(join(dir, 'sdd-explore.md'), VALID);
       await writeFile(join(dir, 'broken.md'), MALFORMED);
-      const logger = createLogger(stubClient());
+      const logger = stubLogger();
       const result = await loadAgents(dir, logger);
 
       expect([...result.keys()]).toEqual(['sdd-explore']);
@@ -51,7 +50,7 @@ describe('loadAgents', () => {
     try {
       await writeFile(join(dir, 'zebra.md'), VALID);
       await writeFile(join(dir, 'apple.md'), VALID);
-      const logger = createLogger(stubClient());
+      const logger = stubLogger();
       const result = await loadAgents(dir, logger);
       expect([...result.keys()]).toEqual(['apple', 'zebra']);
     } finally {

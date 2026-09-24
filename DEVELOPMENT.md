@@ -24,9 +24,14 @@ architecture, see [AGENTS.md](./AGENTS.md); for user-facing docs, see
 - **Node.js 24+** — verify with `node --version`.
 - **pnpm 10+** — the only supported package manager; verify with
   `pnpm --version`.
-- **opencode** — required for end-to-end debugging and `pnpm test:e2e`.
-  Install separately (for example `brew install opencode` on macOS) and
-  verify with `opencode --version`.
+- **opencode 1.x** — required for end-to-end debugging and the V1 e2e
+  lane. Install separately (for example `brew install opencode` on macOS,
+  or `npm install -g opencode-ai@1.18.29`) and verify with
+  `opencode --version`. The plugin targets the 1.18.29+ object entrypoint.
+- **opencode 2.x (optional)** — the V2 e2e lane's loader smoke and local
+  V2 testing need `@opencode/cli` (`npm install -g @opencode/cli@2.0.14`,
+  bins `opencode` and `opencode2`). Without it the V2 lane still runs its
+  in-process specs and skips the loader smoke.
 - **Git** — needed for the Husky `pre-commit` hook.
 
 No global TypeScript or Vitest install is required; everything is pinned in
@@ -52,9 +57,12 @@ All commands run through pnpm scripts in [`package.json`](./package.json):
 - `pnpm typecheck` — type-check production and test code (no emit).
 - `pnpm test` — run the Vitest unit suite once.
 - `pnpm test:watch` — run Vitest in watch mode.
-- `pnpm test:e2e` — run the mock-LLM e2e suite against a real `opencode`
-  server. **Not** part of `pnpm check`; needs the `opencode` binary on PATH
-  and a built `build/`. See [docs/e2e.md](./docs/e2e.md).
+- `pnpm test:e2e` — run both mock-LLM e2e lanes (`:v1` then `:v2`).
+  **Not** part of `pnpm check`. See [docs/e2e.md](./docs/e2e.md).
+- `pnpm test:e2e:v1` — the V1 lane against a real opencode 1.x server;
+  needs the `opencode` binary on PATH and a built `build/`.
+- `pnpm test:e2e:v2` — the V2 lane: in-process `@opencode/sdk` specs plus
+  a loader smoke that skips when `opencode2` is absent.
 - `pnpm lint` — ESLint over `src/`, `test/`, `test-e2e/`, and
   `qa/scripts/`, plus Knip and the Gherkin plan checks.
 - `pnpm lint:fix` — auto-fix the ESLint issues that can be fixed (Knip
@@ -71,9 +79,10 @@ every commit and aborts on any failure:
 
 1. Block staged lines matching `FIXME` or `TODO.*!!`.
 2. Run `pnpm check`.
-3. Build and run `pnpm test:e2e`.
+3. Build and run `pnpm test:e2e` (both lanes).
 
-Step 3 needs the `opencode` binary on PATH. For a WIP commit, use
+Step 3 needs the `opencode` 1.x binary on PATH; the V2 loader smoke skips
+itself when `opencode2` is absent. For a WIP commit, use
 `git commit --no-verify`, but re-run the gate before pushing — CI enforces
 it.
 
@@ -106,10 +115,10 @@ mkdir -p ../opencode-plugin-tester && cd ../opencode-plugin-tester
 
 Pick one of the two methods below.
 
-**Method 1 — reference the local package (recommended).** opencode resolves
-`build/index.js` through `package.json#exports`. This writes the scratch
-project's `opencode.json` with a `file:///` plugin entry; the shell resolves
-the absolute path:
+**Method 1 — reference the local package (recommended).** On V1 opencode
+resolves `build/index.js` through `package.json#exports`; on V2 it resolves
+`<dir>/index.js` directly and ignores `package.json#main`. The scratch
+project's `opencode.json` therefore differs per host line:
 
 ```sh
 cat > opencode.json <<EOF
@@ -120,12 +129,28 @@ cat > opencode.json <<EOF
 EOF
 ```
 
+```sh
+# opencode V2: the entry points at build/, and the key is `plugins`.
+cat > opencode.json <<EOF
+{
+  "\$schema": "https://opencode.ai/config.json",
+  "plugins": ["file://$(cd ../opencode-sdd && pwd)/build"]
+}
+EOF
+```
+
 `opencode.json` lives at the scratch project root, not under `.opencode/`
 (that directory is only used by Method 2).
 
 > **Note:** the `file:` specifier is not documented in opencode's official
-> config schema and has only been verified against opencode 1.18.x. If it
-> stops working, use Method 2.
+> config schema and has only been verified against opencode 1.18.x (V1)
+> and 2.0.x (V2). If it stops working, use Method 2.
+>
+> The plugin's default export is a dual entry object
+> (`{ id, server, setup }`). V1 calls `server()` and never `setup()`; V2
+> requires `id` + `setup` and ignores `server`. A V1 release below 1.18.29
+> does not accept the object entrypoint, which is why the install wizard
+> refuses it.
 
 **Method 2 — thin loader in the plugin directory.** Local plugins load
 directly from `.opencode/plugins/`, and *each file* there is a separate
@@ -231,14 +256,24 @@ error in the compiled output can still block startup. To recover:
 
 ## Troubleshooting
 
-- **`pnpm test:e2e` fails with "opencode binary not found" or "build/ not
-  found".** The e2e `globalSetup` (`test-e2e/global-setup.ts`) fails fast
-  when the binary is missing or `build/index.js` does not exist. Install
-  the binary and run `pnpm build` first.
+- **`pnpm test:e2e:v1` fails with "opencode binary not found" or "build/
+  not found".** The V1 `globalSetup` (`test-e2e/v1/global-setup.ts`) fails
+  fast when a 1.x binary is missing or `build/index.js` does not exist.
+  Install opencode 1.x and run `pnpm build` first.
 
 - **`file://` plugin loading stops working.** The `file:` specifier is not
   in opencode's official config schema and has only been verified against
   opencode 1.18.x. Fall back to Method 2.
+
+- **The plugin registers nothing on opencode V2.** V2 resolves a local
+  plugin directory as `<dir>/index.js` and ignores `package.json#main`, so
+  a `file://` entry must point at `build/` (`file://<root>/build`), not
+  the package root. V2 also loads plugins when a location boots — a
+  `serve`-only smoke test passes vacuously; trigger a session (`run`).
+
+- **V2 `run` boots the wrong project.** `opencode2` resolves its project
+  from the `PWD` environment variable, not the process working directory.
+  Set `PWD` explicitly when spawning it programmatically.
 
 - **Plugin logs are empty even with `--log-level DEBUG`.** You are in the
   TUI, where `--print-logs` is swallowed and logs only land on disk. Tail

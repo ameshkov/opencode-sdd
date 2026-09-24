@@ -1,4 +1,5 @@
-import { probe, type ProbeDeps } from './model-probe.js';
+import { probeForHost, type HostProbeDeps } from './host-probe.js';
+import type { OpencodeHost } from './prerequisites.js';
 import { rankFor, SUBAGENT_RECOMMENDATIONS } from './recommend.js';
 import {
   AGENT_UNSET_WARNING,
@@ -48,15 +49,17 @@ export type InteractivePromptDeps = AgentModelSelectDeps;
  * reaction (register plugin only, warn, exit 0) is uniform across
  * both flows.
  *
- * @param probeDeps Optional test doubles for the SDK server/client
- *   (mirrors `probe`'s `ProbeDeps`).
+ * @param host Detected host line; selects the V1 SDK probe or the V2
+ *   spawn-and-fetch probe.
+ * @param probeDeps Optional test doubles for the host probe.
  * @param promptDeps Optional test doubles for the per-agent `select`.
  */
 export async function buildInteractiveSelection(
-  probeDeps?: ProbeDeps,
+  host: OpencodeHost,
+  probeDeps?: HostProbeDeps,
   promptDeps: InteractivePromptDeps = {},
 ): Promise<InteractiveSelectionResult> {
-  const probeResult = await probe(probeDeps);
+  const probeResult = await probeForHost(host, probeDeps);
   if (!probeResult.ok) {
     return {
       selection: {},

@@ -45,16 +45,21 @@ a model to each SDD subagent. Run it via `npx` (no global install needed):
 npx opencode-sdd install
 ```
 
-The wizard detects the `opencode` binary, discovers patchable configs
-(project-local, an `OPENCODE_CONFIG` override, or global), probes the models
-reachable from your providers, recommends a per-subagent model, shows a
-before/after diff, and writes the change with an idempotent, comment- and
-order-preserving patch. Pass `-y` (or `--yes`) for a fully unattended
-install:
+The wizard detects the `opencode` binary and its host line, discovers
+patchable configs (project-local, an `OPENCODE_CONFIG` override, or
+global), probes the models reachable from your providers, recommends a
+per-subagent model, shows a before/after diff, and writes the change with
+an idempotent, comment- and order-preserving patch. Pass `-y` (or
+`--yes`) for a fully unattended install:
 
 ```sh
 npx opencode-sdd install --yes
 ```
+
+**Supported opencode versions:** 1.x at or above **1.18.29**, and 2.x
+(2.0.x). The wizard writes the config shape native to the detected host
+(`plugin`/`provider` on V1, `plugins`/`providers` on V2) and refuses an
+unsupported 1.x release with an upgrade hint.
 
 The wizard edits configuration only; opencode installs the plugin from the
 npm registry on the next restart. Restart opencode (or start a new session)
@@ -66,13 +71,23 @@ the plugin entry forms, canary pinning, and the model recommendation rules.
 
 ### Manual install
 
-To edit config by hand, add `opencode-sdd` to the `plugin` array in your
-`opencode.json` (or `opencode.jsonc`):
+To edit config by hand, add `opencode-sdd` to your `opencode.json` (or
+`opencode.jsonc`). On opencode 1.x it goes in the `plugin` array:
 
 ```json
 {
     "$schema": "https://opencode.ai/config.json",
     "plugin": ["opencode-sdd"]
+}
+```
+
+On opencode 2.x the key is `plugins` (the same npm entry works — V2
+resolves the package by name):
+
+```json
+{
+    "$schema": "https://opencode.ai/config.json",
+    "plugins": ["opencode-sdd"]
 }
 ```
 

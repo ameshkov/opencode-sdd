@@ -9,9 +9,15 @@
 # (the install wizard's model probe imports @opencode-ai/sdk). There is no
 # host bind mount at all - the host only needs docker.
 #
+# Two environments are supported from the same Dockerfile:
+#   - V1 (default): OPENCODE_MAJOR=1, installed via the official installer.
+#   - V2: OPENCODE_MAJOR=2, installed via `npm install -g @opencode/cli`.
+# qa/scripts/setup/qa-up.sh selects the environment with `--env v1|v2` and
+# passes the matching build args (see qa/docker-compose.v2.yml).
+#
 # After changing plugin source, rebuild:
-#   docker compose -f qa/docker-compose.yml build qa
-#   docker compose -f qa/docker-compose.yml up -d qa
+#   qa/scripts/setup/qa-up.sh --env v1
+#   qa/scripts/setup/qa-up.sh --env v2
 
 FROM node:24-bookworm-slim AS build
 
@@ -28,7 +34,17 @@ RUN pnpm install --frozen-lockfile && pnpm build
 
 FROM node:24-bookworm-slim AS qa-workspace
 
+# Which opencode line this image installs: 1 (official installer) or 2
+# (@opencode/cli npm package). The version args pin the concrete release.
+ARG OPENCODE_MAJOR=1
 ARG OPENCODE_VERSION=1.18.29
+ARG OPENCODE_V2_VERSION=2.0.14
+
+# Baked so the runner can record which opencode release the environment
+# actually carries (the manual QA report gains an `opencodeVersion` field).
+LABEL org.opencode-sdd.qa.opencode-major=${OPENCODE_MAJOR}
+LABEL org.opencode-sdd.qa.opencode-version=${OPENCODE_VERSION}
+LABEL org.opencode-sdd.qa.opencode-v2-version=${OPENCODE_V2_VERSION}
 
 # Baked at build time by qa/scripts/setup/qa-up.sh (which computes the
 # repo hash and passes it via `docker compose build --build-arg`).
@@ -49,12 +65,20 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g pnpm@10.14.0
 
-# --no-modify-path avoids editing shell rc files that do not exist in the
-# image. The installer drops the binary in $HOME/.opencode/bin.
-RUN curl -fsSL https://opencode.ai/install \
-    | bash -s -- --version ${OPENCODE_VERSION} --no-modify-path \
-    && mv "${HOME}/.opencode/bin/opencode" /usr/local/bin/opencode \
-    && opencode --version
+# V1: --no-modify-path avoids editing shell rc files that do not exist in
+# the image. The installer drops the binary in $HOME/.opencode/bin.
+# V2: @opencode/cli installs both `opencode` and `opencode2` bins; `opencode`
+# is the V2 binary in that image, so the whole stack (wizard probe, web UI,
+# TUI) uses V2 consistently.
+RUN if [ "${OPENCODE_MAJOR}" = "2" ]; then \
+      npm install --global @opencode/cli@${OPENCODE_V2_VERSION} \
+      && opencode --version; \
+    else \
+      curl -fsSL https://opencode.ai/install \
+        | bash -s -- --version ${OPENCODE_VERSION} --no-modify-path \
+      && mv "${HOME}/.opencode/bin/opencode" /usr/local/bin/opencode \
+      && opencode --version; \
+    fi
 
 # The plugin source + compiled build/ live at /app (read-only by
 # convention - write tests never touch /app).

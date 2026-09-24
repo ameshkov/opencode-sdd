@@ -1,4 +1,4 @@
-@cli
+@cli @V1
 Feature: CLI install wizard
   The wizard runs from the baked build inside the workspace:
   `qa exec 'node /app/build/cli/install.js ...'` (opencode-sdd is the

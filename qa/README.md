@@ -10,11 +10,19 @@ across frontier families. The gateway IS local (compose service
 `bifrost`); the inference is remote and **costs real OpenRouter
 tokens** — follow the token guidance in section 9.
 
+The suite runs against **two opencode environments** from one compose
+stack definition: `v1` (the 1.x binary, default) and `v2` (the
+`@opencode/cli` binary). Scenarios carry `@V1`/`@V2` applicability
+tags; the runner filters by `--env` and stamps the report with the
+environment, the workspace image, and the opencode version, so evidence
+from the two stacks is never mixed.
+
 The test cases are **Gherkin feature files** in `qa/features/`, run by
 the interactive manual test runner (`qa/scripts/bdd/run-tests.ts`, via
 `pnpm qa:run`), which writes a per-run report to `qa/output/`. The
 plans are enforced as code: `pnpm lint:gherkin` (part of `pnpm lint`)
-validates the `@TC-*` ID convention and Gherkin syntax.
+validates the `@TC-*` ID convention, the `@V1`/`@V2` applicability
+tags, and Gherkin syntax.
 
 Everything needed to run the suite:
 
@@ -22,11 +30,12 @@ Everything needed to run the suite:
 | --- | --- |
 | `qa/docker-compose.yml` | Bifrost gateway (OpenRouter) + isolated workspace container |
 | `qa/docker-compose.ports.yml` | Opt-in host-port override for the gateway (UI + host-side smoke) |
+| `qa/docker-compose.v2.yml` | V2 environment override: project name, image tag, build args (`--env v2`) |
 | `qa/.env.example` | Template for the gitignored `qa/.env` (OpenRouter key + optional host port) |
 | `qa/bifrost/models.tsv` | The canonical OpenRouter model allowlist (id + display name) |
 | `qa/features/` | Gherkin test plans, one file per group (section 4) |
 | `qa/scripts/bdd/` | The manual test runner (`run-tests.ts`) and ID check (`check-gherkin-ids.ts`) |
-| `qa/scripts/setup/` | Host-side scripts: stack/gateway lifecycle, prereq check, key contract |
+| `qa/scripts/setup/` | Host-side scripts: stack/gateway lifecycle, prereq check, key contract, environment resolution (`lib-compose.sh`) |
 | `qa/docker/` | In-container scripts (baked into the image at `/app`): provisioning, post-provision verification, scratch project, config wiring, baseline reset, web-UI server launcher (`serve-web.sh`), wizard PTY driver, smoke test |
 | `qa/output/` | Generated run reports (`qa/output/<run-id>/report.json` + `report.md`) — gitignored |
 | `qa/.gherkin-lintrc` | Gherkin style rules (used by `pnpm lint:gherkin`) |
@@ -158,7 +167,8 @@ docker compose -f qa/docker-compose.yml cp qa:/work/sdd-manual/.sdd \
 | Docker engine | host | `docker info`; ~2 GB free (315 MB gateway image + ~1 GB workspace image) |
 | OpenRouter API key | `qa/.env` (gitignored) | needed to START the stack; see 3.2 |
 | Outbound HTTPS to `openrouter.ai/api/v1` | host (docker) | the gateway forwards every request there; checked by `check-deps.sh` |
-| opencode binary 1.18.29 | image | `qa/Dockerfile` `ARG OPENCODE_VERSION` |
+| opencode binary 1.18.29 (V1) | image | `qa/Dockerfile` `ARG OPENCODE_VERSION`, selected by `OPENCODE_MAJOR=1` |
+| `@opencode/cli` 2.0.14 (V2) | image | `qa/Dockerfile` `ARG OPENCODE_V2_VERSION`, selected by `OPENCODE_MAJOR=2` |
 | Node 24, pnpm 10.14 | image + host | CLI wizard, scratch project; the runner needs `pnpm qa:run` on the host |
 | git, python3, vim, curl | image | scratch project, config edits, smoke tests |
 | Plugin source + `build/` | image | compiled by `qa/Dockerfile` from the repo context |
@@ -171,15 +181,27 @@ restart — see 3.2.
 ### 3.2 Stack: OpenRouter gateway + workspace
 
 ```text
-qa/scripts/setup/qa-up.sh      # build + start gateway and workspace, wait for health,
+qa/scripts/setup/qa-up.sh [--env v1|v2]
+                               # build + start gateway and workspace, wait for health,
                                # provision the provider, VERIFY it end to end (group A
                                # checks folded in); refuses a stale workspace image
-qa/scripts/setup/qa-shell.sh   # interactive shell inside the workspace
-qa/scripts/setup/llm-up.sh     # gateway only: start/restart + wait
+qa/scripts/setup/qa-shell.sh   # interactive shell inside the workspace (QA_ENV=v2 for V2)
+qa/scripts/setup/llm-up.sh     # gateway only: start/restart + wait (QA_ENV selects env)
 qa/scripts/setup/llm-down.sh   # gateway only: stop (container + volume kept)
 qa/docker/llm-smoke.sh         # gateway only: model list, chat, tool call
 ```
 
+- **Environments**: `qa-up.sh --env v1` (default) builds
+  `opencode-sdd-qa:workspace` under compose project `opencode-sdd-qa`
+  and installs the 1.x binary; `--env v2` builds
+  `opencode-sdd-qa:workspace-v2` under project `opencode-sdd-qa-v2` and
+  installs `@opencode/cli` (so `opencode` in that container IS V2). The
+  project rename gives each environment its own named volumes, so both
+  stacks coexist. `qa-shell.sh` / `llm-up.sh` / `llm-down.sh` follow
+  `QA_ENV` (`QA_ENV=v2 qa/scripts/setup/qa-shell.sh`).
+- With host publishing opted in, the V2 defaults are offset
+  (`BIFROST_PORT=8082`, `QA_WEB_PORT=4099`) so both stacks can publish
+  simultaneously; explicit `QA_HOST_PORT`/`QA_WEB_PORT` always win.
 - The stack is two containers (compose file `qa/docker-compose.yml`):
   `bifrost` (the OpenRouter gateway) and `qa` (the workspace). The
   gateway is provisioned at start time by `qa/docker/bifrost-provision.sh`
@@ -342,6 +364,39 @@ container's `BIFROST_BASE_URL` environment variable and the
 after every config change (plugins load once at startup); no hot reload
 exists.
 
+**V2 environment** (`--env v2`): the same script writes the V2-native
+shape — `providers` (with `package`/`settings` instead of
+`npm`/`options`), `plugins`, a top-level `permissions` ruleset that
+auto-approves edits and external dirs, and a `file:///app/build` plugin
+entry (V2 ignores `package.json#main` and resolves `<dir>/index.js`).
+There is no V2 equivalent of `disabled_providers`; the built-in provider
+stays listed, which only affects the wizard's model list (group C is
+V1-only):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "bifrost": {
+      "package": "@ai-sdk/openai-compatible",
+      "settings": { "baseURL": "http://bifrost:8080/v1" },
+      "models": { "openrouter/deepseek/deepseek-v4-flash": { "name": "DeepSeek V4 Flash" } }
+    }
+  },
+  "model": "bifrost/openrouter/deepseek/deepseek-v4-flash",
+  "plugins": ["file:///app/build"],
+  "permissions": [
+    { "action": "edit", "resource": "*", "effect": "allow" },
+    { "action": "external_directory", "resource": "*", "effect": "allow" }
+  ]
+}
+```
+
+V2 does not inline `@<abs-path>` mentions in prompts, so the plugin's V2
+adapter inlines command templates itself (the V1 adapter rewrites the
+token and lets opencode inline it). Both behaviors deliver the template
+body to the model.
+
 Why the provider is shaped this way:
 
 - One opencode provider (`bifrost`) talks to the gateway's
@@ -466,10 +521,16 @@ docker exec opencode-sdd-qa-qa-1 sh -c 'cat /tmp/serve-web.ready'
 # (sandbox VM: http://192.168.64.1:4097; QA_WEB_PORT picks another port)
 ```
 
-`serve-web.sh` sets `OPENCODE_ENABLE_QUESTION_TOOL=1` — headless
-`opencode serve` gates the `question` tool to app/cli/desktop clients
-(upstream #20514, #27644, #19702), so without the flag the SDD
-interview/approval gates never fire. Web-UI specifics: the slash menu
+`serve-web.sh` branches on `QA_ENV`. On V1 it sets
+`OPENCODE_ENABLE_QUESTION_TOOL=1` — headless `opencode serve` gates the
+`question` tool to app/cli/desktop clients (upstream issues 20514,
+27644, 19702), so without the flag the SDD interview/approval gates
+never fire. On V2 it clears any inherited `OPENCODE_SERVER_PASSWORD`/
+`OPENCODE_SERVER_USERNAME` (an inherited password would gate the web UI
+behind Basic auth) and uses lowercase log levels; the V2 question tool
+and form API replace the V1 flag. The container name for manual `docker
+exec` commands is `opencode-sdd-qa-qa-1` on V1 and
+`opencode-sdd-qa-v2-qa-1` on V2. Web-UI specifics: the slash menu
 renders command descriptions in full, including the
 `(provided by opencode-sdd)` suffix (see TC-REG-01); pending questions
 render as an in-session answer UI; permission asks are `Deny` /
@@ -510,17 +571,24 @@ The cases are split across individual feature files, one per group of
 the suite. The file name (minus `.feature`) names the area; the group
 letter/prefix in each TC id matches the file's group:
 
-| Feature file | Group | Cases |
-| --- | --- | --- |
-| `llm.feature` | A — Gateway + model infrastructure | TC-LLM-01..03 |
-| `registration.feature` | B — Plugin registration and config merging | TC-REG-01..05 |
-| `cli.feature` | C — CLI install wizard | TC-CLI-01..08 |
-| `tool.feature` | D — `sdd-command` custom tool | TC-TOOL-01..03 |
-| `short-flow.feature` | E — SDD short flow | TC-SF-01..05 |
-| `prd-flow.feature` | F — PRD long flow | TC-PF-01..06 |
-| `orchestrator.feature` | G — `prd-auto-implement` orchestrator | TC-ORCH-01..04 |
-| `robustness.feature` | I — Robustness and degradation | TC-ROB-01..05 |
-| `perf.feature` | J — Cost and performance | TC-PERF-01..03 |
+| Feature file | Group | Cases | Applies to |
+| --- | --- | --- | --- |
+| `llm.feature` | A — Gateway + model infrastructure | TC-LLM-01..03 | `@V1 @V2` |
+| `registration.feature` | B — Plugin registration and config merging | TC-REG-01..05 | `@V1 @V2` |
+| `cli.feature` | C — CLI install wizard | TC-CLI-01..11 | `@V1` |
+| `tool.feature` | D — `sdd-command` custom tool | TC-TOOL-01..03, 02b | `@V1 @V2` |
+| `short-flow.feature` | E — SDD short flow | TC-SF-01..05 | `@V1 @V2` |
+| `prd-flow.feature` | F — PRD long flow | TC-PF-01..06 | `@V1 @V2` |
+| `orchestrator.feature` | G — `prd-auto-implement` orchestrator | TC-ORCH-01..04 | `@V1 @V2` |
+| `robustness.feature` | I — Robustness and degradation | TC-ROB-01..05 | `@V1` |
+| `perf.feature` | J — Cost and performance | TC-PERF-01..03 | `@V1` |
+
+The last column is the file-level applicability tag (declared on the
+Feature; scenarios inherit it). `pnpm lint:gherkin` enforces that every
+scenario is applicable to at least one environment, and
+`pnpm qa:run --env v1|v2` filters accordingly (46 cases on V1, 27 on V2).
+P0 groups B, D, E, F, and G are applicable to both environments; C, I,
+and J are V1-only until their flows are re-verified on V2.
 
 The group letter in each TC id (`TC-<GROUP>-NN`) matches the table
 above, so the coverage matrix, exit criteria, and record sheet reference
@@ -538,12 +606,13 @@ otherwise.
 | `sdd-command` allowlist mechanics | yes | TC-TOOL-01..03 (sanity) |
 | Permission merging + model preservation | yes | TC-REG-03..05 |
 | Orchestrator loops / escalation / resume | yes | TC-ORCH-01..03 (web UI) |
-| CLI wizard end to end | no | TC-CLI-01..08 |
+| CLI wizard end to end | no | TC-CLI-01..11 (V1) |
 | Short flow / PRD flow with a real LLM | no | Groups E, F |
 | Failure paths (server down, missing assets) | partial | TC-ROB-01..05 |
 | Token cost and context fit | no | Group J |
 | Artifact templates' actual content | partial | Group E/F assertions |
 | Plan quality on a strong model | no | Groups E/F/G — review with the model recorded |
+| V2 registration / command / tool parity | yes (in-process + loader smoke) | TC-REG-*, TC-TOOL-*, TC-SF-01 |
 
 ## 6. Running the suite
 
@@ -551,7 +620,8 @@ The plans are instructions a human tester carries out; the runner is
 the checklist and the record sheet.
 
 ```bash
-pnpm qa:run                    # interactive: walk every scenario
+pnpm qa:run                    # interactive: walk every scenario (V1)
+pnpm qa:run --env v2           # walk the V2-applicable scenarios
 pnpm qa:run --list             # print all scenario IDs and titles
 pnpm qa:run --feature cli      # only that file (name substring match)
 pnpm qa:run --id @TC-CLI-1     # only that scenario
@@ -560,6 +630,12 @@ pnpm qa:run --case-reset       # reset the scratch baseline before every case
 pnpm qa:run --evidence         # copy each case's .sdd + opencode.log into the report
 pnpm qa:run --run-id <id>      # fixed run id instead of a timestamp
 ```
+
+`--env` selects the compose project the runner drives (`v1` or `v2`),
+filters scenarios by their `@V1`/`@V2` tags, and stamps the report with
+`environment`, `opencodeVersion`, and `image`. Run the matching stack
+first (`qa-up.sh --env v2`); the default run id is
+`<timestamp>-<env>`.
 
 `--case-reset` runs `qa/docker/reset-scratch.sh` in the workspace before
 every case (use it for INDEPENDENT groups — registry, CLI; never
@@ -576,9 +652,9 @@ verdict it asks for a **description** of what was done or observed; the
 description is stored in the report together with the verdict.
 `--auto-pass` skips both prompts and records empty descriptions.
 
-Each run gets a unique run id: a local timestamp
-(`2026-08-28T12-34-56`, with a numeric suffix when the directory already
-exists) or `--run-id <id>`. Reports are written progressively to
+Each run gets a unique run id: a local timestamp plus the environment
+(`2026-08-28T12-34-56-v2`, with a numeric suffix when the directory
+already exists) or `--run-id <id>`. Reports are written progressively to
 `qa/output/<run-id>/report.json` and `report.md`, so an interrupted run
 keeps its results. The markdown report contains the run id, a summary
 table, and per-scenario details with status and notes.
@@ -589,11 +665,13 @@ Linting the plans (`pnpm lint:gherkin`, chained into `pnpm lint`):
 
 ### 6.1 Execution drill per group
 
-1. Ensure `pnpm check` and `pnpm test:e2e` are green before starting.
-2. Ensure `qa/scripts/setup/check-deps.sh` passes and `qa/scripts/setup/qa-up.sh`
-   reports the stack healthy AND its post-provision verification passes
-   (Group A checks are folded into bring-up; a stale workspace image is
-   refused).
+1. Ensure `pnpm check` and the matching e2e lane (`pnpm test:e2e:v1`,
+   `pnpm test:e2e:v2`) are green before starting.
+2. Ensure `qa/scripts/setup/check-deps.sh` passes and
+   `qa/scripts/setup/qa-up.sh --env <v1|v2>` reports the stack healthy
+   AND its post-provision verification passes (Group A checks are folded
+   into bring-up; a stale workspace image is refused). The runner and the
+   stack must use the same environment.
 3. Reset the baseline: `qa exec '/app/qa/docker/reset-scratch.sh
    /work/sdd-manual'` before each group's first case (independent cases
    reset their own baseline in their `Given`; the runner's `--case-reset`
@@ -636,22 +714,31 @@ docker compose -f qa/docker-compose.yml cp qa:/work/sdd-manual/.sdd \
 - screenshots of the session (web UI) or terminal captures of the TUI;
 - the `/api/logs` excerpt when the case asserts model/token/cost values;
 - a note recording the **model under test** (e.g.
-  `bifrost/openrouter/deepseek/deepseek-v4-flash`), the opencode version,
-  the plugin commit SHA (the source baked into the image), and the
-  gateway image digest — a result on `deepseek-v4-flash` is not
-  comparable to one on `claude-sonnet-5`.
+  `bifrost/openrouter/deepseek/deepseek-v4-flash`), the opencode
+  environment and version (`v1` / `v2`; the runner stamps both into
+  `report.md`/`report.json`), the plugin commit SHA (the source baked
+  into the image), and the gateway image digest — a result on
+  `deepseek-v4-flash` is not comparable to one on `claude-sonnet-5`, and
+  a V1 result is not comparable to a V2 result. Versioned evidence is
+  mandatory: a report without `environment` + `opencodeVersion` cannot be
+  accepted as a dual-support record.
 
 `qa/evidence/` and `qa/output/` are gitignored; run records stay local.
 
 ## 8. Exit Criteria
 
-- `pnpm check` and `pnpm test:e2e` are green before starting.
+- `pnpm check` and the matching e2e lane (`pnpm test:e2e:v1` /
+  `pnpm test:e2e:v2`) are green before starting.
 - Group A: TC-LLM-01/02 pass; if tool calls fail, stop and fix the
   provider/key (nothing downstream works).
-- All @P0 cases pass: TC-REG-01/02, TC-CLI-02/03, TC-SF-01..03,
-  TC-PF-01/02/06, TC-ORCH-01.
+- All @P0 cases pass **on both environments** (`--env v1` and
+  `--env v2`): TC-REG-01/02, TC-SF-01..03, TC-PF-01/02/06, TC-ORCH-01.
+  TC-CLI-02/03 are V1-only until group C is re-verified on V2.
 - All @P1 cases pass or have a filed defect with evidence; @P2 are
   informational for the release decision.
+- Every run has a versioned report (`environment`, `opencodeVersion`,
+  `image`); V1 and V2 reports are kept side by side under
+  `qa/output/<run-id>/`.
 - Every failure is recorded in the runner's report with the TC id,
   actual behavior, and log excerpt — never fixed silently.
 
@@ -679,6 +766,11 @@ docker compose -f qa/docker-compose.yml cp qa:/work/sdd-manual/.sdd \
 | SDD interview / approval gates never fire in the web UI | headless `opencode serve` gates the `question` tool off (`OPENCODE_ENABLE_QUESTION_TOOL`); `serve-web.sh` sets it to `1` (3.6) |
 | Stack dirty after experiments | `docker compose -f qa/docker-compose.yml down -v` (removes gateway data, scratch work, opencode state) |
 | Runner fails with `no test cases matched the filters` | the file/ID filters are substring/exact matches; check `pnpm lint:gherkin` passes and use `--list` to find ids |
+| `--env v2` runs the wrong stack | the runner drives compose itself; make sure the V2 stack is up (`qa-up.sh --env v2`) and pass the same `--env` to `pnpm qa:run`. `qa-shell.sh`/`llm-up.sh` follow `QA_ENV` |
+| V2 image build fails installing opencode | the `@opencode/cli` postinstall downloads a platform binary; check outbound npm access and that the build arg `OPENCODE_V2_VERSION` exists on npm |
+| V2 web UI returns 401 / asks for Basic auth | an inherited `OPENCODE_SERVER_PASSWORD` gated the server; `serve-web.sh` clears it on V2. Verify inside the container: `env` lists no `OPENCODE_SERVER_*` vars |
+| V2 command templates reach the model as file paths | the plugin's V2 adapter inlines templates itself; rebuild the workspace image so `build/host/v2` carries the current adapter (`qa-up.sh --env v2`) |
+| V1 report says `opencodeVersion: unknown` | the image label is missing because the image was built outside `qa-up.sh`; rebuild via `qa-up.sh --env <env>` (it passes `SRC_HASH` and the version args) |
 | E2E suite fails | it needs `opencode` on PATH and a built `build/`; unrelated to `qa/` |
 
 ## 10. Token and Cost Guidance

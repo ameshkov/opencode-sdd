@@ -113,6 +113,20 @@ observations, and `And` for additional steps of the same kind.
   `qa/scripts/bdd/check-gherkin-ids.ts`).
 - Add a priority tag (`@P0` blocking, `@P1` core, `@P2`
   nice-to-have) matching the suite's exit criteria.
+- Declare environment applicability: `@V1`, `@V2`, or both. The
+  tag may live on the Feature (scenarios inherit it) when the whole
+  file targets the same environment(s). `pnpm lint:gherkin`
+  enforces that every scenario is applicable to at least one
+  environment, and `pnpm qa:run --env v1|v2` filters on these tags.
+  P0 behavior that the plugin ships on both opencode lines (V1
+  >= 1.18.29 and V2 2.x) must be tagged `@V1 @V2`; a scenario that
+  depends on V1-only tooling (the install wizard's V1 config shape,
+  the `OPENCODE_ENABLE_QUESTION_TOOL` flag, V1 log levels) stays
+  `@V1` until re-verified on V2.
+- When a change affects both lines, cover both in the same feature
+  file: one case may assert the shared behavior (tagged `@V1 @V2`)
+  and a sibling case may assert the environment-specific shape
+  (tagged `@V1` or `@V2`).
 - Verify effects the way the plans already do — file assertions,
   log markers (the marker table lives in `qa/README.md`),
   gateway `/api/logs`, TUI-visible behavior.

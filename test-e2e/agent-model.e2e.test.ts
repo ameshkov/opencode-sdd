@@ -8,7 +8,7 @@
  * via `client.config.get()`.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { pluginConfig, startOpencodeServer, type OpencodeServerHandle } from './harness.js';
+import { pluginConfig, startOpencodeServer, type OpencodeServerHandle } from './v1/harness.js';
 
 import type { Config } from '@opencode-ai/sdk';
 

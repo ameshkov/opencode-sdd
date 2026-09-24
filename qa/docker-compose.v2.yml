@@ -1,0 +1,32 @@
+# V2 QA stack override. Use with the base file:
+#   docker compose -f qa/docker-compose.yml -f qa/docker-compose.v2.yml ...
+# or, preferably, `qa/scripts/setup/qa-up.sh --env v2`.
+#
+# It renames the compose project, image tag, and (implicitly, via the project
+# name) the named volumes, so the V1 and V2 stacks coexist without sharing
+# state. Build args install the V2 opencode line; `QA_ENV`/`OPENCODE_MAJOR`
+# let the in-container scripts (wire-opencode-config.sh, serve-web.sh) write
+# V2-native config and use V2 serve flags.
+#
+# Ports: the opt-in ports override still reads ${BIFROST_PORT} / ${QA_WEB_PORT};
+# qa-up.sh defaults them to the V2 offsets (8082/4099) unless the caller set
+# them explicitly.
+
+name: opencode-sdd-qa-v2
+
+services:
+  qa:
+    build:
+      args:
+        OPENCODE_MAJOR: '2'
+        # Also override the V1 arg so the image's `opencode-version` label
+        # (read by the manual-test runner for the report) reflects the
+        # version actually installed in this image.
+        OPENCODE_VERSION: '2.0.14'
+        OPENCODE_V2_VERSION: '2.0.14'
+    image: opencode-sdd-qa:workspace-v2
+    environment:
+      QA_ENV: v2
+      OPENCODE_MAJOR: '2'
+      BIFROST_BASE_URL: http://bifrost:8080
+      HOME: /home/qa

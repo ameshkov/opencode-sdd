@@ -1,4 +1,4 @@
-@llm
+@llm @V1 @V2
 Feature: Gateway and model infrastructure
   Proves the environment itself; nothing else can pass if this fails.
   The gateway is bifrost (compose service), the provider is OpenRouter —

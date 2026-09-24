@@ -8,6 +8,24 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- opencode 2.x support: the plugin's default export is now a dual entry
+  (`{ id, server, setup }`) that registers the full SDD surface —
+  commands, agents, the `sdd-command` tool, and permission gating — on
+  opencode 2.0.x as well as 1.x.
+- The install wizard detects the opencode host line and writes native
+  configuration: `plugins`/`agents` on 2.x, `plugin`/`agent` on 1.x. It
+  refuses opencode 1.x below 1.18.29 with an upgrade hint.
+
+### Changed
+
+- `--local` plugin entries point at `<path>/build` on opencode 2.x (V2
+  resolves `<dir>/index.js` and ignores `package.json#main`); on 1.x the
+  entry still points at the package root.
+- On opencode 2.x the plugin inlines command template assets itself,
+  because V2 does not inline `@<abs-path>` prompt mentions.
+
 ## [v1.5.0] - 2026-09-22
 
 ### Added

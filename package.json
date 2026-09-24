@@ -45,7 +45,10 @@
     "build": "rm -rf build && tsc -p tsconfig.build.json && node scripts/copy-assets.mjs && node scripts/check-runtime-imports.mjs",
     "typecheck": "tsc -p tsconfig.build.json && tsc -p tsconfig.test.json",
     "test": "vitest run",
-    "test:e2e": "vitest run --config vitest.test-e2e.config.ts",
+    "test:e2e": "pnpm test:e2e:all",
+    "test:e2e:v1": "vitest run --config vitest.test-e2e.config.ts",
+    "test:e2e:v2": "vitest run --config vitest.test-e2e-v2.config.ts",
+    "test:e2e:all": "pnpm test:e2e:v1 && pnpm test:e2e:v2",
     "test:watch": "vitest",
     "clean": "rm -rf node_modules build qa/output",
     "qa:run": "node qa/scripts/bdd/run-tests.ts",
@@ -60,15 +63,17 @@
   },
   "dependencies": {
     "@inquirer/prompts": "8.5.2",
-    "jsonc-parser": "3.3.1",
+    "@opencode-ai/sdk": "1.18.29",
     "diff": "9.0.0",
-    "@opencode-ai/sdk": "1.18.29"
+    "jsonc-parser": "3.3.1"
   },
   "devDependencies": {
     "@cucumber/gherkin": "42.0.1",
     "@cucumber/messages": "34.2.1",
     "@eslint/js": "10.0.1",
     "@opencode-ai/plugin": "1.18.29",
+    "@opencode/plugin": "2.0.14",
+    "@opencode/sdk": "2.0.14",
     "@types/node": "25.9.3",
     "eslint": "10.5.0",
     "gherkin-lint": "4.2.4",

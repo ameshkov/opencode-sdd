@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Config, PluginInput } from '@opencode-ai/plugin';
+import type { Logger } from '../src/utils/index.js';
 import { stubClient } from './stub-client.js';
 
 /**
@@ -58,6 +59,43 @@ export async function withCommandsDir(fn: (dir: string) => Promise<void>): Promi
     delete process.env['SDD_AGENTS_DIR'];
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+/** One captured logger entry. */
+export interface StubLogEntry {
+  level: 'debug' | 'info' | 'warn' | 'error';
+  message: string;
+  extra?: Record<string, unknown>;
+}
+
+/** A {@link Logger} that records entries instead of writing them. */
+export interface StubLogger extends Logger {
+  /** Every entry captured so far, in call order. */
+  readonly entries: StubLogEntry[];
+}
+
+/**
+ * Build a recording {@link Logger} for tests that assert on log messages
+ * without a host client.
+ *
+ * @returns A logger whose `entries` array captures every call.
+ */
+export function stubLogger(): StubLogger {
+  const entries: StubLogEntry[] = [];
+  const record = async (
+    level: StubLogEntry['level'],
+    message: string,
+    extra?: Record<string, unknown>,
+  ): Promise<void> => {
+    entries.push(extra === undefined ? { level, message } : { level, message, extra });
+  };
+  return {
+    entries,
+    debug: (message, extra) => record('debug', message, extra),
+    info: (message, extra) => record('info', message, extra),
+    warn: (message, extra) => record('warn', message, extra),
+    error: (message, extra) => record('error', message, extra),
+  };
 }
 
 /**

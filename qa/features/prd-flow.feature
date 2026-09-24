@@ -1,4 +1,4 @@
-@prd-flow
+@prd-flow @V1 @V2
 Feature: PRD long flow
   Step-by-step commands on fixture F2 ("Add divide(a, b) to src/math.ts
   that throws on division by zero. Single issue, no HITL."). Each case

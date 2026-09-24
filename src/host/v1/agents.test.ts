@@ -2,9 +2,15 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { Config } from '@opencode-ai/plugin';
-import sddPlugin from './index.js';
-import { permissionRecord, pluginInput, withCommandsDir } from '../test/plugin-helpers.js';
+import type { Config, Hooks, PluginInput } from '@opencode-ai/plugin';
+import { createV1Hooks } from './index.js';
+import { createV1Logger } from './logger.js';
+import { permissionRecord, pluginInput, withCommandsDir } from '../../../test/plugin-helpers.js';
+
+/** Build the V1 hooks with a logger bound to `input`. */
+function hooksFrom(input: PluginInput): Hooks {
+  return createV1Hooks(createV1Logger(input.client));
+}
 
 /**
  * Create a temp agents directory with a single `sdd-explore` fixture, set
@@ -42,7 +48,7 @@ describe('sdd plugin agent registration', () => {
   it('registers sdd-explore from Markdown', async () => {
     await withCommandsDir(async () => {
       await withAgentsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = {};
         await hooks.config?.(config);
 
@@ -57,7 +63,7 @@ describe('sdd plugin agent registration', () => {
   it('preserves existing user agents via spread-merge', async () => {
     await withCommandsDir(async () => {
       await withAgentsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = {
           agent: { 'user-agent': { description: 'mine' } },
         };
@@ -72,7 +78,7 @@ describe('sdd plugin agent registration', () => {
   it('preserves a user-set model when merging onto a same-named SDD agent', async () => {
     await withCommandsDir(async () => {
       await withAgentsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         // A user pins sdd-explore to a model in opencode.json before the
         // plugin registers its own definition for the same agent name.
         const config: Config = {
@@ -95,7 +101,7 @@ describe('sdd plugin agent registration', () => {
     await withCommandsDir(async () => {
       process.env['SDD_AGENTS_DIR'] = join(tmpdir(), 'definitely-missing-agents');
       try {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = {};
         await expect(hooks.config?.(config)).resolves.toBeUndefined();
         expect(config.agent?.['sdd-explore']).toBeUndefined();
@@ -114,7 +120,7 @@ describe('sdd plugin agent registration', () => {
       );
       process.env['SDD_AGENTS_DIR'] = dir;
       await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = {};
         await expect(hooks.config?.(config)).resolves.toBeUndefined();
         expect(config.agent?.['broken']).toBeUndefined();
@@ -148,7 +154,7 @@ describe('sdd plugin agent registration', () => {
       );
       await withCommandsDir(async () => {
         process.env['SDD_AGENTS_DIR'] = dir;
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = {};
         await hooks.config?.(config);
 
@@ -176,7 +182,7 @@ describe('sdd plugin agent registration', () => {
     process.env['SDD_COMMANDS_DIR'] = join(tmpdir(), 'definitely-missing-cmds');
     try {
       delete process.env['SDD_AGENTS_DIR'];
-      const hooks = await sddPlugin(pluginInput());
+      const hooks = hooksFrom(pluginInput());
       const config: Config = {};
       await hooks.config?.(config);
 
@@ -200,14 +206,14 @@ describe('sdd plugin agent registration', () => {
 
 describe('sdd plugin tool registration', () => {
   it('exposes the sdd-command tool definition on the tool hook', async () => {
-    const hooks = await sddPlugin(pluginInput());
+    const hooks = hooksFrom(pluginInput());
     expect(hooks.tool?.['sdd-command']).toBeDefined();
     expect(hooks.tool?.['sdd-command']?.description).toContain('prd-validate');
   });
 
   it('leaves the deprecated tools field untouched', async () => {
     await withCommandsDir(async () => {
-      const hooks = await sddPlugin(pluginInput());
+      const hooks = hooksFrom(pluginInput());
       const config: Config = { tools: { 'user-tool': true } };
       await hooks.config?.(config);
 

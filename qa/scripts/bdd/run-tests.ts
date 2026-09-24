@@ -7,14 +7,14 @@
  * After the verdict the runner asks for a description of what was done;
  * the description is stored in the report alongside the verdict.
  *
- * Each run gets a unique run ID (a local timestamp by default, or
+ * Each run gets a unique run ID (`<timestamp>-<env>` by default, or
  * `--run-id`). Verdicts are written progressively to
  * `qa/output/<run-id>/report.json` and `report.md` so an interrupted
  * run keeps the results collected so far. The runner is interactive on
  * a TTY and reads input line-by-line from stdin otherwise.
  *
  * Usage:
- *   pnpm qa:run
+ *   pnpm qa:run [--env v1|v2]
  *   pnpm qa:run --list
  *   pnpm qa:run --feature cli
  *   pnpm qa:run --id @TC-CLI-1
@@ -23,28 +23,66 @@
  *   pnpm qa:run --evidence
  *   pnpm qa:run --run-id <id>
  *
+ * `--env` selects the stack the run targets (default v1): it filters
+ * scenarios by their `@V1`/`@V2` applicability tags, drives the matching
+ * compose project, and stamps the report with the environment, the
+ * workspace image tag, and the opencode version baked into that image.
+ *
  * `--case-reset` runs qa/docker/reset-scratch.sh in the workspace before
  * every case (use it for independent groups — never for the chained
  * groups F/G, which build on the previous case's artifacts).
  * `--evidence` copies each case's `.sdd` tree and raw opencode.log into
- * qa/output/<run-id>/evidence/<case-id>/ right after the verdict.
+ * `qa/output/<run-id>/evidence/<case-id>/` right after the verdict.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import { generateMessages } from '@cucumber/gherkin';
-import { IdGenerator, SourceMediaType } from '@cucumber/messages';
+// Node runs these TypeScript sources directly (type stripping) and requires
+// the real `.ts` extension; the project's Node16 convention (`.js`) applies
+// only to compiled output, so the compiler error is expected here.
+// @ts-expect-error -- runtime specifier for Node's native TypeScript support.
+import { loadTestCases, type QaEnvironment } from './cases.ts';
+// @ts-expect-error -- runtime specifier for Node's native TypeScript support.
+import { writeReport, type Report, type TestResult } from './report.ts';
 
 const FEATURES_DIR = join(fileURLToPath(new URL('../../features/', import.meta.url)));
 const OUTPUT_DIR = join(fileURLToPath(new URL('../../output/', import.meta.url)));
+const COMPOSE_BASE = join(fileURLToPath(new URL('../../docker-compose.yml', import.meta.url)));
+const COMPOSE_V2 = join(fileURLToPath(new URL('../../docker-compose.v2.yml', import.meta.url)));
 
-const COMPOSE_FILE = join(fileURLToPath(new URL('../../docker-compose.yml', import.meta.url)));
+const { values } = parseArgs({
+  options: {
+    list: { type: 'boolean', default: false },
+    feature: { type: 'string' },
+    id: { type: 'string' },
+    env: { type: 'string', default: 'v1' },
+    'auto-pass': { type: 'boolean', default: false },
+    'case-reset': { type: 'boolean', default: false },
+    evidence: { type: 'boolean', default: false },
+    'run-id': { type: 'string' },
+  },
+});
+
+const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+const environment = values.env as QaEnvironment;
+if (environment !== 'v1' && environment !== 'v2') {
+  console.error(`qa: --env must be v1 or v2 (got "${values.env}")`);
+  process.exit(1);
+}
+
+/** Compose `-f` arguments for the selected environment. */
+const COMPOSE_ARGS =
+  environment === 'v2' ? ['-f', COMPOSE_BASE, '-f', COMPOSE_V2] : ['-f', COMPOSE_BASE];
+
+/** Workspace image tag for the selected environment. */
+const WORKSPACE_IMAGE =
+  environment === 'v2' ? 'opencode-sdd-qa:workspace-v2' : 'opencode-sdd-qa:workspace';
 
 /**
  * Runs a command inside the QA workspace container.
@@ -56,7 +94,7 @@ function runInWorkspace(command: string): boolean {
   try {
     execFileSync(
       'docker',
-      ['compose', '-f', COMPOSE_FILE, 'exec', '-T', 'qa', 'bash', '-lc', command],
+      ['compose', ...COMPOSE_ARGS, 'exec', '-T', 'qa', 'bash', '-lc', command],
       {
         stdio: 'inherit',
       },
@@ -92,7 +130,7 @@ function collectCaseEvidence(caseId: string, destDir: string): boolean {
   const mkAndCopy = (source: string): boolean => {
     try {
       execFileSync('mkdir', ['-p', destDir]);
-      execFileSync('docker', ['compose', '-f', COMPOSE_FILE, 'cp', `qa:${source}`, destDir]);
+      execFileSync('docker', ['compose', ...COMPOSE_ARGS, 'cp', `qa:${source}`, destDir]);
       return true;
     } catch {
       return false;
@@ -103,61 +141,38 @@ function collectCaseEvidence(caseId: string, destDir: string): boolean {
   return copiedSdd || copiedLog;
 }
 
-const { values } = parseArgs({
-  options: {
-    list: { type: 'boolean', default: false },
-    feature: { type: 'string' },
-    id: { type: 'string' },
-    'auto-pass': { type: 'boolean', default: false },
-    'case-reset': { type: 'boolean', default: false },
-    evidence: { type: 'boolean', default: false },
-    'run-id': { type: 'string' },
-  },
-});
-
 /**
- * Test-ID convention: `@TC-<GROUP>-<case>` with a semantic, uppercase
- * GROUP that names the test area (e.g. `@TC-REG-1`, `@TC-PF-6`). The
- * optional trailing lowercase letter (e.g. `@TC-TOOL-2b`) extends a
- * case with a sub-variant. Shared with `check-gherkin-ids.ts`.
+ * Read a label from the workspace image.
+ *
+ * @param label - Label name to read.
+ * @returns The label value, or `unknown` when the image/label is absent.
  */
-const ID_TAG_PATTERN = /^@TC-[A-Z]+-\d+[a-z]?$/;
-const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-
-interface TestCase {
-  id: string;
-  scenario: string;
-  file: string;
-  steps: string[];
-}
-
-interface TestResult {
-  id: string;
-  scenario: string;
-  file: string;
-  status: 'pass' | 'fail' | 'skip';
-  /** Tester's free-text description of what was done/observed. */
-  notes: string;
-  timestamp: string;
-}
-
-interface Report {
-  runId: string;
-  startedAt: string;
-  finishedAt: string | null;
-  results: TestResult[];
+function imageLabel(label: string): string {
+  try {
+    const value = execFileSync(
+      'docker',
+      ['image', 'inspect', WORKSPACE_IMAGE, '--format', `{{ index .Config.Labels "${label}" }}`],
+      { encoding: 'utf8' },
+    ).trim();
+    return value === '' || value === '<no value>' ? 'unknown' : value;
+  } catch {
+    return 'unknown';
+  }
 }
 
 /**
- * Builds a unique run ID: a local timestamp (`yyyy-MM-ddTHH-mm-ss`)
- * with a numeric suffix when the directory already exists.
+ * Builds a unique run ID: a local timestamp (`yyyy-MM-ddTHH-mm-ss`) plus the
+ * environment, with a numeric suffix when the directory already exists.
+ *
+ * @param env - Selected environment (suffix).
+ * @returns The run id.
  */
-function generateRunId(): string {
+function generateRunId(env: QaEnvironment): string {
   const pad = (value: number): string => String(value).padStart(2, '0');
   const date = new Date();
   const stamp =
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-    `T${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
+    `T${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}-${env}`;
   if (!existsSync(join(OUTPUT_DIR, stamp))) {
     return stamp;
   }
@@ -169,7 +184,7 @@ function generateRunId(): string {
   }
 }
 
-const runId = values['run-id'] ?? generateRunId();
+const runId = values['run-id'] ?? generateRunId(environment);
 if (!RUN_ID_PATTERN.test(runId)) {
   console.error(
     'qa: invalid --run-id, use letters, digits, dots, underscores or ' + `hyphens (got "${runId}")`,
@@ -178,94 +193,18 @@ if (!RUN_ID_PATTERN.test(runId)) {
 }
 const REPORT_DIR = join(OUTPUT_DIR, runId);
 
-/**
- * Parses all feature files into test cases (pickles), filtered by
- * `--feature` / `--id`.
- */
-async function loadTestCases(): Promise<TestCase[]> {
-  const files = (await readdir(FEATURES_DIR)).filter((file) => file.endsWith('.feature'));
-  const cases: TestCase[] = [];
-  for (const file of files) {
-    if (values.feature && !file.includes(values.feature)) {
-      continue;
-    }
-    const source = await readFile(join(FEATURES_DIR, file), 'utf8');
-    const messages = generateMessages(source, file, SourceMediaType.TEXT_X_CUCUMBER_GHERKIN_PLAIN, {
-      includeGherkinDocument: false,
-      includePickles: true,
-      newId: IdGenerator.uuid(),
-    });
-    for (const message of messages) {
-      const pickle = message.pickle;
-      if (!pickle) {
-        continue;
-      }
-      const idTag = (pickle.tags ?? []).find((tag) => ID_TAG_PATTERN.test(tag.name));
-      if (!idTag) {
-        console.warn(`qa: ${file}: ${pickle.name} has no @TC tag, skipping`);
-        continue;
-      }
-      if (values.id && idTag.name !== values.id) {
-        continue;
-      }
-      cases.push({
-        id: idTag.name,
-        scenario: pickle.name,
-        file,
-        steps: pickle.steps.map((step) => step.text),
-      });
-    }
-  }
-  return cases;
-}
-
-/**
- * Writes the current report (JSON + markdown) to the run directory.
- */
-async function writeReport(report: Report): Promise<void> {
-  await mkdir(REPORT_DIR, { recursive: true });
-  await writeFile(join(REPORT_DIR, 'report.json'), JSON.stringify(report, null, 2), 'utf8');
-
-  const lines = [
-    '# Manual Gherkin test report',
-    '',
-    `Run ID: ${report.runId}`,
-    `Started: ${report.startedAt}`,
-    `Finished: ${report.finishedAt ?? 'in progress'}`,
-    '',
-    '## Summary',
-    '',
-    '| ID | Status | Scenario | File |',
-    '| --- | --- | --- | --- |',
-  ];
-  let passed = 0;
-  let failed = 0;
-  let skipped = 0;
-  for (const result of report.results) {
-    if (result.status === 'pass') passed += 1;
-    if (result.status === 'fail') failed += 1;
-    if (result.status === 'skip') skipped += 1;
-    lines.push(`| ${result.id} | ${result.status} | ${result.scenario} | ${result.file} |`);
-  }
-  lines.push('');
-  lines.push(`Summary: ${passed} passed, ${failed} failed, ${skipped} skipped`);
-  lines.push('', '## Details', '');
-  for (const result of report.results) {
-    lines.push(`### ${result.id} — ${result.scenario}`, '');
-    lines.push(`Status: ${result.status}`);
-    lines.push(`Notes: ${result.notes === '' ? '—' : result.notes}`, '');
-  }
-  await writeFile(join(REPORT_DIR, 'report.md'), lines.join('\n') + '\n', 'utf8');
-}
-
-const cases = await loadTestCases();
+const cases = await loadTestCases(FEATURES_DIR, {
+  feature: values.feature,
+  id: values.id,
+  environment,
+});
 if (cases.length === 0) {
   console.error('qa: no test cases matched the filters');
   process.exit(1);
 }
 
 if (values.list) {
-  console.log(`${cases.length} test case(s):\n`);
+  console.log(`${cases.length} test case(s) for environment ${environment}:\n`);
   for (const testCase of cases) {
     console.log(`${testCase.id.padEnd(14)} ${testCase.scenario}`);
     console.log(`               ${testCase.file} (${testCase.steps.length} steps)`);
@@ -275,6 +214,9 @@ if (values.list) {
 
 const report: Report = {
   runId,
+  environment,
+  opencodeVersion: imageLabel('org.opencode-sdd.qa.opencode-version'),
+  image: WORKSPACE_IMAGE,
   startedAt: new Date().toISOString(),
   finishedAt: null,
   results: [],
@@ -340,7 +282,7 @@ for (const testCase of cases) {
     timestamp: new Date().toISOString(),
   };
   report.results.push(result);
-  await writeReport(report);
+  await writeReport(REPORT_DIR, report);
 
   if (values.evidence) {
     const dest = join(REPORT_DIR, 'evidence', testCase.id.replace(/^@TC-/, ''));
@@ -352,7 +294,7 @@ for (const testCase of cases) {
 }
 
 report.finishedAt = new Date().toISOString();
-await writeReport(report);
+await writeReport(REPORT_DIR, report);
 input.close();
 
 const passed = report.results.filter((r) => r.status === 'pass').length;
@@ -360,5 +302,6 @@ const failed = report.results.filter((r) => r.status === 'fail').length;
 const skipped = report.results.filter((r) => r.status === 'skip').length;
 console.log(`\n${'='.repeat(72)}`);
 console.log(`Run ID: ${report.runId}`);
+console.log(`Environment: ${report.environment} (opencode ${report.opencodeVersion})`);
 console.log(`Done: ${passed} passed, ${failed} failed, ${skipped} skipped`);
 console.log(`Report: ${join(REPORT_DIR, 'report.md')}`);

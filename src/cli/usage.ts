@@ -6,6 +6,9 @@
  */
 export const USAGE_TEXT = `opencode-sdd install - set up the opencode-sdd plugin and SDD subagent models.
 
+Supports opencode 1.x (>= 1.18.29) and 2.x; the wizard writes the
+native config shape for the detected host.
+
 Usage:
   opencode-sdd install [-y|--yes] [--tag <spec> | --local [path]]
   opencode-sdd --help
@@ -17,16 +20,18 @@ Flags:
   --tag <spec>
               Pin the plugin to an npm dist-tag or version (e.g. canary,
               latest, 1.2.0). Writes "opencode-sdd@<spec>" into the
-              plugin array.
+              plugin list.
   --local [path]
               Register a local build instead of the npm package. The
               path defaults to the opencode-sdd package this CLI runs
-              from; writes "file://<path>". Paths may be relative.
+              from; writes "file://<path>" (V2 points at "<path>/build").
+              Paths may be relative.
   --help      Show this help and exit.
   --version   Print the opencode-sdd version and exit.
 
 Workflow:
-  1. Detect the opencode binary on PATH.
+  1. Detect the opencode binary on PATH and its host line (1.x or 2.x).
+     opencode 1.x below 1.18.29 is refused.
   2. Resolve the plugin entry: --tag/--local win; otherwise a canary
      (prerelease) build pins the canary dist-tag and a release build
      keeps the latest entry.

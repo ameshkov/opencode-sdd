@@ -7,8 +7,8 @@
  * (hard-stop, re-read timing) is HITL-verified.
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { createSession, replyToPendingQuestion } from './harness.js';
-import type { MockLlmState } from './mock-server.js';
+import { createSession, replyToPendingQuestion } from './v1/harness.js';
+import type { MockLlmState } from './shared/mock-server.js';
 import {
   type CleanupFn,
   capturedPromptText,
@@ -18,8 +18,8 @@ import {
   sessionParts,
   setupAutoImplementServer,
   tempProjectDir,
-} from './prd-auto-implement-helpers.js';
-import type { OpencodeServerHandle } from './harness.js';
+} from './v1/prd-auto-implement-helpers.js';
+import type { OpencodeServerHandle } from './v1/harness.js';
 import {
   autoImplementCrossCuttingCompleteScenario,
   autoImplementCrossCuttingEscalationScenario,
@@ -34,7 +34,7 @@ import {
   autoImplementValidationEscalationScenario,
   autoImplementValidationLoopScenario,
   autoImplementValidationResumeScenario,
-} from './scenarios.js';
+} from './shared/scenarios.js';
 
 const cleanup: CleanupFn[] = [];
 afterEach(() => {

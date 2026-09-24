@@ -6,10 +6,15 @@
 # exist yet. A restart of an existing container is done via
 # `docker compose start` (see below), which keeps the key that was
 # provided when it was created — no re-entry needed mid-session.
+#
+# Honors QA_ENV=v1|v2 (default v1): the gateway stack is selected
+# accordingly (V2 uses its own project/volumes).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-COMPOSE_FILE="$REPO_ROOT/qa/docker-compose.yml"
+
+# shellcheck source=lib-compose.sh
+source "$REPO_ROOT/qa/scripts/setup/lib-compose.sh"
 
 # shellcheck source=lib-openrouter-key.sh
 source "$REPO_ROOT/qa/scripts/setup/lib-openrouter-key.sh"
@@ -19,7 +24,7 @@ source "$REPO_ROOT/qa/scripts/setup/lib-openrouter-key.sh"
 # includes the ports override and publishes that host port. Without it the
 # stack is hermetic — no host port is bound, so nothing can collide with
 # the host.
-COMPOSE_ARGS=(-f "$COMPOSE_FILE")
+COMPOSE_ARGS=("${QA_COMPOSE_ARGS[@]}")
 if [ -n "${QA_HOST_PORT:-}" ]; then
   COMPOSE_ARGS+=(-f "$REPO_ROOT/qa/docker-compose.ports.yml")
   BIFROST_PORT="$QA_HOST_PORT"
@@ -45,7 +50,7 @@ health_ok() {
   # Gateway-only stack (workspace not running): probe from a one-off
   # busybox container on the stack network (tiny image, no curl needed
   # in the bifrost image).
-  docker run --rm --network opencode-sdd-qa_default \
+  docker run --rm --network "${QA_PROJECT}_default" \
     busybox:1.36.1 wget -qO- http://bifrost:8080/health >/dev/null 2>&1 \
     && return 0
   # Host-side probes for the opt-in ports override: localhost first, then
@@ -80,7 +85,7 @@ else
     fi
     if [ "$i" -eq 60 ]; then
       echo "ERROR: gateway did not become healthy. Check logs:"
-      echo "  docker compose -f $COMPOSE_FILE logs -f bifrost"
+      echo "  docker compose ${QA_COMPOSE_ARGS[*]} logs -f bifrost"
       exit 1
     fi
   done
@@ -108,4 +113,4 @@ echo "qa/scripts/setup/qa-up.sh once: it provisions the provider and enables"
 echo "request logging. A restart of an existing gateway needs no key."
 echo
 echo "Host-side smoke: qa/docker/llm-smoke.sh (requires the ports override);"
-echo "workspace smoke: docker compose -f $COMPOSE_FILE exec qa bash -lc '/app/qa/docker/llm-smoke.sh'"
+echo "workspace smoke: docker compose ${QA_COMPOSE_ARGS[*]} exec qa bash -lc '/app/qa/docker/llm-smoke.sh'"

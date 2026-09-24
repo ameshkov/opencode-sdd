@@ -4,8 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadCommands } from './loader.js';
-import { stubClient } from '../../test/stub-client.js';
-import { createLogger } from '../utils/index.js';
+import { stubLogger } from '../../test/plugin-helpers.js';
 
 const fixturesDir = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -17,7 +16,7 @@ const fixturesDir = join(
 
 describe('loadCommands', () => {
   it('parses every fixture into the expected command and skips malformed', async () => {
-    const logger = createLogger(stubClient());
+    const logger = stubLogger();
     const result = await loadCommands(fixturesDir, logger);
 
     expect(result.has('malformed')).toBe(false);
@@ -42,7 +41,7 @@ describe('loadCommands', () => {
   });
 
   it('returns an empty map for a missing directory', async () => {
-    const logger = createLogger(stubClient());
+    const logger = stubLogger();
     const result = await loadCommands(join(tmpdir(), 'does-not-exist'), logger);
     expect(result.size).toBe(0);
   });
@@ -53,7 +52,7 @@ describe('loadCommands', () => {
     try {
       await writeFile(join(dir, 'zebra.md'), '---\ndescription: z\n---\n\nz\n');
       await writeFile(join(dir, 'apple.md'), '---\ndescription: a\n---\n\na\n');
-      const logger = createLogger(stubClient());
+      const logger = stubLogger();
       const result = await loadCommands(dir, logger);
       expect([...result.keys()]).toEqual(['apple', 'zebra']);
     } finally {
@@ -67,7 +66,7 @@ describe('loadCommands', () => {
     try {
       await writeFile(join(dir, 'alpha.md'), '---\ndescription: Alpha\n---\n\nAlpha body\n');
       await writeFile(join(dir, 'beta.md'), '---\nagent: x\n---\n\nBeta body\n');
-      const logger = createLogger(stubClient());
+      const logger = stubLogger();
       const result = await loadCommands(dir, logger);
 
       expect(result.get('alpha')).toEqual({

@@ -1,4 +1,4 @@
-@perf
+@perf @V1
 Feature: Cost and performance
   These quantify what each flow step costs on the model under test.
   They inform model and prompt choices — and, since inference is billed

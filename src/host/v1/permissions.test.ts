@@ -2,9 +2,15 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { Config, PluginInput } from '@opencode-ai/plugin';
-import sddPlugin from './index.js';
-import { permissionRecord, pluginInput, withCommandsDir } from '../test/plugin-helpers.js';
+import type { Config, Hooks, PluginInput } from '@opencode-ai/plugin';
+import { createV1Hooks } from './index.js';
+import { createV1Logger } from './logger.js';
+import { permissionRecord, pluginInput, withCommandsDir } from '../../../test/plugin-helpers.js';
+
+/** Build the V1 hooks with a logger bound to `input`. */
+function hooksFrom(input: PluginInput): Hooks {
+  return createV1Hooks(createV1Logger(input.client));
+}
 
 /**
  * Create a temp templates directory (with a single placeholder template),
@@ -48,7 +54,7 @@ describe('sdd plugin bundled templates external_directory permission', () => {
   it('grants an external_directory allow-rule for the resolved templates dir', async () => {
     await withTemplatesDir(async (templatesDir) => {
       await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = {};
         await hooks.config?.(config);
 
@@ -62,7 +68,7 @@ describe('sdd plugin bundled templates external_directory permission', () => {
   it('preserves existing user permission categories via spread-merge', async () => {
     await withTemplatesDir(async (templatesDir) => {
       await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = { permission: { edit: 'allow', bash: 'ask' } };
         await hooks.config?.(config);
 
@@ -78,7 +84,7 @@ describe('sdd plugin bundled templates external_directory permission', () => {
   it('preserves an existing external_directory path-glob map and adds ours', async () => {
     await withTemplatesDir(async (templatesDir) => {
       await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = {
           // object-form external_directory is not modeled by the root SDK
           // type, so cast through `unknown` (the runtime and v2 type accept it).
@@ -99,7 +105,7 @@ describe('sdd plugin bundled templates external_directory permission', () => {
   it('replaces a string external_directory "ask" with a map granting our glob', async () => {
     await withTemplatesDir(async (templatesDir) => {
       await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = { permission: { external_directory: 'ask' } };
         await hooks.config?.(config);
 
@@ -113,7 +119,7 @@ describe('sdd plugin bundled templates external_directory permission', () => {
   it('is a no-op when external_directory is already "allow"', async () => {
     await withTemplatesDir(async () => {
       await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = { permission: { external_directory: 'allow' } };
         await hooks.config?.(config);
 
@@ -128,7 +134,7 @@ describe('sdd plugin bundled templates external_directory permission', () => {
     await withTemplatesDir(async () => {
       await withCommandsDir(async () => {
         const input = pluginInput();
-        const hooks = await sddPlugin(input);
+        const hooks = hooksFrom(input);
         const config: Config = { permission: { external_directory: 'deny' } };
         await hooks.config?.(config);
 
@@ -145,7 +151,7 @@ describe('sdd plugin bundled templates external_directory permission', () => {
   it('is a no-op when permission is a global "allow" string', async () => {
     await withTemplatesDir(async () => {
       await withCommandsDir(async () => {
-        const hooks = await sddPlugin(pluginInput());
+        const hooks = hooksFrom(pluginInput());
         const config: Config = {
           // A top-level string permission is accepted by the runtime but not
           // modeled by the root SDK type; cast through `unknown`.
@@ -163,7 +169,7 @@ describe('sdd plugin bundled templates external_directory permission', () => {
     await withTemplatesDir(async () => {
       await withCommandsDir(async () => {
         const input = pluginInput();
-        const hooks = await sddPlugin(input);
+        const hooks = hooksFrom(input);
         const config: Config = {
           permission: 'deny' as unknown as Config['permission'],
         };

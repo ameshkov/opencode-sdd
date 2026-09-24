@@ -26,9 +26,16 @@
 #                QA_WEB_PORT in qa/docker-compose.ports.yml, default 4097)
 #
 # Env:
-#   OPENCODE_ENABLE_QUESTION_TOOL  default "1" (set to an empty value to
-#                                 keep the headless-mode gate off, the
-#                                 pre-flag behaviour of the tool)
+#   QA_ENV                         v1|v2 (default v1). V2 `serve` differs:
+#                                 log levels are lowercase, the server owns
+#                                 stdout in stdio mode but this script uses
+#                                 HTTP mode, and an inherited
+#                                 OPENCODE_SERVER_PASSWORD would gate the
+#                                 web UI behind Basic auth — it is cleared
+#                                 for V2 so the browser UI stays reachable.
+#   OPENCODE_ENABLE_QUESTION_TOOL  V1 only; default "1" (set to an empty
+#                                 value to keep the headless-mode gate off,
+#                                 the pre-flag behaviour of the tool)
 #   QA_SERVE_READY_FILE            readiness marker, default
 #                                 /tmp/serve-web.ready — polling it with a
 #                                 fast `docker exec ... cat` is the
@@ -55,7 +62,7 @@ set -euo pipefail
 PROJECT="${1:-/work/sdd-manual}"
 PORT="${2:-4096}"
 READY_FILE="${QA_SERVE_READY_FILE:-/tmp/serve-web.ready}"
-export OPENCODE_ENABLE_QUESTION_TOOL="${OPENCODE_ENABLE_QUESTION_TOOL:-1}"
+QA_ENV="${QA_ENV:-v1}"
 
 if [ ! -d "$PROJECT" ]; then
   echo "ERROR: project dir not found: $PROJECT" >&2
@@ -67,8 +74,17 @@ cd "$PROJECT"
 
 # --print-logs keeps /tmp/serve-web.out a full transcript (markers, errors)
 # on top of the usual opencode.log under the qa-home volume.
-opencode serve --port "$PORT" --hostname 0.0.0.0 \
-  --log-level DEBUG --print-logs >/tmp/serve-web.out 2>&1 &
+if [ "$QA_ENV" = "v2" ]; then
+  # V2: lowercase log levels; clear any inherited Basic-auth credentials so
+  # the browser UI is reachable without pairing.
+  unset OPENCODE_SERVER_PASSWORD OPENCODE_SERVER_USERNAME
+  opencode serve --port "$PORT" --hostname 0.0.0.0 \
+    --log-level debug --print-logs >/tmp/serve-web.out 2>&1 &
+else
+  export OPENCODE_ENABLE_QUESTION_TOOL="${OPENCODE_ENABLE_QUESTION_TOOL:-1}"
+  opencode serve --port "$PORT" --hostname 0.0.0.0 \
+    --log-level DEBUG --print-logs >/tmp/serve-web.out 2>&1 &
+fi
 SERVER_PID=$!
 
 # Handshake: wait until the web client answers (or the process died), then

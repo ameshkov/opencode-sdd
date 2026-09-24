@@ -13,6 +13,7 @@ import {
 } from 'jsonc-parser';
 import { applyAgentModels } from './agent-model-patch.js';
 import { isOpenCodeSddReference, planPluginEntry } from './plugin-entry.js';
+import type { OpencodeHost } from './prerequisites.js';
 
 /**
  * The user's per-subagent model choices passed into {@link computePatch}.
@@ -116,6 +117,11 @@ export interface ComputeOptions {
    * pinned one.
    */
   readonly pluginExplicit?: boolean;
+  /**
+   * Detected host line; selects the config key names. V1 uses `plugin` and
+   * `agent`, V2 uses `plugins` and `agents`. Defaults to `v1`.
+   */
+  readonly host?: OpencodeHost;
 }
 
 /** Default 2-space formatting (matches opencode's config style). */
@@ -195,10 +201,19 @@ export function computePatch(
 
   const pluginEntry = options.pluginEntry ?? PLUGIN_ENTRY;
   const pluginExplicit = options.pluginExplicit ?? false;
+  const host = options.host ?? 'v1';
+  const pluginKey = pluginKeyFor(host);
 
-  // Step 1: plugin registration. The `plugin` array is either created
+  // Step 1: plugin registration. The plugin array is either created
   // or planned via planPluginEntry (noop / add / replace / keep).
-  const pluginStep = applyPluginEntry(current, root, formatting, pluginEntry, pluginExplicit);
+  const pluginStep = applyPluginEntry(
+    current,
+    root,
+    formatting,
+    pluginEntry,
+    pluginExplicit,
+    pluginKey,
+  );
   const pluginEntryNote = pluginStep.note;
   let patchedText = pluginStep.patchedText;
 
@@ -208,6 +223,7 @@ export function computePatch(
     patchedText = applyAgentModels(patchedText, selection.models, {
       formatting: options.formatting,
       targetPath: options.targetPath,
+      host,
     }).patchedText;
   }
 
@@ -241,8 +257,18 @@ function editPlugin(
 }
 
 /**
+ * The top-level config key holding plugin entries for a host line.
+ *
+ * @param host - Detected host line.
+ * @returns `plugins` on V2, `plugin` on V1.
+ */
+function pluginKeyFor(host: OpencodeHost): 'plugin' | 'plugins' {
+  return host === 'v2' ? 'plugins' : 'plugin';
+}
+
+/**
  * Resolve the plugin-array step of {@link computePatch}: create the
- * top-level `plugin` key when absent, else plan against the existing
+ * top-level plugin key when absent, else plan against the existing
  * entries (exact-match no-op, append, in-place replace, or keep with a
  * warning note). Returns the patched text plus an optional keep-existing
  * note for the caller.
@@ -253,10 +279,11 @@ function applyPluginEntry(
   formatting: FormattingOptions,
   pluginEntry: string,
   pluginExplicit: boolean,
+  pluginKey: 'plugin' | 'plugins',
 ): { patchedText: string; note?: string } {
-  const pluginNode = findNodeAtLocation(root, ['plugin']);
+  const pluginNode = findNodeAtLocation(root, [pluginKey]);
   if (pluginNode === undefined) {
-    // Top-level `plugin` key is absent — create it with
+    // Top-level plugin key is absent — create it with
     // [pluginEntry] (the key's value is an ARRAY, unlike the element
     // edits below). `modify` inserts a new top-level key; the default
     // `getInsertionIndex` appends at the end of the existing property
@@ -264,7 +291,7 @@ function applyPluginEntry(
     return {
       patchedText: applyEdits(
         current,
-        modify(current, ['plugin'], [pluginEntry], {
+        modify(current, [pluginKey], [pluginEntry], {
           formattingOptions: formatting,
         }),
       ),
@@ -284,7 +311,7 @@ function applyPluginEntry(
     // new element at that index; existing entries (and any inline
     // comments on them) are byte-preserved.
     return {
-      patchedText: editPlugin(current, ['plugin', existing.length], pluginEntry, formatting),
+      patchedText: editPlugin(current, [pluginKey, existing.length], pluginEntry, formatting),
     };
   }
   if (action === 'replace') {
@@ -292,7 +319,7 @@ function applyPluginEntry(
     // other plugin entries and their comments are byte-preserved.
     const index = existing.findIndex(isOpenCodeSddReference);
     return {
-      patchedText: editPlugin(current, ['plugin', index], pluginEntry, formatting),
+      patchedText: editPlugin(current, [pluginKey, index], pluginEntry, formatting),
     };
   }
   // keep-existing: a different opencode-sdd reference is already

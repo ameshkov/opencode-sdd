@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # Multi-stage Dockerfile that runs the full quality gate (format, lint,
-# type-check, unit tests) and the mock-LLM e2e suite. Each gate is a stage
+# type-check, unit tests) and both mock-LLM e2e lanes (V1 binary + V2
+# in-process/loader smoke). Each gate is a stage
 # that writes a *-results.txt file, and each has a `FROM scratch` collector
 # stage so `--output type=local` yields only that result file. Usage:
 #
@@ -74,9 +75,11 @@ FROM node:24-bookworm-slim AS opencode
 # download fails the build if the fetch errors out.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# The version tested locally (see docs/e2e.md). Override with
-# --build-arg OPENCODE_VERSION=... to pin a different release.
+# The versions tested locally (see docs/e2e.md). Override with
+# --build-arg OPENCODE_VERSION=... / OPENCODE_V2_VERSION=... to pin
+# different releases.
 ARG OPENCODE_VERSION=1.18.29
+ARG OPENCODE_V2_VERSION=2.0.14
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates \
@@ -92,14 +95,25 @@ RUN curl -fsSL https://opencode.ai/install \
 RUN mv "${HOME}/.opencode/bin/opencode" /usr/local/bin/opencode \
     && opencode --version
 
+# The V2 CLI installs both `opencode` and `opencode2` bins. Install it into
+# a private prefix so the V1 binary stays the one on PATH for `opencode`;
+# only `opencode2` is added from /opt/oc2/bin (appended to PATH below).
+RUN npm install --global --prefix /opt/oc2 @opencode/cli@${OPENCODE_V2_VERSION} \
+    && /opt/oc2/bin/opencode2 --version
+
 # ---------------------------------------------------------------------------
 # Stage 6: E2E tests (real opencode server + mock LLM)
 # ---------------------------------------------------------------------------
 FROM build AS e2e-test
 
 COPY --from=opencode /usr/local/bin/opencode /usr/local/bin/opencode
+COPY --from=opencode /opt/oc2 /opt/oc2
 
-RUN pnpm test:e2e 2>&1 | tee /tmp/e2e-results.txt
+# Appended (not prepended): `opencode` keeps resolving to the V1 binary in
+# /usr/local/bin, while `opencode2` is found in /opt/oc2/bin.
+ENV PATH="${PATH}:/opt/oc2/bin"
+
+RUN pnpm test:e2e:all 2>&1 | tee /tmp/e2e-results.txt
 
 # ---------------------------------------------------------------------------
 # Stage 7: Output collectors

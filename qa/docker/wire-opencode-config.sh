@@ -4,7 +4,11 @@
 # Usage: qa/docker/wire-opencode-config.sh <project-dir> [plugin-entry]
 #   plugin-entry defaults to "opencode-sdd"; pass your local build path as
 #   file:///path/to/opencode-sdd for dev runs.
-# Env: BIFROST_BASE_URL (default http://localhost:8080; the compose stack
+# Env: QA_ENV          (v1|v2; default v1. The V2 stack sets QA_ENV=v2 and
+#      writes `plugins`/`providers`/`permissions` instead of
+#      `plugin`/`provider`, and points a `file://` entry at `<dir>/build`
+#      because V2 ignores package.json#main)
+#      BIFROST_BASE_URL (default http://localhost:8080; the compose stack
 #      sets http://bifrost:8080 — with or without a /v1 suffix)
 #      BIFROST_MODEL   (OpenRouter slug used as the global default model;
 #      defaults to the FIRST entry of qa/bifrost/models.tsv).
@@ -40,7 +44,13 @@
 set -euo pipefail
 
 PROJECT="${1:-}"
-PLUGIN_ENTRY="${2:-opencode-sdd}"
+QA_ENV="${QA_ENV:-v1}"
+if [ "$QA_ENV" = "v2" ]; then
+  DEFAULT_PLUGIN_ENTRY="file:///app/build"
+else
+  DEFAULT_PLUGIN_ENTRY="opencode-sdd"
+fi
+PLUGIN_ENTRY="${2:-$DEFAULT_PLUGIN_ENTRY}"
 BASE_URL="${BIFROST_BASE_URL:-http://localhost:8080}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_FILE="$SCRIPT_DIR/../bifrost/models.tsv"
@@ -52,6 +62,20 @@ fi
 if [ ! -r "$MODELS_FILE" ]; then
   echo "ERROR: model allowlist not found: $MODELS_FILE" >&2
   exit 1
+fi
+
+# V2 ignores package.json#main and resolves `<dir>/index.js`, so a local
+# `file://` entry must point at the compiled build/ directory. Normalize an
+# explicit dev entry (`file:///app`) to the V2 form.
+if [ "$QA_ENV" = "v2" ]; then
+  case "$PLUGIN_ENTRY" in
+    file://*)
+      case "$PLUGIN_ENTRY" in
+        */build) ;;
+        *) PLUGIN_ENTRY="$PLUGIN_ENTRY/build" ;;
+      esac
+      ;;
+  esac
 fi
 
 # Normalize: no trailing slash, no /v1 suffix (the config appends /v1).
@@ -90,7 +114,40 @@ NF >= 2 && $1 !~ /^#/ {
 END { printf "\n" }
 ' "$MODELS_FILE")"
 
-cat > "$TARGET" <<EOF
+if [ "$QA_ENV" = "v2" ]; then
+  # V2 provider shape: `providers` + `package`/`settings`. The model map
+  # carries only display names (V2 models declare capabilities themselves).
+  MODELS_BODY_V2="$(awk -F'\t' '
+  NF >= 2 && $1 !~ /^#/ {
+    if (n) printf ",\n"
+    n = 1
+    printf "        \"openrouter/%s\": { \"name\": \"%s\" }", $1, $2
+  }
+  END { printf "\n" }
+  ' "$MODELS_FILE")"
+
+  cat > "$TARGET" <<EOF
+{
+  "\$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "bifrost": {
+      "package": "@ai-sdk/openai-compatible",
+      "settings": { "baseURL": "$BASE_URL/v1" },
+      "models": {
+$MODELS_BODY_V2
+      }
+    }
+  },
+  "model": "bifrost/openrouter/$DEFAULT_MODEL",
+  "plugins": ["$PLUGIN_ENTRY"],
+  "permissions": [
+    { "action": "edit", "resource": "*", "effect": "allow" },
+    { "action": "external_directory", "resource": "*", "effect": "allow" }
+  ]
+}
+EOF
+else
+  cat > "$TARGET" <<EOF
 {
   "\$schema": "https://opencode.ai/config.json",
   "provider": {
@@ -107,8 +164,10 @@ $MODELS_BODY
   "plugin": ["$PLUGIN_ENTRY"]
 }
 EOF
+fi
 
 echo "Wrote $TARGET"
+echo "environment: $QA_ENV"
 echo "plugin:    $PLUGIN_ENTRY"
 echo "baseURL:   $BASE_URL/v1"
 echo "provider:  bifrost only (built-in 'opencode' provider disabled)"

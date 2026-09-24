@@ -11,12 +11,8 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  REPO_ROOT,
-  pluginConfig,
-  startOpencodeServer,
-  type OpencodeServerHandle,
-} from './harness.js';
+import { REPO_ROOT } from './shared/harness.js';
+import { pluginConfig, startOpencodeServer, type OpencodeServerHandle } from './v1/harness.js';
 
 /**
  * The exact set of commands shipped in the build. Derived from the built

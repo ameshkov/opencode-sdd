@@ -18,7 +18,8 @@ import {
   type ResolverEnv,
 } from './config-resolver.js';
 import { promptTarget } from './target-select.js';
-import { detect, INSTALL_OPENCODE_HINT, type DetectResult } from './prerequisites.js';
+import { detect, type DetectResult, type OpencodeHost } from './prerequisites.js';
+import { detectHost } from './detect-host.js';
 import { USAGE_TEXT } from './usage.js';
 import { buildYesSelection, type YesSelectionResult } from './yes-selection.js';
 import { confirmPatch as confirmPatchFn } from './confirm-patch.js';
@@ -70,12 +71,16 @@ const CREATE_NEW_CONFIG_FILENAME = 'opencode.json';
  *
  * @param pluginEntry - the resolved plugin entry string (bare name,
  *                      `opencode-sdd@<spec>`, or `file://<abs-path>`).
+ * @param host - detected host line; selects the V1 (`plugin`/`agent`) or
+ *               V2 (`plugins`/`agents`) config keys.
  */
-function createNewSkeleton(pluginEntry: string): string {
+function createNewSkeleton(pluginEntry: string, host: OpencodeHost): string {
+  const pluginKey = host === 'v2' ? 'plugins' : 'plugin';
+  const agentKey = host === 'v2' ? 'agents' : 'agent';
   return `{
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["${pluginEntry}"],
-  "agent": {}
+  "${pluginKey}": ["${pluginEntry}"],
+  "${agentKey}": {}
 }`;
 }
 
@@ -253,6 +258,7 @@ async function applyConfigPatch(
   deps: MainDeps,
   selection: Selection,
   plugin: PluginIntent,
+  host: OpencodeHost,
   confirm?: () => Promise<boolean>,
 ): Promise<number> {
   let currentText: string;
@@ -267,6 +273,7 @@ async function applyConfigPatch(
     targetPath: target.path,
     pluginEntry: plugin.entry,
     pluginExplicit: plugin.explicit,
+    host,
   });
 
   if (patch.pluginEntryNote !== undefined) {
@@ -316,18 +323,21 @@ async function applyConfigPatch(
 async function buildModelSelection(
   yes: boolean,
   deps: MainDeps,
+  host: OpencodeHost,
 ): Promise<{ selection: Selection; confirm: (() => Promise<boolean>) | undefined }> {
   let selection: Selection;
   let confirm: (() => Promise<boolean>) | undefined;
   if (yes) {
-    const modelsResult = await (deps.selectYesModels ?? buildYesSelection)();
+    const modelsResult = await (deps.selectYesModels ?? (() => buildYesSelection(host)))();
     for (const warning of modelsResult.warnings) {
       console.error(warning);
     }
     selection = modelsResult.selection;
     confirm = undefined;
   } else {
-    const modelsResult = await (deps.selectInteractiveModels ?? buildInteractiveSelection)();
+    const modelsResult = await (
+      deps.selectInteractiveModels ?? (() => buildInteractiveSelection(host))
+    )();
     for (const warning of modelsResult.warnings) {
       console.error(warning);
     }
@@ -364,6 +374,7 @@ async function createNewConfig(
   cwd: string,
   deps: MainDeps,
   pluginEntry: string,
+  host: OpencodeHost,
 ): Promise<Candidate | null> {
   const synthetic: Candidate = {
     source: 'create',
@@ -382,7 +393,7 @@ async function createNewConfig(
   // minimal valid skeleton is written first and then patched by the
   // same code path that edits existing files").
   const writeTarget = deps.writeTarget ?? defaultAtomicWrite;
-  writeTarget(accepted.path, createNewSkeleton(pluginEntry));
+  writeTarget(accepted.path, createNewSkeleton(pluginEntry, host));
   return accepted;
 }
 
@@ -397,6 +408,7 @@ async function createNewConfig(
 function resolvePlugin(
   parsed: ParsedArgs,
   deps: MainDeps,
+  host: OpencodeHost,
 ): { ok: true; plugin: PluginIntent } | { ok: false; message: string } {
   if (parsed.localPath !== undefined && !existsSync(parsed.localPath)) {
     return { ok: false, message: `--local path does not exist: ${parsed.localPath}` };
@@ -409,6 +421,7 @@ function resolvePlugin(
       localPath: parsed.localPath,
       cwd: buildResolverEnv().cwd,
       own,
+      host,
     });
     return { ok: true, plugin: resolved };
   } catch (error) {
@@ -432,6 +445,7 @@ async function selectTarget(
   deps: MainDeps,
   yes: boolean,
   pluginEntry: string,
+  host: OpencodeHost,
 ): Promise<{ target: Candidate | null; error?: string }> {
   if (candidates.length === 0) {
     if (yes) {
@@ -440,7 +454,7 @@ async function selectTarget(
       return { target: null, error: NO_RESOLVABLE_TARGET_HINT };
     }
     return {
-      target: await createNewConfig(buildResolverEnv().cwd, deps, pluginEntry),
+      target: await createNewConfig(buildResolverEnv().cwd, deps, pluginEntry, host),
     };
   }
   return { target: await pickOrPromptTarget(candidates, deps, yes) };
@@ -489,14 +503,15 @@ export async function main(argv: string[], deps: MainDeps = {}): Promise<number>
     // any target: explicit --tag / --local, else the build-aware
     // default (a canary build self-pins). Errors surface as a message
     // + exit 1.
-    const detected = (deps.detect ?? detect)();
-    if (!detected.ok) {
-      console.error(INSTALL_OPENCODE_HINT);
+    const detection = detectHost(deps.detect ?? detect);
+    if (!detection.ok) {
+      console.error(detection.message);
       return 1;
     }
-    console.log(`opencode ${detected.version} detected`);
+    const { host } = detection;
+    console.log(`opencode ${detection.version} detected (${host} plugin API)`);
 
-    const resolvedPlugin = resolvePlugin(parsed.args, deps);
+    const resolvedPlugin = resolvePlugin(parsed.args, deps, host);
     if (!resolvedPlugin.ok) {
       console.error(`install: ${resolvedPlugin.message}`);
       return 1;
@@ -508,7 +523,7 @@ export async function main(argv: string[], deps: MainDeps = {}): Promise<number>
     // default over the discovered candidates; create-new fallback
     // when none exists. Cancel -> exit 0, unresolvable + --yes -> 1.
     const candidates = (deps.enumerateCandidates ?? enumerateCandidates)(buildResolverEnv());
-    const selected = await selectTarget(candidates, deps, yes, plugin.entry);
+    const selected = await selectTarget(candidates, deps, yes, plugin.entry, host);
     if (selected.error !== undefined) {
       console.error(selected.error);
       return 1;
@@ -526,8 +541,8 @@ export async function main(argv: string[], deps: MainDeps = {}): Promise<number>
     // mode (interactive, --yes, create-new).
     console.log(target.path);
 
-    const { selection, confirm } = await buildModelSelection(yes, deps);
-    return await applyConfigPatch(target, deps, selection, plugin, confirm);
+    const { selection, confirm } = await buildModelSelection(yes, deps, host);
+    return await applyConfigPatch(target, deps, selection, plugin, host, confirm);
   } catch (error) {
     // Top-level guard: any phase error -> non-zero exit with a message.
     // `promptTarget` rethrows non-Ctrl-C failures; this catch surfaces

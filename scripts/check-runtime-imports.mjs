@@ -1,7 +1,8 @@
 // Enforces the project's zero-runtime-imports invariant on the compiled
 // plugin entry graph: no compiled module (`build/index.js` and its transitive
 // imports) may import (or re-export from) the type-only SDK packages
-// (`@opencode-ai/plugin`, `@opencode-ai/sdk`).
+// (`@opencode-ai/plugin`, `@opencode-ai/sdk`, `@opencode/plugin`,
+// `@opencode/sdk`).
 //
 // These packages are devDependencies used only for types and are erased by
 // `tsc` when imported via `import type`. A leaked *value* import surviving
@@ -34,16 +35,17 @@ const root = join(here, '..');
 const override = process.argv[2];
 const buildDir = override ? resolve(override) : join(root, 'build');
 
-// Matches a runtime (non-erased) reference to any `@opencode-ai/*` package:
-//   - `import ... from '@opencode-ai/...'`
-//   - `export ... from '@opencode-ai/...'`
-//   - side-effect `import '@opencode-ai/...'`
-//   - dynamic `import('@opencode-ai/...')`
+// Matches a runtime (non-erased) reference to any type-only opencode package
+// (both the V1 `@opencode-ai/*` line and the V2 `@opencode/*` line):
+//   - `import ... from '@opencode/...'`
+//   - `export ... from '@opencode/...'`
+//   - side-effect `import '@opencode/...'`
+//   - dynamic `import('@opencode/...')`
 // `import type` is erased by `tsc` and never appears in `build/`, so any
 // match here is a leaked value import. Comments are stripped before scanning
 // (see `stripComments`) so prose mentions of these packages in JSDoc do not
 // produce false positives.
-const SDK_IMPORT_RE = /\b(?:from|import)\s*\(?\s*['"]@opencode-ai\//;
+const SDK_IMPORT_RE = /\b(?:from|import)\s*\(?\s*['"]@opencode(?:-ai)?\//;
 
 /**
  * Neutralise `//` line comments and `/* ... *&#47;` block comments in compiled
@@ -101,15 +103,15 @@ for (const file of collectJs(buildDir)) {
 }
 
 if (offenders.length) {
-  console.error('check-runtime-imports: leaked @opencode-ai runtime import(s) in build/:');
+  console.error('check-runtime-imports: leaked opencode runtime import(s) in build/:');
   for (const { file, line, text } of offenders) {
     console.error(`  ${file}:${line}: ${text}`);
   }
   console.error('');
-  console.error('The @opencode-ai/plugin and @opencode-ai/sdk packages are devDependencies');
+  console.error('The @opencode-ai/* and @opencode/* packages are devDependencies');
   console.error('(type-only). Use `import type { ... }` so tsc erases them; a surviving');
   console.error('value import breaks the published plugin at module-load time.');
   process.exit(1);
 }
 
-console.log('check-runtime-imports: no @opencode-ai runtime imports in build/');
+console.log('check-runtime-imports: no opencode runtime imports in build/');

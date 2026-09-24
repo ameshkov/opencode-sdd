@@ -11,12 +11,8 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  REPO_ROOT,
-  pluginConfig,
-  startOpencodeServer,
-  type OpencodeServerHandle,
-} from './harness.js';
+import { REPO_ROOT } from './shared/harness.js';
+import { pluginConfig, startOpencodeServer, type OpencodeServerHandle } from './v1/harness.js';
 
 describe('bundled templates external_directory permission e2e', () => {
   let server: OpencodeServerHandle;

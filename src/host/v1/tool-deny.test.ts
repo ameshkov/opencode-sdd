@@ -4,9 +4,15 @@
  * field, which opencode ignores for plugin-registered tool names.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { Config, PluginInput } from '@opencode-ai/plugin';
-import sddPlugin from './index.js';
-import { permissionRecord, pluginInput, withCommandsDir } from '../test/plugin-helpers.js';
+import type { Config, Hooks, PluginInput } from '@opencode-ai/plugin';
+import { createV1Hooks } from './index.js';
+import { createV1Logger } from './logger.js';
+import { permissionRecord, pluginInput, withCommandsDir } from '../../../test/plugin-helpers.js';
+
+/** Build the V1 hooks with a logger bound to `input`. */
+function hooksFrom(input: PluginInput): Hooks {
+  return createV1Hooks(createV1Logger(input.client));
+}
 
 /** True when a log entry at `level` carrying `message` was emitted. */
 function loggedWith(input: PluginInput, level: string, message: string): boolean {
@@ -19,7 +25,7 @@ function loggedWith(input: PluginInput, level: string, message: string): boolean
 /** Run the config hook against `config` and return the plugin input used. */
 async function runConfigHook(config: Config): Promise<PluginInput> {
   const input = pluginInput();
-  const hooks = await sddPlugin(input);
+  const hooks = hooksFrom(input);
   await expect(hooks.config?.(config)).resolves.toBeUndefined();
   return input;
 }

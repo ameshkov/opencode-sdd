@@ -76,7 +76,7 @@ describe('buildYesSelection', () => {
       'deepseek-chat': modelStub({ id: 'deepseek-chat', providerID: 'deepseek' }),
       'qwen-coder': modelStub({ id: 'qwen-coder', providerID: 'qwen' }),
     };
-    const result = await buildYesSelection({
+    const result = await buildYesSelection('v1', {
       createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
       createClient: () => stubClient(models, {}),
     });
@@ -97,7 +97,7 @@ describe('buildYesSelection', () => {
       'qwen-coder': modelStub({ id: 'qwen-coder', providerID: 'qwen' }),
       'deepseek-chat': modelStub({ id: 'deepseek-chat', providerID: 'deepseek' }),
     };
-    const result = await buildYesSelection({
+    const result = await buildYesSelection('v1', {
       createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
       createClient: () => stubClient(models, {}),
     });
@@ -108,7 +108,7 @@ describe('buildYesSelection', () => {
     const models: Record<string, Model> = {
       'claude-3': modelStub({ id: 'claude-3', providerID: 'anthropic' }),
     };
-    const result = await buildYesSelection({
+    const result = await buildYesSelection('v1', {
       createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
       createClient: () =>
         stubClient(models, { small_model: 'anthropic/claude-3', model: 'openai/gpt-4o' }),
@@ -120,7 +120,7 @@ describe('buildYesSelection', () => {
     const models: Record<string, Model> = {
       'claude-3': modelStub({ id: 'claude-3', providerID: 'anthropic' }),
     };
-    const result = await buildYesSelection({
+    const result = await buildYesSelection('v1', {
       createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
       createClient: () => stubClient(models, {}),
     });
@@ -136,7 +136,7 @@ describe('buildYesSelection', () => {
   });
 
   it('probe failure degrades gracefully: empty selection + warning naming the skipped step + degraded=true', async () => {
-    const result = await buildYesSelection({
+    const result = await buildYesSelection('v1', {
       createServer: async () => {
         throw new Error('opencode binary not found');
       },
@@ -150,7 +150,7 @@ describe('buildYesSelection', () => {
   });
 
   it('probe zero-models failure also degrades gracefully', async () => {
-    const result = await buildYesSelection({
+    const result = await buildYesSelection('v1', {
       createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
       createClient: () => stubClient({}, { model: 'p/x' }),
     });
@@ -168,7 +168,7 @@ describe('buildYesSelection', () => {
     const models: Record<string, Model> = {
       'kimi-k2': modelStub({ id: 'kimi-k2', providerID: 'moonshot' }),
     };
-    const result = await buildYesSelection({
+    const result = await buildYesSelection('v1', {
       createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
       createClient: () => stubClient(models, {}),
     });

@@ -6,8 +6,15 @@ import { main } from './install.js';
 import type { Candidate } from './config-resolver.js';
 import type { DetectResult } from './prerequisites.js';
 
-const ok = (): DetectResult => ({ ok: true, version: '1.18.29' });
-const missing = (): DetectResult => ({ ok: false });
+const ok = (): DetectResult => ({
+  ok: true,
+  raw: '1.18.29',
+  version: '1.18.29',
+  major: 1,
+  minor: 18,
+  patch: 29,
+});
+const missing = (): DetectResult => ({ ok: false, reason: 'not-found' });
 
 // A minimal valid JSON config written to the resolved target's path
 // before each affected resolver test, so `main`'s `readFileSync` +

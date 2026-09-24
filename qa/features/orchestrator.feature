@@ -1,4 +1,4 @@
-@orchestrator
+@orchestrator @V1 @V2
 Feature: prd-auto-implement orchestrator
   Model under test: the wired default (deepseek-v4-flash); the
   delegation chain (planner to coder to validator) also runs on each

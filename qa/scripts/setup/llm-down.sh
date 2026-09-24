@@ -4,14 +4,18 @@
 # OpenRouter key reference, and the bifrost-data volume keeps the
 # provider config + request logs, so `qa/scripts/setup/llm-up.sh` restarts
 # without re-entering the key or re-provisioning.
+#
+# Honors QA_ENV=v1|v2 (default v1).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-COMPOSE_FILE="$REPO_ROOT/qa/docker-compose.yml"
 
-docker compose -f "$COMPOSE_FILE" stop bifrost
+# shellcheck source=lib-compose.sh
+source "$REPO_ROOT/qa/scripts/setup/lib-compose.sh"
+
+docker compose "${QA_COMPOSE_ARGS[@]}" stop bifrost
 
 echo "bifrost stopped (container + volume kept)."
 echo "  restart:        qa/scripts/setup/llm-up.sh (no key needed)"
-echo "  full teardown:  docker compose -f $COMPOSE_FILE down"
-echo "  full reset:     docker compose -f $COMPOSE_FILE down -v"
+echo "  full teardown:  docker compose ${QA_COMPOSE_ARGS[*]} down"
+echo "  full reset:     docker compose ${QA_COMPOSE_ARGS[*]} down -v"

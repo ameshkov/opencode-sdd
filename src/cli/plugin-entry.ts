@@ -1,6 +1,7 @@
-import { resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { OwnPackageInfo } from './own-package.js';
+import type { OpencodeHost } from './prerequisites.js';
 
 /**
  * The bare plugin entry written by the install CLI by default. opencode
@@ -42,6 +43,11 @@ export interface PluginEntryRequest {
    * bare entry).
    */
   readonly own: OwnPackageInfo | null;
+  /**
+   * Detected host line; selects the local entry shape. Defaults to `v1`
+   * when omitted (the pre-V2 behavior).
+   */
+  readonly host?: OpencodeHost;
 }
 
 /** The resolved plugin entry to write into the config. */
@@ -74,17 +80,40 @@ export function npmConfigEntry(spec: string): string {
 }
 
 /**
- * Format a local build's plugin entry. opencode loads `file://` entries
- * by resolving the package's `main`/`exports` (`build/index.js`), so
- * the path must point at the package ROOT (the directory containing
- * `package.json`), not at `build/`.
+ * Format a local build's plugin entry as a `file://` URL.
  *
- * @param absPath - the local plugin package root; made absolute against
- *                  the process cwd, then URL-encoded (`pathToFileURL`).
+ * The URL is made absolute against the process cwd and encoded
+ * (`pathToFileURL`). What the URL should point at is host-specific — see
+ * {@link localConfigEntry}.
+ *
+ * @param absPath - the path to encode.
  * @internal Exported for tests only; not part of the public module API.
  */
 export function fileConfigEntry(absPath: string): string {
   return pathToFileURL(resolve(absPath)).href;
+}
+
+/**
+ * Compute the local plugin entry for a host line.
+ *
+ * - V1 resolves a local directory through the package entry point
+ *   (`package.json#main`/`exports`), so the entry points at the package ROOT.
+ * - V2 tries `<dir>/server` then `<dir>/index` and ignores `package.json#main`,
+ *   so the entry points at the compiled `build/` directory (where `index.js`
+ *   lives). A path that already names a `build` directory is used as-is.
+ *
+ * @param absPath - local plugin package root (or its `build/` directory).
+ * @param host - detected host line; defaults to `v1`.
+ * @returns The `file://` entry to write into the config.
+ * @internal Exported for tests only; not part of the public module API.
+ *   Production callers reach it through {@link resolvePluginEntry}.
+ */
+export function localConfigEntry(absPath: string, host: OpencodeHost = 'v1'): string {
+  const root = resolve(absPath);
+  if (host === 'v2' && basename(root) !== 'build') {
+    return fileConfigEntry(join(root, 'build'));
+  }
+  return fileConfigEntry(root);
 }
 
 /**
@@ -151,16 +180,16 @@ export function planPluginEntry(
  *               an invalid `--tag` value.
  */
 export function resolvePluginEntry(request: PluginEntryRequest): PluginEntryResolution {
-  const { tag, local, localPath, cwd, own } = request;
+  const { tag, local, localPath, cwd, own, host = 'v1' } = request;
   if (tag !== undefined && local) {
     throw new Error('--tag and --local cannot be combined');
   }
   if (local) {
     if (localPath !== undefined) {
-      return { entry: fileConfigEntry(resolve(cwd, localPath)), explicit: true };
+      return { entry: localConfigEntry(resolve(cwd, localPath), host), explicit: true };
     }
     if (own !== null) {
-      return { entry: fileConfigEntry(own.root), explicit: true };
+      return { entry: localConfigEntry(own.root, host), explicit: true };
     }
     throw new Error(
       '--local requires a path when the running opencode-sdd package cannot be located',

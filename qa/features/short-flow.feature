@@ -1,4 +1,4 @@
-@short-flow
+@short-flow @V1 @V2
 Feature: SDD short flow
   A single session: /sdd-spec, then /sdd-implement, then /sdd-validate on
   fixture F1 ("Add mul(a, b) to src/math.ts following TDD."). All

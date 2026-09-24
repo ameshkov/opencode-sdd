@@ -457,3 +457,50 @@ describe('computePatch — diff rendering', () => {
     expect(diff).toBe('');
   });
 });
+
+describe('computePatch — V2 config shape', () => {
+  it('creates the top-level plugins key with ["opencode-sdd"] when missing', () => {
+    const { patchedText } = computePatch(`{ "$schema": "x" }`, EMPTY_SELECTION, {
+      host: 'v2',
+    });
+    expect(JSON.parse(patchedText)).toEqual({
+      $schema: 'x',
+      plugins: ['opencode-sdd'],
+    });
+  });
+
+  it('writes agent models under the agents key on v2', () => {
+    const { patchedText } = computePatch(
+      `{ "plugins": ["opencode-sdd"] }`,
+      { models: new Map([['sdd-coder', 'mock/model']]) },
+      { host: 'v2' },
+    );
+    expect(JSON.parse(patchedText)).toEqual({
+      plugins: ['opencode-sdd'],
+      agents: { 'sdd-coder': { model: 'mock/model' } },
+    });
+  });
+
+  it('is a no-op when plugins already contains the entry on v2', () => {
+    const current = `{
+  "plugins": ["opencode-sdd"],
+  "agents": { "sdd-coder": { "model": "mock/model" } }
+}`;
+    const { noChanges } = computePatch(
+      current,
+      { models: new Map([['sdd-coder', 'mock/model']]) },
+      { host: 'v2' },
+    );
+    expect(noChanges).toBe(true);
+  });
+
+  it('does not touch a v1 plugin key when patching as v2', () => {
+    const { patchedText } = computePatch(`{ "plugin": ["other-plugin"] }`, EMPTY_SELECTION, {
+      host: 'v2',
+    });
+    expect(JSON.parse(patchedText)).toEqual({
+      plugin: ['other-plugin'],
+      plugins: ['opencode-sdd'],
+    });
+  });
+});

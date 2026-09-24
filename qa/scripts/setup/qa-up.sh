@@ -5,17 +5,46 @@
 # keys, model list, one smoke call) and only then prints how to enter.
 # Refuses to start on a stale workspace image (SRC_HASH label mismatch).
 #
+# Usage: qa-up.sh [--env v1|v2]
+#   --env selects the opencode environment (default v1): v1 installs the
+#   1.x binary, v2 installs @opencode/cli and uses qa/docker-compose.v2.yml
+#   (separate project name, image tag, volumes, and offset host ports when
+#   publishing is opted into).
+#
 # The OpenRouter API key is resolved by lib-openrouter-key.sh: gitignored
 # qa/.env -> exported env var -> external key file -> interactive hidden
 # prompt. It is never committed and never echoed.
 set -euo pipefail
 
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --env)
+      QA_ENV="${2:-}"
+      shift 2
+      ;;
+    --env=*)
+      QA_ENV="${1#--env=}"
+      shift
+      ;;
+    *)
+      echo "ERROR: unknown argument: $1" >&2
+      echo "usage: qa-up.sh [--env v1|v2]" >&2
+      exit 2
+      ;;
+  esac
+done
+export QA_ENV="${QA_ENV:-v1}"
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-COMPOSE_FILE="$REPO_ROOT/qa/docker-compose.yml"
-WORKSPACE_IMAGE="opencode-sdd-qa:workspace"
+
+# shellcheck source=lib-compose.sh
+source "$REPO_ROOT/qa/scripts/setup/lib-compose.sh"
 
 # shellcheck source=lib-openrouter-key.sh
 source "$REPO_ROOT/qa/scripts/setup/lib-openrouter-key.sh"
+
+COMPOSE_FILE="$QA_COMPOSE_FILE"
+WORKSPACE_IMAGE="$QA_WORKSPACE_IMAGE"
 
 # Optional host publishing (host-side smoke tests, the bifrost Web UI,
 # and the opencode web UI for browser-driven runs):
@@ -24,12 +53,21 @@ source "$REPO_ROOT/qa/scripts/setup/lib-openrouter-key.sh"
 # port is QA_WEB_PORT (default 4097, container 4096) and is published by
 # the same override. Without them the stack is hermetic — no host port is
 # bound, so nothing can collide with the host.
-COMPOSE_ARGS=(-f "$COMPOSE_FILE")
+COMPOSE_ARGS=("${QA_COMPOSE_ARGS[@]}")
 if [ -n "${QA_HOST_PORT:-}" ] || [ -n "${QA_WEB_PORT:-}" ]; then
   COMPOSE_ARGS+=(-f "$REPO_ROOT/qa/docker-compose.ports.yml")
   if [ -n "${QA_HOST_PORT:-}" ]; then
     BIFROST_PORT="$QA_HOST_PORT"
-    export BIFROST_PORT
+  elif [ "$QA_ENV" = "v2" ]; then
+    # Offset default so a V1 and a V2 stack can publish side by side.
+    BIFROST_PORT=8082
+  fi
+  export BIFROST_PORT
+  if [ -n "${QA_WEB_PORT:-}" ]; then
+    export QA_WEB_PORT
+  elif [ "$QA_ENV" = "v2" ]; then
+    QA_WEB_PORT=4099
+    export QA_WEB_PORT
   fi
 fi
 
@@ -155,9 +193,17 @@ PUBLISHED="$(docker port "${BIFROST_ID:+$BIFROST_ID}" 8080 2>/dev/null || true)"
 QA_ID="$(docker compose "${COMPOSE_ARGS[@]}" ps -q qa 2>/dev/null || true)"
 WEB_PUBLISHED="$(docker port "${QA_ID:+$QA_ID}" 4096 2>/dev/null || true)"
 
+COMPOSE_HINT="docker compose"
+for arg in "${COMPOSE_ARGS[@]}"; do
+  case "$arg" in
+    -f) COMPOSE_HINT="$COMPOSE_HINT -f" ;;
+    *) COMPOSE_HINT="$COMPOSE_HINT $arg" ;;
+  esac
+done
+
 echo
-echo "QA stack is ready."
-echo "  workspace shell:  docker compose -f $COMPOSE_FILE exec -it qa bash"
+echo "QA stack is ready (environment: $QA_ENV, project: $QA_PROJECT)."
+echo "  workspace shell:  $COMPOSE_HINT exec -it qa bash"
 echo "  opencode session: qa/docker/serve-web.sh + browser (qa/README.md 3.6)"
 echo "  gateway (in workspace): http://bifrost:8080/v1 (compose DNS)"
 if [ -n "${PUBLISHED:-}" ]; then
@@ -178,15 +224,15 @@ else
 fi
 echo
 echo "  First-time setup inside the workspace:"
-echo "    docker compose -f $COMPOSE_FILE exec qa \\"
+echo "    $COMPOSE_HINT exec qa \\"
 echo "      bash -lc '/app/qa/docker/scratch-init.sh /work/sdd-manual'"
 echo "    docker compose -f $COMPOSE_FILE exec qa \\"
 echo "      bash -lc '/app/qa/docker/wire-opencode-config.sh /work/sdd-manual file:///app'"
 echo
 echo "  Baseline reset between cases (wipes .sdd, resets git, rewires the config):"
-echo "    docker compose -f $COMPOSE_FILE exec qa \\"
+echo "    $COMPOSE_HINT exec qa \\"
 echo "      bash -lc '/app/qa/docker/reset-scratch.sh /work/sdd-manual'"
 echo
 echo "  Smoke test the gateway:"
-echo "    docker compose -f $COMPOSE_FILE exec qa \\"
+echo "    $COMPOSE_HINT exec qa \\"
 echo "      bash -lc '/app/qa/docker/llm-smoke.sh'"

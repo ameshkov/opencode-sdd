@@ -16,8 +16,8 @@ import {
   startOpencodeServer,
   type OpencodeServerHandle,
 } from './harness.js';
-import { createMockLlm, type MockLlmState } from './mock-server.js';
-import { autoImplementHitlPauseScenario } from './scenarios.js';
+import { createMockLlm, type MockLlmState } from '../shared/mock-server.js';
+import { autoImplementHitlPauseScenario } from '../shared/scenarios.js';
 
 /** A cleanup function pushed onto a test file's cleanup stack. */
 export type CleanupFn = () => void;

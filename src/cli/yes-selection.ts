@@ -1,5 +1,6 @@
 import type { Model } from '@opencode-ai/sdk';
-import { probe, type ProbeDeps } from './model-probe.js';
+import { probeForHost, type HostProbeDeps } from './host-probe.js';
+import type { OpencodeHost } from './prerequisites.js';
 import { autoSelect, SUBAGENT_RECOMMENDATIONS, type AgentSelection } from './recommend.js';
 import type { Selection } from './config-patcher.js';
 
@@ -82,12 +83,16 @@ export const AGENT_UNSET_WARNING = (agent: string): string =>
  * registered (the caller's `computePatch` falls back to the
  * plugin-only patch on an empty Selection).
  *
- * @param probeDeps Optional test doubles for the SDK server/client (mirrors
- *   `probe`'s `ProbeDeps`). Tests inject stubs exactly like
- *   `model-probe.test.ts` does.
+ * @param host Detected host line; selects the V1 SDK probe or the V2
+ *   spawn-and-fetch probe.
+ * @param probeDeps Optional test doubles for the host probe. Tests inject
+ *   stubs exactly like `model-probe.test.ts` / `v2-model-probe.test.ts` do.
  */
-export async function buildYesSelection(probeDeps?: ProbeDeps): Promise<YesSelectionResult> {
-  const probeResult = await probe(probeDeps);
+export async function buildYesSelection(
+  host: OpencodeHost,
+  probeDeps?: HostProbeDeps,
+): Promise<YesSelectionResult> {
+  const probeResult = await probeForHost(host, probeDeps);
   if (!probeResult.ok) {
     return {
       selection: {},

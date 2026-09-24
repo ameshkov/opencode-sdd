@@ -1,2 +1,3 @@
 export { loadCommands } from './loader.js';
-export { rewriteAssetReferences } from './template-rewriter.js';
+export { inlineAssetReferences } from './template-inliner.js';
+export type { CommandConfig } from './frontmatter-parser.js';

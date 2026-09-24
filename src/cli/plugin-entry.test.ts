@@ -4,6 +4,7 @@ import {
   CANARY_TAG,
   fileConfigEntry,
   isOpenCodeSddReference,
+  localConfigEntry,
   npmConfigEntry,
   planPluginEntry,
   resolvePluginEntry,
@@ -159,5 +160,53 @@ describe('resolvePluginEntry', () => {
   it('accepts --help short-circuit values unchanged (CANARY_TAG export)', () => {
     expect(CANARY_TAG).toBe('canary');
     expect(BARE_PLUGIN_ENTRY).toBe('opencode-sdd');
+  });
+});
+
+describe('localConfigEntry host forms', () => {
+  it('points at the package root on v1', () => {
+    expect(localConfigEntry('/opt/opencode-sdd', 'v1')).toBe('file:///opt/opencode-sdd');
+  });
+
+  it('points at build/ on v2 (V2 ignores package.json#main)', () => {
+    expect(localConfigEntry('/opt/opencode-sdd', 'v2')).toBe('file:///opt/opencode-sdd/build');
+  });
+
+  it('does not double-append build when the path already names build/', () => {
+    expect(localConfigEntry('/opt/opencode-sdd/build', 'v2')).toBe(
+      'file:///opt/opencode-sdd/build',
+    );
+  });
+
+  it('defaults to the v1 root form when no host is given', () => {
+    expect(localConfigEntry('/opt/opencode-sdd')).toBe('file:///opt/opencode-sdd');
+  });
+});
+
+describe('resolvePluginEntry host-aware --local', () => {
+  const own = { root: '/repo/opencode-sdd', version: '1.5.0', prerelease: false };
+
+  it('writes the v1 root entry by default', () => {
+    expect(resolvePluginEntry({ local: true, cwd: '/repo', own }).entry).toBe(
+      'file:///repo/opencode-sdd',
+    );
+  });
+
+  it('writes the v2 build entry when host is v2', () => {
+    expect(resolvePluginEntry({ local: true, cwd: '/repo', own, host: 'v2' }).entry).toBe(
+      'file:///repo/opencode-sdd/build',
+    );
+  });
+
+  it('applies the host form to an explicit --local path too', () => {
+    expect(
+      resolvePluginEntry({ local: true, localPath: 'pkg', cwd: '/repo', own, host: 'v2' }).entry,
+    ).toBe('file:///repo/pkg/build');
+  });
+
+  it('leaves npm entries host-independent', () => {
+    expect(resolvePluginEntry({ tag: 'canary', cwd: '/repo', own, host: 'v2' }).entry).toBe(
+      'opencode-sdd@canary',
+    );
   });
 });

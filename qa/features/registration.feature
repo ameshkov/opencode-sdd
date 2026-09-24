@@ -1,4 +1,4 @@
-@registration
+@registration @V1 @V2
 Feature: Plugin registration and config merging
   A clean opencode startup registers the full plugin surface: 11
   commands, 6 agents, the `sdd-command` global permission deny and the

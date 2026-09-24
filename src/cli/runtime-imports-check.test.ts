@@ -10,6 +10,7 @@ const repoRoot = dirname(dirname(here));
 const script = join(repoRoot, 'scripts', 'check-runtime-imports.mjs');
 
 const LEAK_LINE = `import { createOpencodeServer } from '@opencode-ai/sdk';\n`;
+const V2_LEAK_LINE = `import { define } from '@opencode/plugin';\n`;
 
 /** Run the build script against `buildDir` and return the full result. */
 function run(buildDir: string) {
@@ -56,9 +57,38 @@ describe('check-runtime-imports scoping', () => {
       writeFileSync(join(clean, 'build', 'index.js'), `export const x = 1;\n`);
       const out = run(join(clean, 'build'));
       expect(out.status).toBe(0);
-      expect(out.stdout).toContain('no @opencode-ai runtime imports');
+      expect(out.stdout).toContain('no opencode runtime imports');
     } finally {
       rmSync(clean, { recursive: true, force: true });
+    }
+  });
+
+  it('flags a leaked V2 @opencode/* value import', () => {
+    const v2 = mkdtempSync(join(tmpdir(), 'sdd-cli-check-v2-'));
+    try {
+      mkdirSync(join(v2, 'build', 'host', 'v2'), { recursive: true });
+      writeFileSync(join(v2, 'build', 'index.js'), `export const x = 1;\n`);
+      writeFileSync(join(v2, 'build', 'host', 'v2', 'index.js'), V2_LEAK_LINE);
+      const result = run(join(v2, 'build'));
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('build/host/v2/index.js');
+    } finally {
+      rmSync(v2, { recursive: true, force: true });
+    }
+  });
+
+  it('does not flag a package name mentioned only in a comment', () => {
+    const commented = mkdtempSync(join(tmpdir(), 'sdd-cli-check-comment-'));
+    try {
+      mkdirSync(join(commented, 'build'), { recursive: true });
+      writeFileSync(
+        join(commented, 'build', 'index.js'),
+        `// import type from '@opencode/plugin' is erased by tsc\nexport const x = 1;\n`,
+      );
+      const out = run(join(commented, 'build'));
+      expect(out.status).toBe(0);
+    } finally {
+      rmSync(commented, { recursive: true, force: true });
     }
   });
 

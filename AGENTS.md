@@ -35,10 +35,12 @@ loaded by opencode and extends its merged configuration with:
 - **Commands** — slash commands such as `prd-write` that produce
   specification artifacts.
 
-The plugin does not run as a standalone process. It is a module that exports a
-default function of type `Plugin` from `@opencode-ai/plugin`, which returns a
-`Hooks` object. The only hook is `config`, used to register agents and
-commands.
+The plugin does not run as a standalone process. It is a module whose
+default export is a **dual entry object** `{ id, server, setup }`: V1 calls
+`server(input)` and consumes the returned `Hooks` object (the `config` and
+`tool` hooks); V2 requires `id` + `setup(ctx)` and registers the same
+surface through the V2 editors. V1 never calls `setup`, and V2 ignores
+`server`, so one package serves both hosts.
 
 ## Technical Context
 
@@ -47,17 +49,17 @@ commands.
 | Language | TypeScript 6, ES2022 target, strict mode |
 | Runtime | Node.js 24+ (loaded inside the opencode host) |
 | Package Manager | pnpm 10+ |
-| Framework | OpenCode Plugin SDK (`@opencode-ai/plugin`, `@opencode-ai/sdk`) |
-| Primary Dependencies | `@inquirer/prompts`, `jsonc-parser`, `diff` (CLI runtime); the OpenCode SDK/Plugin packages are type-only for the plugin entry |
+| Framework | OpenCode Plugin SDK: V1 (`@opencode-ai/plugin`, `@opencode-ai/sdk`) and V2 (`@opencode/plugin`, `@opencode/sdk`) |
+| Primary Dependencies | `@inquirer/prompts`, `jsonc-parser`, `diff` (CLI runtime); the OpenCode SDK/Plugin packages are type-only for the plugin entry, `@opencode/sdk` is dev-only (V2 e2e lane) |
 | Storage | None — SDD artifacts are Markdown files under `SPECS_DIR` |
 | Linting | ESLint 10.x + typescript-eslint |
 | Formatting | Prettier 3.x, Markdownlint (markdownlint-cli2) |
 | Unused-export analysis | Knip |
 | Tests | Vitest 4.x |
-| Target Platform | opencode host process (Node.js 24+), macOS/Linux/Windows |
+| Target Platform | opencode 1.x (>= 1.18.29) and 2.x (2.0.x) host process (Node.js 24+), macOS/Linux/Windows |
 | Project Type | opencode plugin (ESM, compiled to `build/`) |
 | Performance Goals | N/A — startup-time registration of 11 commands and 6 agents |
-| Constraints | zero runtime `@opencode-ai/*` imports in the plugin entry; the `config` hook must never throw; opencode hard-fails on invalid config |
+| Constraints | zero runtime `@opencode-ai/*` and `@opencode/*` imports in the plugin entry; the `config`/`setup` paths must never throw; opencode hard-fails on invalid config |
 | Scale/Scope | one opencode host process per user; registers 11 slash commands and 6 hidden subagents |
 
 ## Project Structure
@@ -71,34 +73,41 @@ and the files inside it are self-explanatory from their names.
 ```text
 opencode-sdd/
 ├── src/
-│   ├── index.ts                # Plugin entry point (config + tool hooks)
+│   ├── index.ts                # Dual plugin entry { id, server, setup }
+│   ├── host/                   # Host adapters: surface builder + V1/V2
+│   │                           # registration (detect, surface, v1/, v2/)
 │   ├── agents/                 # Agent loader: scans *.md → AgentConfig map
-│   ├── commands/               # Command loader + template-rewriter
-│   │                           # (rewrites @opencode-sdd-templates/ → abs path)
+│   ├── commands/               # Command loader + template-inliner
+│   │                           # (V2 inlines template file content)
 │   ├── sdd-command/            # The `sdd-command` custom tool (allowlist,
-│   │                           # source loader, ToolDefinition factory)
+│   │                           # source loader, neutral core + V1 adapter)
 │   ├── cli/                    # `opencode-sdd install` binary (second entry point)
-│   ├── utils/                  # Shared internals: logger, frontmatter helpers
+│   ├── utils/                  # Shared internals: logger port, frontmatter
+│   │                           # helpers, template-token rewriter
 │   ├── assets/agents/          # Bundled agent Markdown (frontmatter + prompt)
 │   ├── assets/commands/        # Bundled command Markdown files
 │   └── assets/commands/templates/  # Prompt templates referenced by commands
 │                              # via the @opencode-sdd-templates/ token
 ├── test/                       # Shared test support code (plugin-helpers,
 │                               # stub-client, fixtures) — NOT test cases
-├── test-e2e/                    # Mock-LLM end-to-end suite (real opencode
-│                               # server driven by a local SSE mock LLM)
+├── test-e2e/                   # Mock-LLM end-to-end suite, split into
+│                               # shared/ (mock LLM + scenarios), v1/ (real
+│                               # 1.x server) and v2/ (in-process SDK host +
+│                               # real opencode2 loader smoke)
 ├── scripts/                    # Build-time helpers (copy-assets,
 │                               # check-runtime-imports)
 ├── docs/                        # Reference docs (docs/reference/:
-│                               # install CLI + slash commands) and
+│                               # install CLI + slash commands),
 │                               # long-form developer docs (e2e.md,
-│                               # assets/)
+│                               # assets/), and implementation plans
+│                               # (docs/plans/)
 ├── qa/                          # Manual QA suite: the OpenRouter-backed
 │                               # bifrost gateway compose + model allowlist
 │                               # (qa/bifrost/), the isolated workspace
 │                               # image (Dockerfile: opencode + toolchain,
-│                               # plugin baked in), host-side lifecycle
-│                               # scripts (qa/scripts/setup/) and
+│                               # plugin baked in; V1 and V2 environments
+│                               # via docker-compose.v2.yml), host-side
+│                               # lifecycle scripts (qa/scripts/setup/) and
 │                               # in-container payload scripts
 │                               # (qa/docker/: pty-driver, serve-web),
 │                               # the gitignored key file
@@ -132,7 +141,8 @@ opencode-sdd/
 - `pnpm test:watch` — run Vitest in watch mode
 - `pnpm lint` — lint source files with ESLint, check for unused
   exports with Knip, and verify the Gherkin QA plans (`lint:gherkin`:
-  `@TC-*` ID convention + `gherkin-lint` over `qa/features/`)
+  `@TC-*` ID convention, `@V1`/`@V2` applicability tags, and
+  `gherkin-lint` over `qa/features/`)
 - `pnpm lint:fix` — lint and auto-fix issues
 - `pnpm lint:gherkin` — run only the Gherkin plan checks
 - `pnpm knip` — run Knip unused-export analysis separately
@@ -140,11 +150,15 @@ opencode-sdd/
 - `pnpm format:fix` — fix formatting issues
 - `pnpm check` — run `format:check`, `lint`, `typecheck`, and `test`
   (full CI gate)
-- `pnpm test:e2e` — run the mock-LLM e2e suite against a real
-  `opencode` server (NOT part of `pnpm check`; needs the `opencode`
-  binary on PATH and a built `build/`)
+- `pnpm test:e2e` — run both mock-LLM e2e lanes (`:v1` then `:v2`; NOT
+  part of `pnpm check`)
+- `pnpm test:e2e:v1` — V1 lane against a real opencode 1.x server
+  (needs the `opencode` binary on PATH and a built `build/`)
+- `pnpm test:e2e:v2` — V2 lane: in-process `@opencode/sdk` specs plus a
+  loader smoke against `opencode2` (skips itself when absent)
 - `pnpm qa:run` — run the interactive manual QA runner over
-  `qa/features/` (writes a report to `qa/output/`)
+  `qa/features/` (writes a report to `qa/output/`; `--env v1|v2`
+  selects the stack and filters by applicability tags)
 - `pnpm clean` — remove `node_modules` and `build/`
 
 ## Contribution Instructions
@@ -202,27 +216,30 @@ Design for a library (an opencode plugin loaded inside the host process):
   listeners, shared singletons) beyond what opencode's hook contract
   expects. The host may run alongside other plugins in a long-lived
   process.
-- Export a stable public API: the default `Plugin` function from
-  `@opencode-ai/plugin` returning a `Hooks` object. Internal modules
-  (loaders, parsers, rewriters, utilities) are reached only through
-  barrel `index.ts` files.
+- Export a stable public API: the default dual entry object
+  `{ id, server, setup }`, where `server` returns the V1 `Hooks` object
+  (`@opencode-ai/plugin`) and `setup` registers the V2 surface
+  (`@opencode/plugin`). Internal modules (loaders, parsers, rewriters,
+  host adapters, utilities) are reached only through barrel `index.ts`
+  files.
 - Keep the dependency footprint minimal — the OpenCode Plugin and SDK
   packages are type-only (`devDependencies`, erased at compile time), so
   the compiled `build/` output has zero runtime imports. This is enforced
   by `scripts/check-runtime-imports.mjs` in `pnpm build` (fails the build
-  on any leaked `@opencode-ai/*` value import); `import type { ... }` is
-  the only correct form for these packages.
-- Side effects are confined to the `config` hook: it mutates opencode's
-  merged `Config` in place to register agents and commands. The only
-  other side effect is filesystem reads of bundled asset Markdown at
-  registration time, which is part of the plugin contract.
+  on any leaked `@opencode-ai/*` or `@opencode/*` value import);
+  `import type { ... }` is the only correct form for these packages.
+- Side effects are confined to the `config` hook (V1) and `setup` (V2):
+  the V1 hook mutates opencode's merged `Config` in place to register
+  agents and commands; the V2 setup registers through the host editors.
+  The only other side effect is filesystem reads of bundled asset
+  Markdown at registration time, which is part of the plugin contract.
 - Provide complete type definitions so the plugin is usable with static
   type checking against the SDK (`AgentConfig`, derived command types).
   opencode hard-fails on invalid config, so the compiler catches shape
   mistakes early.
-- Handle errors by degrading gracefully inside the `config` hook — if a
-  feature fails to register, log and continue rather than breaking
-  opencode startup. Never let the hook throw.
+- Handle errors by degrading gracefully inside the `config` hook / `setup`
+  — if a feature fails to register, log and continue rather than breaking
+  opencode startup. Never let either path throw.
 - Keep the plugin deterministic: given the same `Config`, registration
   always produces the same result. No reliance on wall-clock time,
   network, or random values during load.
@@ -243,37 +260,42 @@ Universal design principles this codebase follows:
   imports only from layers below it.
 - **Data Flow Clarity** — data moves through the plugin in a single,
   traceable path: bundled Markdown → loader → frontmatter parser →
-  template rewriter → registered `Config` entries. No hidden side
-  channels.
+  host-neutral surface → host adapter (V1 `Config` mutation / V2 editors).
+  No hidden side channels.
 - **Minimize Coupling, Maximize Cohesion** — modules are self-contained
   and interact through narrow interfaces.
 - **Make Invalid States Impossible** — use TypeScript strict mode and
   validation to prevent illegal combinations at compile time.
 - **Observability Built-in** — the plugin surfaces its behavior through
-  the host's logger (`client.app.log` via `src/utils/logger.ts`); every
-  registration step logs at an appropriate level so failures are
-  diagnosable.
+  the host-neutral `Logger` port (`src/utils/logger.ts`): V1 forwards to
+  `client.app.log`, V2 writes to stderr; every registration step logs at
+  an appropriate level so failures are diagnosable.
 - **Keep It Boring** — prefer well-understood patterns over clever or
   novel solutions.
 
 The project's layers, from top to bottom:
 
-- **Entry point** (`src/index.ts`) — exports the `Plugin` function,
-  returns the `Hooks` object, and wires together the registered surface.
-- **Definitions** (`src/agents/`, `src/commands/`) — Markdown agent and
-  command files loaded at startup via their loaders, plus their frontmatter
-  parsers and the command template rewriter that rewrites the portable
-  `@opencode-sdd-templates/` token to the resolved absolute templates
-  directory at registration time. No side effects beyond logging.
+- **Entry point** (`src/index.ts`) — the dual entry object; `server()`
+  returns the V1 hooks, `setup()` registers the V2 surface.
+- **Host adapters** (`src/host/`) — the host-neutral surface builder plus
+  the V1 and V2 registration adapters. Sibling adapters never import each
+  other; shared code lives at the `host/` level (`detect.ts`,
+  `surface.ts`). The adapters map the same loaded surface onto V1
+  `Config` mutations and V2 editor registrations.
+- **Definitions** (`src/agents/`, `src/commands/`, `src/sdd-command/`) —
+  Markdown agent and command files loaded at startup via their loaders,
+  plus their frontmatter parsers, the command template inliner, and the
+  host-neutral `sdd-command` tool core. No side effects beyond logging.
 - **Data** (`src/assets/agents/`, `src/assets/commands/` +
   `src/assets/commands/templates/`) — Bundled agent Markdown files,
-  command Markdown files, and prompt template assets embedded by command
-  prompts via native `@<abs-path>` mention resolution.
+  command Markdown files, and prompt template assets.
 
 ```text
 Entry point (index.ts)
       ↓
-Definitions (agents/, commands/)
+Host adapters (host/: v1/, v2/)
+      ↓
+Definitions (agents/, commands/, sdd-command/)
       ↓
 Data (assets/agents/, assets/commands/, assets/commands/templates/)
 ```
@@ -289,15 +311,16 @@ importing downward only:
 Neither entry imports the other; the plugin entry never imports from
 `src/cli/`, and the CLI never imports `src/index.ts`. This split keeps
 the compiled plugin output (`build/index.js`) free of any runtime
-`@opencode-ai/*` imports — such imports live only in the CLI graph
-(`build/cli/`), enforced by `scripts/check-runtime-imports.mjs` in
-`pnpm build`.
+`@opencode-ai/*` and `@opencode/*` imports — such imports live only in
+the CLI graph (`build/cli/`), enforced by
+`scripts/check-runtime-imports.mjs` in `pnpm build`.
 
 ```text
 CLI entry (src/cli/install.ts)
       ↓
-CLI modules (src/cli/*.ts: argv, prerequisites, config-resolver,
-            target-select, model-probe, recommend, yes-selection,
+CLI modules (src/cli/*.ts: argv, prerequisites, detect-host,
+            config-resolver, target-select, model-probe, v2-model-probe,
+            host-probe, recommend, yes-selection,
             interactive-selection, config-patcher, plugin-entry,
             own-package, agent-model-*, install, usage, bin-entry,
             config-paths, confirm-patch, server-auth)
@@ -311,11 +334,15 @@ The install CLI writes exactly three plugin entry forms: the bare
 which resolves plugin specs via `npm-package-arg` + Arborist), and
 `file://<abs-path>` for local builds. Never write the `npm:`-prefixed
 form: `npm-package-arg` parses it as an alias TARGET, not a registry
-spec, so it cannot resolve to `opencode-sdd`.
+spec, so it cannot resolve to `opencode-sdd`. The local form is
+host-specific: `file://<root>` on V1 (which resolves `package.json#main`)
+and `file://<root>/build` on V2 (which resolves `<dir>/index.js` and
+ignores `main`). The CLI refuses V1 below 1.18.29 and writes `plugin`/
+`agent` keys on V1, `plugins`/`agents` on V2.
 
 Definitions MUST NOT import from the entry point. Sibling definition
-layers (`agents/`, `commands/`) MUST NOT import from each other; shared
-parsing helpers live in the `utils/` layer below them. New layers (e.g.,
+layers (`agents/`, `commands/`, `sdd-command/`) MUST NOT import from each
+other; shared helpers live in the `utils/` layer below them. New layers (e.g.,
 services, utilities) introduced in later iterations MUST sit below the
 entry point and above definitions only when they are consumed by them.
 
@@ -413,6 +440,12 @@ Every module MUST have test coverage:
 - **Shared test utilities**: Common test infrastructure lives in the
   `test/` directory. These files MUST NOT use the `.test.ts` suffix — they
   are test support code, not test cases.
+- **Host-neutral tests use the host-neutral logger stub**: Unit tests for
+  host-neutral modules (`agents/`, `commands/`, `sdd-command/`, `utils/`)
+  MUST use `stubLogger()` from `test/plugin-helpers.ts` rather than a host
+  adapter logger (`createV1Logger`/`createV2Logger`). Those modules never
+  exercise host logging, and importing a host adapter would point the
+  dependency from a lower layer up to the host adapters.
 - **Test verification mandatory**: All changes MUST pass `pnpm test`
   before merge. Tests MUST NOT be deleted or weakened without explicit
   justification.
@@ -432,24 +465,28 @@ making it easier to find, update, and maintain tests.
 
 #### E2E Testing
 
-The `test-e2e/` suite exercises the plugin against a real `opencode` server
-(opencode-as-a-library), driven by a local mock OpenAI-compatible LLM
-(`node:http` + SSE). It is deterministic, offline, and needs no API keys:
+The `test-e2e/` suite exercises the plugin against a real opencode host on
+both lines, driven by a local mock OpenAI-compatible LLM (`node:http` +
+SSE). It is deterministic, offline, and needs no API keys. The suite is
+split into `shared/` (mock LLM, scenarios, host-neutral harness pieces),
+`v1/` (the real 1.x binary lane) and `v2/` (an in-process `@opencode/sdk`
+lane plus a real-`opencode2` loader smoke):
 
-- **Prerequisites**: the `opencode` binary on PATH **and** a built `build/`
-  (the plugin loads from `build/index.js` via `file://`). The vitest
-  `globalSetup` (`test-e2e/global-setup.ts`) fails loudly with a clear message
-  if either is missing.
-- **Scope**: `pnpm test:e2e` runs the standalone mock unit test plus the
-  binary-dependent `.e2e.test.ts` files. It is intentionally **not** part of
-  `pnpm check`; the main `vitest.config.ts` excludes `*.e2e.test.ts` so the CI
-  gate never requires the binary. The mock unit test
-  (`test-e2e/mock-server.test.ts`) still runs under `pnpm test`.
+- **Prerequisites**: a built `build/` always; the V1 lane additionally
+  requires an opencode **1.x** binary on PATH and its `globalSetup`
+  (`test-e2e/v1/global-setup.ts`) asserts the major. The V2 lane runs its
+  in-process specs without a binary; the loader smoke skips itself when
+  `opencode2` is absent and runs in CI, which installs `@opencode/cli`.
+- **Scope**: `pnpm test:e2e:v1` / `:v2` run the lanes; `pnpm test:e2e`
+  runs both. They are intentionally **not** part of `pnpm check`; the main
+  `vitest.config.ts` excludes `*.e2e.test.ts` so the CI gate never requires
+  a binary. The host-neutral unit tests (`test-e2e/shared/mock-server.test.ts`,
+  `test-e2e/v1/harness.test.ts`) still run under `pnpm test`.
 - **Type checking**: `test-e2e/**/*` is included in `tsconfig.json`, so
   `pnpm typecheck` covers it; it is never compiled into `build/`.
-- **How it works**: see [`docs/e2e.md`](docs/e2e.md) for how the suite
-  operates — the mock LLM, server lifecycle, permission auto-approve, and
-  the runtime absolute-path template-rewriting mechanism.
+- **How it works**: see [`docs/e2e.md`](docs/e2e.md) for the lane layout,
+  the mock LLM, server lifecycle, permission auto-approve, and the
+  template-inlining differences between V1 and V2.
 
 ### Dependency Management
 
@@ -470,29 +507,32 @@ The `test-e2e/` suite exercises the plugin against a real `opencode` server
   build on any leaked `@opencode-ai/*` value import in the plugin entry
   graph (excluding the top-level `build/cli/`); `import type { ... }` is
   the only correct form for these packages in the plugin entry.
-- **Keep the opencode version in sync.** The opencode release is
-  pinned in several places that MUST all be bumped together in a
-  single change:
-    - `package.json` pins `@opencode-ai/sdk` and `@opencode-ai/plugin`
-      (published in lockstep with the binary); refresh the lockfile
-      with `pnpm install`.
-    - The `opencode` binary: the `OPENCODE_VERSION` env var in
-      `.github/workflows/ci.yml` and the `OPENCODE_VERSION` build arg
-      in `Dockerfile` and `qa/Dockerfile`.
-    - Unit-test fixtures that encode the version:
-      `prerequisites.test.ts` (detected `opencode --version` string),
-      `install*.test.ts` (stubbed `DetectResult.version`), and
-      `manifest.test.ts` (asserts the `@opencode-ai/sdk` pin).
-    - Docs stating the version: `DEVELOPMENT.md` (verified-against
-      notes and the Docker section) and `qa/README.md`
+- **Keep the opencode versions in sync.** Two version lines are pinned
+  in several places each; bump all pins for a line together in a single
+  change.
+    - V1 (`@opencode-ai/*`): `package.json` pins `@opencode-ai/sdk`
+      (runtime, CLI probe) and `@opencode-ai/plugin` (types); refresh
+      the lockfile with `pnpm install`.
+    - V2 (`@opencode/*`): `package.json` pins `@opencode/plugin`
+      (type-only devDependency) and `@opencode/sdk` (devDependency for
+      the V2 e2e lane) at the same version as the V2 binary.
+    - The binaries: the `OPENCODE_VERSION` / `OPENCODE_V2_VERSION` env
+      vars in `.github/workflows/ci.yml`, the matching build args in
+      `Dockerfile` and `qa/Dockerfile`, and the `qa/docker-compose.v2.yml`
+      build args.
+    - Unit-test fixtures that encode the versions:
+      `prerequisites.test.ts` (detected `opencode --version` strings),
+      `install*.test.ts` (stubbed `DetectResult`), `manifest.test.ts`
+      (asserts both SDK pins), and the V2 adapter tests.
+    - Docs stating the versions: `DEVELOPMENT.md` (verified-against
+      notes and the Docker section), `docs/e2e.md`, and `qa/README.md`
       (prerequisite table).
 - The npm packages and the binary MAY differ by a patch (e.g. SDK
   `1.17.7` with binary `1.17.8`), but they MUST stay on the same
-  minor line — the plugin is only verified against one opencode
-  release at a time. After any bump, run `pnpm typecheck` (API
-  compatibility against the new SDK types), `pnpm test`, and
-  `pnpm test:e2e` (runtime behavior against the installed binary)
-  before merging.
+  minor line — the plugin is only verified against one release per
+  line at a time. After any bump, run `pnpm typecheck` (API
+  compatibility against the new SDK types), `pnpm test`, and the
+  matching e2e lane (`pnpm test:e2e:v1` / `:v2`) before merging.
 - Behavioral notes phrased "as of opencode 1.x.x" state what was
   verified at the time; do NOT reword them to a newer version without
   re-verifying the behavior against that release.
@@ -533,7 +573,10 @@ Configuration and documentation MUST stay synchronized with code:
   `README.md` and `DEVELOPMENT.md` keep summaries and link there. When the
   wizard's flags or behavior change, update `install-cli.md` and the
   README Install section in the same change; when the command surface
-  changes, update `commands.md`.
+  changes, update `commands.md`. When host support changes, update the
+  supported-version statements in `README.md`, `DEVELOPMENT.md`,
+  `docs/e2e.md`, `docs/reference/install-cli.md`, and `qa/README.md` in
+  the same change.
 - **TypeScript project structure**: The project uses a base/build/test
   tsconfig split. `tsconfig.json` is the shared base and the config the
   editor keys off; it includes production source and tests and sets
@@ -550,6 +593,12 @@ Configuration and documentation MUST stay synchronized with code:
 operational incidents.
 
 ### Plugin Surface
+
+The plugin registers the same surface through two host-specific paths:
+the V1 `config`/`tool` hooks and the V2 `setup(ctx)` editors. The rules
+below describe the V1 `config` hook unless stated otherwise; the V2
+adapter (`src/host/v2/`) maps the same loaded surface onto
+`agent.transform`/`command.transform`/`tool.transform`.
 
 This plugin talks to opencode exclusively through the `config` hook:
 
@@ -614,9 +663,26 @@ This plugin talks to opencode exclusively through the `config` hook:
   `@opencode-ai/sdk` and derive command types from `Config` so the
   compiler catches shape mistakes early. opencode hard-fails on invalid
   config, so the cost of a wrong shape is a broken startup.
-- **The plugin must not throw during load.** Keep the `config` hook
-  deterministic; if registration of a feature fails, degrade gracefully
-  rather than breaking opencode startup.
+- **The plugin must not throw during load.** Keep the `config` hook and
+  V2 `setup` deterministic; if registration of a feature fails, degrade
+  gracefully rather than breaking opencode startup.
+- **V2 specifics (verified against 2.0.14).** V2 registration goes
+  through editor transforms: `ctx.agent.transform` (upsert via
+  `editor.update(id, mutator)` — a missing id is created),
+  `ctx.command.transform` (`editor.add({ name, description, execute })`)
+  and `ctx.tool.transform`. The `sdd-command` tool is registered with
+  `options: { codemode: false, permission: 'sdd-command' }`: without
+  `codemode: false` V2 folds plugin tools into its CodeMode `execute`
+  tool, and `permission` makes the tool's permission action match the V1
+  key so the per-agent rules gate it. Agent frontmatter permission maps
+  are mapped onto V2 rules (`bash` -> `shell`, `task` -> `subagent`;
+  last-match-wins), the global deny is expressed as a per-agent
+  `{ action: 'sdd-command', resource: '*', effect: 'deny' }` appended to
+  non-SDD agents, and the templates grant becomes an
+  `external_directory` allow rule on the SDD agents. V2 does not inline
+  `@<abs-path>` mentions in prompts, so the V2 command adapter inlines
+  the referenced template file content itself
+  (`src/commands/template-inliner.ts`).
 
 ### Markdown Formatting
 

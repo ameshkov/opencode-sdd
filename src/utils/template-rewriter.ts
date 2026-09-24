@@ -8,7 +8,11 @@
  * ships in every build. The absolute templates directory is only known at
  * runtime — it is computed by `resolveTemplatesDir()` in the plugin entry — so
  * the `config` hook rewrites each loaded command template at registration
- * time, replacing the token with the resolved absolute templates directory.
+ * time and the `sdd-command` tool core rewrites the command source it loads,
+ * replacing the token with the resolved absolute templates directory.
+ *
+ * Both definition layers that touch command source need this primitive, so it
+ * lives in the shared `utils/` layer below them rather than in `commands/`.
  *
  * opencode's `resolvePromptParts` (`packages/opencode/src/session/prompt.ts`)
  * resolves `@<absolute-path>` mentions by passing the path through
@@ -22,13 +26,10 @@
  * The portable token used in command `.md` files as
  * `@opencode-sdd-templates/<subdir>/<file>.md`.
  *
- * Kept here as the single source of truth so both the rewriter and tests
- * reference one constant. Command Markdown source files embed the token
- * literally; only the rewrite target (the absolute assets directory) is
+ * Kept here as the single source of truth so the rewriter, the V2 inliner,
+ * and tests reference one constant. Command Markdown source files embed the
+ * token literally; only the rewrite target (the absolute assets directory) is
  * computed at runtime.
- *
- * @internal Exported for tests only; not part of the public module API.
- *   Production code consumes it via {@link rewriteAssetReferences}.
  */
 export const ASSET_REFERENCE_TOKEN = 'opencode-sdd-templates';
 

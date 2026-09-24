@@ -113,3 +113,38 @@ describe('applyAgentModels (per-subagent model step)', () => {
     ).toThrow(/\/repo\/opencode\.jsonc/);
   });
 });
+
+describe('applyAgentModels — V2 shape', () => {
+  it('writes agents.<name>.model on a v2 host', () => {
+    const models = new Map([['sdd-coder', 'mock/model']]);
+    const { patchedText, changed } = applyAgentModels(`{ "plugins": [] }`, models, {
+      host: 'v2',
+    });
+    expect(changed).toBe(true);
+    expect(JSON.parse(patchedText)).toEqual({
+      plugins: [],
+      agents: { 'sdd-coder': { model: 'mock/model' } },
+    });
+  });
+
+  it('preserves existing agent fields on v2', () => {
+    const models = new Map([['sdd-coder', 'mock/model']]);
+    const { patchedText } = applyAgentModels(
+      `{ "agents": { "sdd-coder": { "temperature": 0.5 } } }`,
+      models,
+      { host: 'v2' },
+    );
+    expect(JSON.parse(patchedText).agents['sdd-coder']).toEqual({
+      temperature: 0.5,
+      model: 'mock/model',
+    });
+  });
+
+  it('defaults to the v1 agent key when no host is given', () => {
+    const models = new Map([['sdd-coder', 'mock/model']]);
+    const { patchedText } = applyAgentModels('{}', models);
+    expect(JSON.parse(patchedText)).toEqual({
+      agent: { 'sdd-coder': { model: 'mock/model' } },
+    });
+  });
+});

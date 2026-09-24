@@ -51,6 +51,7 @@ describe('buildInteractiveSelection', () => {
     // Return the same model for every agent call — all 6 agents get prompted
     // (recommended models sorted first, but all models are selectable).
     const result = await buildInteractiveSelection(
+      'v1',
       {
         createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
         createClient: () => stubClient({ 'deepseek-chat': deepseek }, {}),
@@ -71,6 +72,7 @@ describe('buildInteractiveSelection', () => {
     const qwen = modelStub({ id: 'qwen-coder', providerID: 'qwen' });
     const selectAgentModel = vi.fn().mockResolvedValue(deepseek);
     await buildInteractiveSelection(
+      'v1',
       {
         createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
         createClient: () =>
@@ -102,6 +104,7 @@ describe('buildInteractiveSelection', () => {
     // can pick any model for any agent — recommended or not.
     const selectAgentModel = vi.fn().mockResolvedValueOnce(null).mockResolvedValue(deepseek);
     const result = await buildInteractiveSelection(
+      'v1',
       {
         createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
         createClient: () => stubClient({ 'deepseek-chat': deepseek }, {}),
@@ -115,7 +118,7 @@ describe('buildInteractiveSelection', () => {
   });
 
   it('probe failure degrades gracefully: empty selection + warning + degraded=true', async () => {
-    const result = await buildInteractiveSelection({
+    const result = await buildInteractiveSelection('v1', {
       createServer: async () => {
         throw new Error('opencode binary not found');
       },
@@ -131,6 +134,7 @@ describe('buildInteractiveSelection', () => {
   it('all agents selectable even when no keywords match (interactive allows any model)', async () => {
     const claude = modelStub({ id: 'claude-3', providerID: 'anthropic' });
     const result = await buildInteractiveSelection(
+      'v1',
       {
         createServer: async () => ({ url: 'http://127.0.0.1:0', close: vi.fn() }),
         createClient: () => stubClient({ 'claude-3': claude }, {}),

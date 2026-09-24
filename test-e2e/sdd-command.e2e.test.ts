@@ -25,9 +25,9 @@ import {
   pluginConfig,
   startOpencodeServer,
   type OpencodeServerHandle,
-} from './harness.js';
-import { createMockLlm, type MockLlmState } from './mock-server.js';
-import { sddCommandScenario } from './scenarios.js';
+} from './v1/harness.js';
+import { createMockLlm, type MockLlmState } from './shared/mock-server.js';
+import { sddCommandScenario } from './shared/scenarios.js';
 
 const cleanup: Array<() => void> = [];
 afterEach(() => {

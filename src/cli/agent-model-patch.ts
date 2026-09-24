@@ -5,6 +5,7 @@ import {
   type FormattingOptions,
   type ParseError,
 } from 'jsonc-parser';
+import type { OpencodeHost } from './prerequisites.js';
 
 /** Optional inputs to {@link applyAgentModels}. Mirrors ComputeOptions. */
 export interface AgentModelOptions {
@@ -12,6 +13,21 @@ export interface AgentModelOptions {
   readonly formatting?: { readonly tabSize: number; readonly insertSpaces: boolean };
   /** Included in malformed-JSONC error messages. */
   readonly targetPath?: string;
+  /**
+   * Detected host line; selects the top-level agent map key (`agent` on V1,
+   * `agents` on V2). Defaults to `v1`.
+   */
+  readonly host?: OpencodeHost;
+}
+
+/**
+ * The top-level config key holding the agent map for a host line.
+ *
+ * @param host - Detected host line.
+ * @returns `agents` on V2, `agent` on V1.
+ */
+function agentKeyFor(host: OpencodeHost): 'agent' | 'agents' {
+  return host === 'v2' ? 'agents' : 'agent';
 }
 
 /** The result of {@link applyAgentModels}. */
@@ -31,13 +47,13 @@ const DEFAULT_FORMATTING: FormattingOptions = {
  * Apply per-subagent `model` assignments to `currentText` via comment-
  * and order-preserving JSONC-safe edits.
  *
- * For each `[agentName, value]` in `models`, sets
- * `agent.<agentName>.model` to `value`:
- *   - creates the top-level `agent` key when absent;
- *   - creates the `agent.<agentName>` object when absent;
- *   - shallow-merges `model` into an existing `agent.<agentName>`
- *     object, preserving its non-`model` fields (the existing agent
- *     fields survive the overwrite).
+ * For each `[agentName, value]` in `models`, sets the agent's `model` field
+ * (`agent.<agentName>.model` on V1, `agents.<agentName>.model` on V2):
+ *   - creates the top-level agent-map key when absent;
+ *   - creates the agent object when absent;
+ *   - shallow-merges `model` into an existing agent object, preserving
+ *     its non-`model` fields (the existing agent fields survive the
+ *     overwrite).
  *
  * `jsonc-parser.modify` + `applyEdits` patch the source in place, so
  * untouched subtrees (comments, sibling agent fields, key order)
@@ -85,11 +101,12 @@ export function applyAgentModels(
   // computed against the most-recent state. applyEdits(text, []) is a
   // no-op when modify() returns an empty EditResult (the value already
   // equals the on-disk value), so the idempotency contract holds.
+  const agentKey = agentKeyFor(options.host ?? 'v1');
   let text = currentText;
   for (const [agentName, value] of models) {
     text = applyEdits(
       text,
-      modify(text, ['agent', agentName, 'model'], value, {
+      modify(text, [agentKey, agentName, 'model'], value, {
         formattingOptions: formatting,
       }),
     );

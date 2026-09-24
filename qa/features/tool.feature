@@ -1,4 +1,4 @@
-@tool
+@tool @V1 @V2
 Feature: sdd-command custom tool
   These cases are e2e-proven (mock-LLM test-e2e proves the byte-exact
   tool results); the manual run re-checks them through the real runtime
